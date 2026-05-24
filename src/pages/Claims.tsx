@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Loader2, AlertCircle, Download } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, Download, AlignJustify, List } from 'lucide-react'
 import type { Claim } from '../types'
 import { useClaims } from '../hooks/useClaims'
 import { api } from '../lib/api'
@@ -8,11 +8,25 @@ import { downloadCsv } from '../lib/utils'
 import ClaimsFilters, { useClaimFilters } from '../components/claims/ClaimsFilters'
 import ClaimsTable from '../components/claims/ClaimsTable'
 import StatusUpdateModal from '../components/claims/StatusUpdateModal'
+import { SkeletonTable } from '../components/ui/Skeleton'
+
+function useDensity() {
+  const [density, setDensityState] = useState<'comfortable' | 'compact'>(() => {
+    try { return (localStorage.getItem('claimsTableDensity') as 'comfortable' | 'compact') ?? 'comfortable' }
+    catch { return 'comfortable' }
+  })
+  const setDensity = (d: 'comfortable' | 'compact') => {
+    setDensityState(d)
+    try { localStorage.setItem('claimsTableDensity', d) } catch { /* noop */ }
+  }
+  return { density, setDensity }
+}
 
 export default function Claims() {
   const filters = useClaimFilters()
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null)
   const [exporting, setExporting] = useState(false)
+  const { density, setDensity } = useDensity()
 
   const apiFilter = {
     clinician:   filters.clinician   || undefined,
@@ -25,7 +39,6 @@ export default function Claims() {
 
   const { data: claims, isLoading, isError, error } = useClaims(apiFilter)
 
-  // Client-side search — case-insensitive match on claimId and notes
   const search = (filters.search ?? '').toLowerCase().trim()
   const displayed = claims && search
     ? claims.filter(c =>
@@ -46,10 +59,35 @@ export default function Claims() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <h1 className="font-heading text-xl font-semibold text-ink">Claims</h1>
         <div className="flex items-center gap-2">
+          {/* Density toggle */}
+          <div className="flex items-center border border-gray-200 rounded overflow-hidden">
+            <button
+              type="button"
+              title="Comfortable density"
+              onClick={() => setDensity('comfortable')}
+              className={[
+                'p-2 transition-colors',
+                density === 'comfortable' ? 'bg-teal-pale text-teal' : 'text-muted hover:bg-gray-50',
+              ].join(' ')}
+            >
+              <AlignJustify size={14} />
+            </button>
+            <button
+              type="button"
+              title="Compact density"
+              onClick={() => setDensity('compact')}
+              className={[
+                'p-2 transition-colors border-l border-gray-200',
+                density === 'compact' ? 'bg-teal-pale text-teal' : 'text-muted hover:bg-gray-50',
+              ].join(' ')}
+            >
+              <List size={14} />
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={handleExport}
@@ -69,16 +107,9 @@ export default function Claims() {
         </div>
       </div>
 
-      {/* Filters */}
       <ClaimsFilters />
 
-      {/* States */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-16 text-muted">
-          <Loader2 size={20} className="animate-spin mr-2" />
-          <span className="text-sm font-body">Loading claims…</span>
-        </div>
-      )}
+      {isLoading && <SkeletonTable rows={10} />}
 
       {isError && (
         <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
@@ -88,10 +119,9 @@ export default function Claims() {
       )}
 
       {displayed && (
-        <ClaimsTable claims={displayed} onStatusClick={setSelectedClaim} />
+        <ClaimsTable claims={displayed} onStatusClick={setSelectedClaim} compact={density === 'compact'} />
       )}
 
-      {/* Status update modal */}
       {selectedClaim && (
         <StatusUpdateModal
           claim={selectedClaim}

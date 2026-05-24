@@ -12,6 +12,7 @@ const PAGE_SIZE = 50
 interface Props {
   claims: Claim[]
   onStatusClick: (claim: Claim) => void
+  compact?: boolean
 }
 
 type SortKey = 'claimDate' | 'clinician' | 'totalPayment'
@@ -208,11 +209,13 @@ function MobileEditModal({ claim, field, label, rawValue, inputType, options, on
 
 // ─── MAIN TABLE ───────────────────────────────────────────────────────────────
 
-export default function ClaimsTable({ claims, onStatusClick }: Props) {
+export default function ClaimsTable({ claims, onStatusClick, compact = false }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
     key: 'claimDate', dir: 'desc',
   })
   const [page, setPage] = useState(1)
+  const rowPy = compact ? 'py-1.5' : 'py-3'
+  const cellText = compact ? 'text-xs' : 'text-sm'
 
   const sorted = [...claims].sort((a, b) => {
     let cmp = 0
@@ -277,10 +280,10 @@ export default function ClaimsTable({ claims, onStatusClick }: Props) {
             )}
             {paginated.map(claim => (
               <tr key={claim.rowIndex} className="hover:bg-cream transition-colors">
-                <td className="px-4 py-3 font-medium text-ink">{claim.clinician}</td>
-                <td className="px-4 py-3 text-muted">{claim.insurance}</td>
-                <td className="px-4 py-3 text-muted whitespace-nowrap">{formatDate(claim.claimDate)}</td>
-                <td className="px-4 py-3 font-mono text-xs text-ink">
+                <td className={`px-4 ${rowPy} font-medium text-ink ${cellText}`}>{claim.clinician}</td>
+                <td className={`px-4 ${rowPy} text-muted ${cellText}`}>{claim.insurance}</td>
+                <td className={`px-4 ${rowPy} text-muted whitespace-nowrap ${cellText}`}>{formatDate(claim.claimDate)}</td>
+                <td className={`px-4 ${rowPy} font-mono text-xs text-ink`}>
                   <InlineEditCell
                     claim={claim}
                     field="serviceCode"
@@ -290,7 +293,7 @@ export default function ClaimsTable({ claims, onStatusClick }: Props) {
                     options={SERVICE_CODES}
                   />
                 </td>
-                <td className="px-4 py-3 text-muted">
+                <td className={`px-4 ${rowPy} text-muted ${cellText}`}>
                   <InlineEditCell
                     claim={claim}
                     field="submissionMethod"
@@ -300,10 +303,10 @@ export default function ClaimsTable({ claims, onStatusClick }: Props) {
                     options={SUBMISSION_METHODS}
                   />
                 </td>
-                <td className="px-4 py-3">
+                <td className={`px-4 ${rowPy}`}>
                   <Badge status={claim.status} onClick={() => onStatusClick(claim)} />
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">
+                <td className={`px-4 ${rowPy} text-right tabular-nums ${cellText}`}>
                   <InlineEditCell
                     claim={claim}
                     field="clientAmount"
@@ -312,7 +315,7 @@ export default function ClaimsTable({ claims, onStatusClick }: Props) {
                     inputType="number"
                   />
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">
+                <td className={`px-4 ${rowPy} text-right tabular-nums ${cellText}`}>
                   <InlineEditCell
                     claim={claim}
                     field="insuranceAmount"
@@ -321,8 +324,8 @@ export default function ClaimsTable({ claims, onStatusClick }: Props) {
                     inputType="number"
                   />
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums font-medium">{formatCurrency(claim.totalPayment)}</td>
-                <td className="px-4 py-3 text-muted max-w-40">
+                <td className={`px-4 ${rowPy} text-right tabular-nums font-medium ${cellText}`}>{formatCurrency(claim.totalPayment)}</td>
+                <td className={`px-4 ${rowPy} text-muted max-w-40 ${cellText}`}>
                   <InlineEditCell
                     claim={claim}
                     field="notes"
@@ -331,7 +334,7 @@ export default function ClaimsTable({ claims, onStatusClick }: Props) {
                     inputType="text"
                   />
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className={`px-4 ${rowPy} text-right`}>
                   <Link
                     to={`/claims/${claim.rowIndex}/edit`}
                     className="text-xs text-teal hover:underline font-body"

@@ -16,7 +16,7 @@
   --color-error:      #DC2626;
 
   /* Typography — must use --font-* for Tailwind v4 font-{name} utilities */
-  --font-heading: 'Playfair Display', serif;
+  --font-heading: 'Fraunces', serif;
   --font-body:    'DM Sans', sans-serif;
   --font-accent:  'Lora', serif;
 }

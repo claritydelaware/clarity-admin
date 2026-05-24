@@ -9,7 +9,7 @@ const STYLES: Record<ClaimStatus, string> = {
 
 interface Props {
   status: ClaimStatus
-  onClick?: () => void
+  onClick?: React.MouseEventHandler<HTMLButtonElement>
 }
 
 export default function Badge({ status, onClick }: Props) {

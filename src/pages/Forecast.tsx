@@ -7,6 +7,7 @@ import {
 } from 'recharts'
 import { useClaims } from '../hooks/useClaims'
 import { useForecastAccuracy } from '../hooks/useAnalytics'
+import { useToast } from '../context/ToastContext'
 import { api } from '../lib/api'
 import { formatCurrency } from '../lib/utils'
 import type { Claim, ForecastAccuracyWeek } from '../types'
@@ -145,7 +146,7 @@ function ForecastAccuracySection() {
                     <XAxis dataKey="week" tick={{ fontSize: 10, fontFamily: 'DM Sans' }} />
                     <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fontFamily: 'DM Sans' }} width={48} />
                     <Tooltip
-                      formatter={(v: number) => formatCurrency(v)}
+                      formatter={(v: unknown) => formatCurrency(v as number)}
                       contentStyle={{ fontSize: 12, fontFamily: 'DM Sans' }}
                     />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, fontFamily: 'DM Sans' }} />
@@ -200,9 +201,66 @@ function ForecastAccuracySection() {
   )
 }
 
+function QuarterlyRollup({ claims }: { claims: Claim[] }) {
+  const [open, setOpen] = useState(true)
+
+  const { label, pendingCount, pendingAmount, overdueCount } = useMemo(() => {
+    const now = new Date()
+    const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+    const qEnd   = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0)
+    const q = Math.floor(now.getMonth() / 3) + 1
+    const today = new Date(new Date().toDateString())
+
+    const inQuarter = claims.filter(c => {
+      if (!c.forecastWeek) return false
+      const fw = new Date(c.forecastWeek)
+      return fw >= qStart && fw <= qEnd
+    })
+    const overdue = claims.filter(c => c.forecastWeek && new Date(c.forecastWeek) < today)
+
+    return {
+      label: `Q${q} ${now.getFullYear()}`,
+      pendingCount: inQuarter.length,
+      pendingAmount: inQuarter.reduce((s, c) => s + c.totalPayment, 0),
+      overdueCount: overdue.length,
+    }
+  }, [claims])
+
+  return (
+    <div className="rounded-xl border border-teal/20 bg-teal-pale/30 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-teal-pale/50 transition-colors"
+      >
+        <span className="font-heading text-sm font-semibold text-teal">
+          {label} Forecast
+        </span>
+        {open ? <ChevronUp size={15} className="text-teal" /> : <ChevronDown size={15} className="text-teal" />}
+      </button>
+      {open && (
+        <div className="px-5 pb-4 flex flex-wrap gap-6">
+          <div>
+            <p className="text-xs font-body text-muted">Expected this quarter</p>
+            <p className="font-heading text-xl font-semibold text-teal tabular-nums">{formatCurrency(pendingAmount)}</p>
+            <p className="text-xs text-muted font-body mt-0.5">{pendingCount} pending claim{pendingCount !== 1 ? 's' : ''}</p>
+          </div>
+          {overdueCount > 0 && (
+            <div>
+              <p className="text-xs font-body text-muted">Overdue claims</p>
+              <p className="font-heading text-xl font-semibold text-error tabular-nums">{overdueCount}</p>
+              <p className="text-xs text-error font-body mt-0.5">forecast date passed</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Forecast() {
   const { data: claims, isLoading, isError, error } = useClaims({ status: 'Pending' })
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [recalcState, setRecalcState] = useState<'idle' | 'loading' | 'done'>('idle')
   const [recalcCount, setRecalcCount] = useState(0)
 
@@ -213,9 +271,11 @@ export default function Forecast() {
       setRecalcCount(result.updated)
       queryClient.invalidateQueries({ queryKey: ['claims'] })
       setRecalcState('done')
+      toast.success(`Forecasts recalculated (${result.updated} updated)`)
       setTimeout(() => setRecalcState('idle'), 3000)
     } catch {
       setRecalcState('idle')
+      toast.error('Recalculation failed — please try again')
     }
   }
 
@@ -294,6 +354,9 @@ export default function Forecast() {
           )}
         </div>
       </div>
+
+      {/* Quarterly rollup */}
+      {claims && claims.length > 0 && <QuarterlyRollup claims={claims} />}
 
       {/* Empty state */}
       {weeks.length === 0 && (

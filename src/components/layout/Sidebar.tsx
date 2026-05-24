@@ -1,11 +1,14 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, FileText, TrendingUp, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users } from 'lucide-react'
 
 const NAV = [
-  { to: '/dashboard',  label: 'Dashboard',       icon: LayoutDashboard },
-  { to: '/analytics',  label: 'Analytics',        icon: BarChart2 },
-  { to: '/claims',     label: 'Claims',           icon: FileText },
-  { to: '/forecast',   label: 'Revenue Forecast', icon: TrendingUp },
+  { to: '/dashboard',   label: 'Dashboard',       icon: LayoutDashboard },
+  { to: '/analytics',   label: 'Analytics',        icon: BarChart2 },
+  { to: '/claims',      label: 'Claims',           icon: FileText },
+  { to: '/pay-periods', label: 'Pay Periods',      icon: Calendar },
+  { to: '/forecast',    label: 'Revenue Forecast', icon: TrendingUp },
+  { to: '/overhead',    label: 'Overhead',         icon: Receipt },
+  { to: '/staff',       label: 'Staff',            icon: Users },
 ]
 
 interface Props {
@@ -16,7 +19,6 @@ interface Props {
 export default function Sidebar({ isOpen, onClose }: Props) {
   return (
     <>
-      {/* Mobile backdrop */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 md:hidden"

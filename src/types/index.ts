@@ -152,17 +152,20 @@ export interface ForecastAccuracyWeek {
   cumulative: number | null
 }
 
+export interface DashboardPeriodMetrics {
+  sessions: number
+  sessionsByClinician: Record<Clinician, number>
+  revenue: number
+  revenueByClinician: Record<Clinician, number>
+  pendingCount: number
+  pendingAmount: number
+  receivedAmount: number
+  utilizationByClinician: Record<Clinician, number>
+}
+
 export interface DashboardData {
-  currentMonth: {
-    sessions: number
-    sessionsByClinician: Record<Clinician, number>
-    revenue: number
-    revenueByClinician: Record<Clinician, number>
-    pendingCount: number
-    pendingAmount: number
-    receivedAmount: number
-    utilizationByClinician: Record<Clinician, number>
-  }
+  currentMonth: DashboardPeriodMetrics
+  priorPeriod?: DashboardPeriodMetrics
   sixMonthTrend: MonthlyAggregate[]
   aging: {
     bucket0_30: AgingBucket
@@ -171,4 +174,128 @@ export interface DashboardData {
     bucket90plus: AgingBucket
   }
   payerMix: PayerMixEntry[]
+}
+
+// ─── PHASE 4 TYPES ────────────────────────────────────────────────────────────
+
+export type DateWindow = 'mtd' | 'qtd' | 'ytd' | 'last-month' | 'last-quarter'
+
+export interface QuarterlySummary {
+  year: number
+  quarter: 1 | 2 | 3 | 4
+  label: string
+  revenue: number
+  income: number
+  operationalOverhead: number
+  payrollOverhead: number
+  totalOverhead: number
+  profit: number
+  marginPct: number | null
+  sessions: number
+  byClinicianRevenue: Record<string, number>
+  byClinicianSessions: Record<string, number>
+  missingOverheadMonths: string[]
+}
+
+export interface OverheadLineItem {
+  account: string
+  amount: number
+  category: 'income' | 'payroll' | 'operational' | 'other'
+}
+
+export interface XeroImportPreview {
+  month: string
+  periodLabel: string
+  totalIncome: number
+  payrollExpenses: number
+  operationalExpenses: number
+  totalExpenses: number
+  netIncome: number
+  lineItems: OverheadLineItem[]
+}
+
+export interface OverheadEntry {
+  month: string
+  totalIncome: number
+  payrollExpenses: number
+  operationalExpenses: number
+  totalExpenses: number
+  netIncome: number
+  lineItems: OverheadLineItem[]
+  importSource: 'xero-import' | 'manual'
+  notes: string
+}
+
+export interface SalaryPayPeriod {
+  periodStart: string
+  periodEnd: string
+  payDate: string
+}
+
+export interface HourlyPayPeriod {
+  periodStart: string
+  periodEnd: string
+  payDate: string
+}
+
+export interface PartnerPeriodSummary {
+  clinician: string
+  periodStart: string
+  periodEnd: string
+  payDate: string
+  sessions: number
+  revenue: number
+  receivedRevenue: number
+  pendingRevenue: number
+  annualSalary: number
+  periodSalary: number
+}
+
+export interface EmilyPayPeriodSummary {
+  periodStart: string
+  periodEnd: string
+  payDate: string
+  claimCount: number
+  sessions: number
+  revenue: number
+  paymentsReceived: number
+  pctReceivedByPayDate: number
+  unreceivedPayments: number
+  sessionRate: number
+  sessionPay: number
+  adminHourlyRate: number
+  adminHours: number
+  adminPay: number
+  bonusPay: number
+  totalPay: number
+  profit: number
+  profitMargin: number
+  priorPeriodMargins: number[]
+}
+
+export interface PayerPerformance {
+  payer: string
+  totalClaims: number
+  avgDaysToPay: number | null
+  collectionRate: number | null
+  pendingCount: number
+  oldestPendingDays: number | null
+}
+
+export interface StaffMember {
+  id: string
+  name: string
+  role: 'partner' | 'w2'
+  npi: string
+  licenseType: string
+  licenseNumber: string
+  licenseState: string
+  licenseExpiration: string | null
+  hireDate: string
+  compensationType: 'salary' | 'session-rate'
+  annualSalary: number | null
+  sessionRate: number | null
+  adminHourlyRate: number | null
+  active: boolean
+  notes: string
 }

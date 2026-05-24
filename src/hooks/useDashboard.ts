@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 
-export function useDashboard() {
+export function useDashboard(from?: string, to?: string) {
   return useQuery({
-    queryKey: ['dashboard'],
-    queryFn: () => api.dashboard.get(),
+    queryKey: ['dashboard', from ?? '', to ?? ''],
+    queryFn: () => api.dashboard.get(from, to),
     staleTime: 2 * 60 * 1000,
   })
 }
