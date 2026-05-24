@@ -27,13 +27,14 @@ function monthLabel(iso: string): string {
 
 function pct(val: number | null): string {
   if (val === null) return '—'
-  return `${(val * 100).toFixed(1)}%`
+  // Sheet stores util % as whole numbers (e.g. 94.6 = 94.6%)
+  return `${val.toFixed(1)}%`
 }
 
 function utilColor(val: number | null): string {
   if (val === null) return 'text-muted'
-  if (val >= 1.0) return 'text-error font-semibold'
-  if (val >= 0.95) return 'text-amber-600 font-semibold'
+  if (val >= 100) return 'text-error font-semibold'
+  if (val >= 95)  return 'text-amber-600 font-semibold'
   return 'text-ink'
 }
 

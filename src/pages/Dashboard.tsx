@@ -39,8 +39,9 @@ function useCapacityAlerts() {
     for (const { name, getter } of checks) {
       const a = avg(last2.map(getter))
       if (a === null) continue
-      if (a >= 1.0) alerts.push({ name, pct: a, level: 'danger' })
-      else if (a >= 0.95) alerts.push({ name, pct: a, level: 'warning' })
+      // Sheet stores util % as whole numbers (e.g. 94.6 = 94.6%), not decimals
+      if (a >= 100) alerts.push({ name, pct: a, level: 'danger' })
+      else if (a >= 95) alerts.push({ name, pct: a, level: 'warning' })
     }
     return alerts
   }, [trends])
@@ -107,7 +108,7 @@ export default function Dashboard() {
           <ul className="space-y-0.5">
             {capacityAlerts.map(a => (
               <li key={a.name} className={`text-sm font-body ${a.level === 'danger' ? 'text-error' : 'text-amber-800'}`}>
-                {a.name} has been at {(a.pct * 100).toFixed(0)}% utilization over the last 2 months
+                {a.name} has been at {a.pct.toFixed(0)}% utilization over the last 2 months
                 {a.level === 'danger' ? ' — over capacity, consider caseload review.' : ' — approaching capacity.'}
               </li>
             ))}
