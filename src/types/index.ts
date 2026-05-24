@@ -67,6 +67,22 @@ export interface ClaimUpdateInput {
   notes?: string
 }
 
+export interface ClaimFullEditInput {
+  claimDate?: string
+  clinician?: Clinician
+  clientId?: string
+  insurance?: string
+  claimId?: string
+  serviceCode?: ServiceCode
+  submissionMethod?: SubmissionMethod
+  status?: ClaimStatus
+  clientAmount?: number
+  insuranceAmount?: number
+  paymentDateReceived?: string
+  totalPayment?: number
+  notes?: string
+}
+
 export interface PayPeriod {
   start: string
   end: string
@@ -92,6 +108,48 @@ export interface MonthlyAggregate {
   month: string
   sessionsByClinician: Record<Clinician, number>
   revenue: number
+}
+
+export interface CaseloadTrendMonth {
+  month: string
+  emilySessions: number | null
+  shannonSessions: number | null
+  jenSessions: number | null
+  totalSessions: number | null
+  emilyClients: number | null
+  shannonClients: number | null
+  jenClients: number | null
+  totalClients: number | null
+  emilyAvgPerWeek: number | null
+  shannonAvgPerWeek: number | null
+  jenAvgPerWeek: number | null
+  totalAvgPerWeek: number | null
+  emilyUtilPct: number | null
+  shannonUtilPct: number | null
+  jenUtilPct: number | null
+  totalUtilPct: number | null
+  emilyRevenue: number | null
+  shannonRevenue: number | null
+  jenRevenue: number | null
+  totalRevenue: number | null
+  revenuePerSession: number | null
+  payrollCosts: number | null
+  operationalOverhead: number | null
+  totalOverhead: number | null
+  grossMargin: number | null
+  grossMarginPct: number | null
+  income: number | null
+  incomePct: number | null
+  collectionVariance: number | null
+  weeks: number | null
+}
+
+export interface ForecastAccuracyWeek {
+  weekStart: string
+  forecast: number | null
+  actual: number | null
+  difference: number | null
+  cumulative: number | null
 }
 
 export interface DashboardData {

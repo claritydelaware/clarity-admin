@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, FileText } from 'lucide-react'
+import { LayoutDashboard, FileText, TrendingUp, BarChart2 } from 'lucide-react'
 
 const NAV = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/claims',    label: 'Claims',    icon: FileText },
+  { to: '/dashboard',  label: 'Dashboard',       icon: LayoutDashboard },
+  { to: '/analytics',  label: 'Analytics',        icon: BarChart2 },
+  { to: '/claims',     label: 'Claims',           icon: FileText },
+  { to: '/forecast',   label: 'Revenue Forecast', icon: TrendingUp },
 ]
 
 interface Props {
@@ -25,17 +27,19 @@ export default function Sidebar({ isOpen, onClose }: Props) {
 
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-teal',
+          'fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-white border-r border-gray-200',
           'transition-transform duration-300 ease-in-out',
           'md:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
         {/* Brand */}
-        <div className="flex items-center px-6 py-5 border-b border-white/10">
-          <span className="font-heading text-white text-lg font-semibold tracking-tight">
-            Clarity Admin
-          </span>
+        <div className="flex items-center px-5 py-4 border-b border-gray-100">
+          <img
+            src="/new-clarity-logo-transparent.png"
+            alt="Clarity Counseling"
+            className="h-10 w-auto object-contain"
+          />
         </div>
 
         {/* Nav */}
@@ -49,8 +53,8 @@ export default function Sidebar({ isOpen, onClose }: Props) {
                 [
                   'flex items-center gap-3 py-2.5 pl-5 pr-6 text-sm transition-colors border-l-2',
                   isActive
-                    ? 'border-gold bg-white/10 text-white font-medium'
-                    : 'border-transparent text-white/65 hover:text-white hover:bg-white/5',
+                    ? 'border-gold bg-teal-pale text-teal font-medium'
+                    : 'border-transparent text-muted hover:text-teal hover:bg-gray-50',
                 ].join(' ')
               }
             >
@@ -61,8 +65,8 @@ export default function Sidebar({ isOpen, onClose }: Props) {
         </nav>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-white/10">
-          <p className="text-xs text-white/40 font-body">Clarity Counseling of Delaware</p>
+        <div className="px-6 py-4 border-t border-gray-100">
+          <p className="text-xs text-muted font-body">Clarity Counseling of Delaware</p>
         </div>
       </aside>
     </>

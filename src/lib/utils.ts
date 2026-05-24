@@ -24,3 +24,27 @@ export function formatDate(dateStr: string): string {
     month: 'short', day: 'numeric', year: 'numeric',
   })
 }
+
+// Convert M/D/YYYY (Sheet format) → YYYY-MM-DD for <input type="date">
+// Uses string manipulation to avoid UTC timezone shift from new Date().toISOString()
+export function toInputDate(sheetDate: string): string {
+  const parts = sheetDate.split('/')
+  if (parts.length !== 3) return ''
+  const [m, d, y] = parts
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+}
+
+// Download a 2D string array as a CSV file in the browser.
+// Each cell is quoted and embedded quotes are escaped to handle commas in notes.
+export function downloadCsv(rows: string[][], filename: string): void {
+  const csv = rows
+    .map(row => row.map(cell => `"${(cell ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}

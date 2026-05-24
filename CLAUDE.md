@@ -67,12 +67,14 @@ admin.claritydelaware.com  (currently on *.pages.dev until DNS cutover)
 
 ### Colors
 ```css
---color-teal: #254D54      /* Primary: sidebar, nav, section headers */
---color-gold: #F6C54D      /* Accent: highlights, active states, CTAs, key metrics */
+--color-teal: #254D54      /* Primary: active nav, CTAs, headings */
+--color-teal-mid: #3A7078  /* Hover states */
+--color-teal-pale: #E8F1F2 /* Active nav background */
+--color-gold: #F6C54D      /* Accent: active nav border, key metric accent */
 --color-cream: #F9F7F4     /* Content area background */
 ```
 Additional palette:
-- White `#FFFFFF` — cards, panels, form backgrounds
+- White `#FFFFFF` — sidebar, cards, panels, form backgrounds
 - Text primary `#1A1A1A`
 - Text muted `#6B7280`
 - Success green `#16A34A`
@@ -89,7 +91,7 @@ Load via `<link>` in `index.html`:
 ```
 
 ### UI Approach
-Light background (cream/white) content area. Teal sidebar. Gold accents. This is a utility tool — prioritize information density and clarity over decorative elements. No hero sections, no gradients on content areas.
+Light background (cream/white) content area. White sidebar with right border. Gold accent on active nav item (left border + teal-pale background). This is a utility tool — prioritize information density and clarity over decorative elements. No hero sections, no gradients on content areas.
 
 ### Status Badge Colors
 | Status | Background | Text |
@@ -99,32 +101,149 @@ Light background (cream/white) content area. Teal sidebar. Gold accents. This is
 | Finalized | `#6B7280` | `#FFFFFF` |
 | Denied | `#DC2626` | `#FFFFFF` |
 
+### Logo
+- Light sidebar logo: `public/new-clarity-logo-transparent.png` (dark text, use on white/light backgrounds)
+- Dark background logo: `assets/White text logo-cprs.png` (white text, use on teal/dark backgrounds)
+
 ---
 
 ## Current Build State
 
-### Phase 1A — Infrastructure (in progress)
+### Phase 1A — Infrastructure ✅ Complete
 
 | Step | Task | Status |
 |---|---|---|
 | 1 | Google Cloud project created, Sheets API enabled, service account created | ✅ Done |
-| 1 | Service account JSON key downloaded (required org policy override at project level: `iam.disableServiceAccountKeyCreation` → Off) | ✅ Done — **confirm key file is stored securely offline** |
+| 1 | Service account JSON key downloaded (org policy override applied: `iam.disableServiceAccountKeyCreation` → Off) | ✅ Done — key stored securely offline only |
 | 2 | Google Sheets workbook shared with service account email (Editor access) | ✅ Done |
 | 3 | GitHub repo `clarity-admin` created, cloned locally | ✅ Done |
 | 3.5 | Vite + React + TypeScript scaffolded, dependencies installed, pushed to GitHub | ✅ Done |
-| 4 | Cloudflare Pages project connected to GitHub repo | 🔲 Pending |
-| 5 | Cloudflare Access application configured for admin URL | 🔲 Pending |
-| 6 | Cloudflare Worker `clarity-admin-api` created, secrets configured | 🔲 Pending |
+| 4 | Cloudflare Pages project connected to GitHub repo | ✅ Done |
+| 5 | Cloudflare Access application configured | ✅ Done |
+| 6 | Cloudflare Worker `clarity-admin-api` deployed; `GOOGLE_SERVICE_ACCOUNT_KEY` and `SPREADSHEET_ID` secrets configured | ✅ Done |
 | 7 | DNS CNAME record: `admin` → `*.pages.dev` | ⏸ Deferred — waiting on DNS migration to Cloudflare |
 
-### Phase 1B — App Scaffolding
-🔲 Not started
+### Phase 1B — App Scaffolding ✅ Complete
 
-### Phase 1C — Claims Module
-🔲 Not started
+- Types (`src/types/index.ts`): `Claim`, `PayPeriod`, `CaseloadEntry`, `DashboardData` interfaces
+- API client (`src/lib/api.ts`): typed fetch wrappers for all Worker endpoints
+- AppShell, Sidebar (white/light theme), Topbar layout components
+- React Router v7 routes: `/` → `/dashboard`, `/dashboard`, `/claims`, `/claims/new`
+- TanStack Query provider with `staleTime: 5min`, `retry: 2`
+- Vite dev proxy: `/api/*` → `https://clarity-admin-api.bruce-5f2.workers.dev`
 
-### Phase 1D — Dashboard Module
-🔲 Not started
+### Phase 1C — Claims Module ✅ Complete
+
+- `ClaimsFilters` — all dropdowns + date range; filter state persisted in URL params
+- `ClaimsTable` — desktop table (sortable by date/clinician/total, paginated 50 rows) + mobile tap-to-expand card layout
+- `StatusUpdateModal` — click any status badge to update; enforces payment date + amount when marking Payment Received
+- `NewClaim` form — all 11 fields; client ID autocomplete from Caseloads sheet; live Stripe fee preview; business rule warnings (HHO no-show, discontinued codes)
+- `useClaims` / `useUpdateClaim` / `useCreateClaim` hooks (TanStack Query)
+
+### Phase 1D — Dashboard Module ✅ Complete (v1)
+
+- Metric cards: Sessions, Revenue, Pending, Received this month
+- Utilization progress bars per clinician vs weekly targets
+- Revenue trend line chart (6 months, total)
+- Payer mix bar chart (current month)
+- Pending claims aging table (0–30, 31–60, 61–90, 90+ days; 90+ highlighted red)
+- `useDashboard` hook
+
+### Phase 2 — Full Edit + Search + Forecast + Backup ✅ Complete (2026-05-24)
+
+**Worker version deployed:** `149413a6-431c-4fbf-b65e-02f5f5846879`
+
+| Feature | Details |
+|---|---|
+| Full Claim Edit | `EditClaim.tsx` at `/claims/:rowIndex/edit`; all 11 fields; `useClaim` + `useEffect+reset()` + `!isDirty` guard |
+| Claim Search | Search input in `ClaimsFilters`; client-side filter on `claimId` + `notes`; `search` param stripped before API call |
+| Revenue Forecast | `Forecast.tsx` at `/forecast`; pending claims grouped by `forecastWeek` ascending; overdue highlighted red/amber |
+| CSV Export | "Export CSV" button in Claims header; `api.claims.exportRaw()` → `downloadCsv()` with quote-escaping |
+| Automated Backup | Worker Cron `0 6 * * 1` (Monday 6 AM UTC); creates `Snapshot_YYYY-MM-DD` tab via `batchUpdate+addSheet` |
+
+**New Worker endpoints:**
+- `GET /api/claims/:rowIndex` — single-row fetch
+- `PUT /api/claims/:rowIndex` — extended: full field edit + date/forecast recalculation when `claimDate` or `insurance` changes
+- `GET /api/export/claims` — returns full `string[][]` including header row
+
+**Critical implementation details:**
+- `toInputDate()` uses string split/pad only — NOT `Date.toISOString()` — to avoid UTC timezone shift (M/D/YYYY → YYYY-MM-DD)
+- `useClaim` has `refetchOnWindowFocus: false`, `staleTime: Infinity` — prevents background refetch from clobbering in-progress edits
+- Snapshot cron creates a new named tab per run instead of appending to a single tab
+- Forecast `useMemo` filters empty `forecastWeek` BEFORE sort — `Invalid Date` sorts inconsistently across browsers
+- Cron config lives in `clarity-admin-api/wrangler.jsonc` (NOT wrangler.toml)
+
+### Phase 2.5 — Forecast Payment Date Rebuild ✅ Complete (2026-05-24)
+
+| Feature | Details |
+|---|---|
+| 3-tier recency-weighted forecast | Client+payer (≥3 claims) → payer-wide → 30-day fallback; recency weights: ≤90d=1.0, 91-180d=0.5, >180d=0.25 |
+| Payment-day snap | Aetna → Tuesday, BCBS → Wednesday; applied in all tiers including fallback |
+| Batch recalculate endpoint | `POST /api/maintenance/recalculate-forecasts`; rewrites columns V+W for Pending claims only |
+| Recalculate button | Forecast page header; triggers batch recalculate + auto-refreshes the week groups |
+| Vitest unit tests | `src/forecast-helpers.test.ts`; 22 test cases for pure functions; `npm test` |
+
+**Worker version deployed:** `ac26ecb4-816c-4aec-ab84-2ddd6897f2ca`
+
+**New Worker file:** `clarity-admin-api/src/forecast-helpers.ts` — pure business logic (exported for testability)
+
+**Critical implementation details:**
+- `calcForecastDate` takes `clientId` as third param; callers: `createClaim` and `updateClaim`
+- Pure functions live in `forecast-helpers.ts` (not `index.ts`) so Vitest can import them without Worker env
+- `sheetBatchUpdateValues` uses `/{id}/values:batchUpdate` (different from cron's `/{id}:batchUpdate`)
+- All test Date construction uses `new Date(year, month, day)` local time — never ISO string (UTC parse causes day-of-week mismatch)
+- `tsconfig.json` has `skipLibCheck: true` to resolve `@cloudflare/workers-types` vs `tinybench` conflict
+
+### Pending Infrastructure
+
+- **DNS cutover** — point `admin.claritydelaware.com` CNAME to Pages once DNS migrates to Cloudflare
+- **Cloudflare Access domain update** — add `admin.claritydelaware.com` to the Access application after DNS cutover
+
+---
+
+## Actual File Structure
+
+```
+clarity-admin/
+├── public/
+│   └── new-clarity-logo-transparent.png
+├── assets/
+│   └── new-clarity-logo-transparent.png   (source copy — do not reference directly in code)
+├── src/
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── AppShell.tsx
+│   │   │   ├── Sidebar.tsx             (white bg, teal/gold active states; Phase 2: Forecast nav item)
+│   │   │   └── Topbar.tsx
+│   │   ├── ui/
+│   │   │   └── Badge.tsx               (status badges, clickable variant)
+│   │   └── claims/
+│   │       ├── ClaimsTable.tsx         (desktop table + mobile cards; Phase 2: Edit link column)
+│   │       ├── ClaimsFilters.tsx       (URL-param-driven filter bar; Phase 2: search input)
+│   │       └── StatusUpdateModal.tsx
+│   ├── hooks/
+│   │   ├── useClaims.ts                (Phase 2: +useClaim, +useFullEditClaim)
+│   │   └── useDashboard.ts
+│   ├── lib/
+│   │   ├── api.ts                      (Phase 2: +get, +fullEdit, +exportRaw; search strip)
+│   │   └── utils.ts                    (Phase 2: +toInputDate, +downloadCsv)
+│   ├── pages/
+│   │   ├── Dashboard.tsx
+│   │   ├── Claims.tsx                  (Phase 2: client-side search + Export CSV button)
+│   │   ├── NewClaim.tsx
+│   │   ├── EditClaim.tsx               (Phase 2: new)
+│   │   └── Forecast.tsx                (Phase 2: new)
+│   ├── types/
+│   │   └── index.ts                    (Phase 2: +ClaimFullEditInput)
+│   ├── App.tsx                         (Phase 2: +EditClaim and Forecast routes)
+│   ├── main.tsx
+│   └── index.css                       (Tailwind v4 @theme tokens)
+├── CLAUDE.md
+├── index.html
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
+```
 
 ---
 
@@ -155,7 +274,7 @@ The workbook is named "Claim Tracking" and contains these sheets:
 | O | Insurance Amount | Amount billed to/received from insurance |
 | P | Insurance Paid (HHO) | Highmark Health Options specific — leave blank for other payers |
 | Q | Over/Under Payment (HHO) | HHO specific — leave blank for other payers |
-| R | Total Payment | Client Amount + Insurance Amount |
+| R | Total Payment | Client Amount + Insurance Amount — **primary revenue field used by dashboard** |
 | S | Payment Date Received | Date payment was received (M/D/YYYY) |
 | T | Time to Receive Payment | Days (same value as Lag Days for received claims) |
 | U | Lag Days | **Calculated on update:** days between Claim Date and Payment Date Received |
@@ -171,18 +290,18 @@ BCBS, Aetna, United, United-MA, United-Surest, Medicare, Health Options, Delawar
 **Known CPT codes:**
 90837 (53-min individual), 90832 (30-min individual), 90834 (45-min individual), 90847 (couples/family), 90791 (intake/eval), 90785 (interactive complexity add-on), 96127 (behavioral screening), 96136 (psych testing — stopped mid-Jan 2026)
 
+**Important:** The Google Sheets API returns currency-formatted cells as strings (e.g. `"$1,234.56"`). The Worker's `num()` helper strips `$` and `,` before parsing. Do not remove this — it is load-bearing for all financial fields.
+
 ### Sheet: Pay Periods
 Three columns: `Pay Period Start` | `Pay Period End` | `Pay Date`
 
-Periods are roughly monthly (15th/16th to 14th/15th). The Worker must fetch this sheet to resolve Pay Period on new claim submission. Cache it for the session — it changes infrequently.
+Periods are roughly monthly (15th/16th to 14th/15th). Cached in Worker memory for the session — changes infrequently.
 
 ### Sheet: Caseloads
-Maps Client ID to clinician name for autopopulation in the new claim form. Fetch on form load.
+Maps Client ID to clinician name for autopopulation in the new claim form. Fetched on form load.
 
 ### Sheet: Caseload Trends
 Monthly aggregate rows. Columns include: Emily/Shannon/Jen Sessions, Clients, 90837 %, Avg/Wk, Util %, Revenue by clinician, Payroll Costs, Operational Overhead, Total Overhead, Gross Margin, Income, Collection Variance, Start Date, End Date, Weeks.
-
-The Worker should read this sheet for overhead and payroll figures (which originate from Gusto/Xero, not from Claims) and combine them with live Claims aggregates for the dashboard. Do not use this sheet as the sole dashboard source — compute sessions and revenue from Claims directly to keep the portal independently accurate.
 
 ---
 
@@ -192,13 +311,13 @@ The Worker should read this sheet for overhead and payroll figures (which origin
 ```typescript
 function getSundayOfWeek(date: Date): Date {
   const d = new Date(date);
-  d.setDate(d.getDate() - d.getDay()); // getDay() returns 0 for Sunday
+  d.setDate(d.getDate() - d.getDay());
   return d;
 }
 ```
 
 ### Pay Period (from Claim Date)
-Fetch Pay Periods sheet. Find the row where `Pay Period Start ≤ Claim Date ≤ Pay Period End`. Return the `Pay Period Start` value for that row (formatted M/D/YYYY to match existing sheet data).
+Fetch Pay Periods sheet. Find the row where `Pay Period Start ≤ Claim Date ≤ Pay Period End`. Return the `Pay Period Start` value for that row (formatted M/D/YYYY).
 
 ### Forecast Payment Date (on new claim creation)
 ```
@@ -206,20 +325,16 @@ if payer is Self-Pay, Cash, or Late Cancellation:
   Forecast Payment Date = Claim Date (lag = 0)
 else:
   avgLagDays = average(LagDays) from Claims rows where
-    Insurance = submitted payer
-    AND Status = "Payment Received"
-    AND LagDays > 0
-  if avgLagDays exists:
-    Forecast Payment Date = Claim Date + round(avgLagDays) days
-  else:
-    Forecast Payment Date = Claim Date + 30 days  // default fallback
+    Insurance = submitted payer AND Status = "Payment Received" AND LagDays > 0
+  Forecast Payment Date = Claim Date + round(avgLagDays) days
+  (fallback: Claim Date + 30 days if no history for that payer)
 ```
 
 ### Stripe Fees
 ```typescript
 function calculateStripeFees(clientAmount: number): number {
   if (clientAmount <= 0) return 0;
-  return parseFloat(((clientAmount * 0.029) + 0.30).toFixed(2));
+  return Math.round((clientAmount * 0.029 + 0.30) * 100) / 100;
 }
 ```
 True Client Amount = Client Amount - Stripe Fees
@@ -227,7 +342,7 @@ True Client Amount = Client Amount - Stripe Fees
 ### Lag Days (when recording payment)
 ```typescript
 const lagDays = Math.round(
-  (paymentDateReceived.getTime() - claimDate.getTime()) / (1000 * 60 * 60 * 24)
+  (paymentDateReceived.getTime() - claimDate.getTime()) / 86400000
 );
 ```
 
@@ -235,259 +350,133 @@ const lagDays = Math.round(
 
 ## Worker API Specification
 
-**Worker name:** `clarity-admin-api`
+**Worker name:** `clarity-admin-api`  
+**Worker URL:** `https://clarity-admin-api.bruce-5f2.workers.dev`  
 **Route:** All `/api/*` requests from the Pages app are proxied to the Worker.
 
-### Environment Secrets (set in Cloudflare Worker dashboard)
+### Environment Secrets (Cloudflare Worker dashboard — never in code)
 ```
 GOOGLE_SERVICE_ACCOUNT_KEY   Full JSON content of the service account key file
-SPREADSHEET_ID               Google Sheets spreadsheet ID
+SPREADSHEET_ID               1-uX4T45donLFSkQ7YRTguraDeUNnxODgXrRUruarkG
 ```
 
 ### Endpoints
 
 ```
 GET  /api/claims
-     Query params: clinician, payer, status, serviceCode, from (YYYY-MM-DD), to (YYYY-MM-DD)
-     Returns: filtered array of claim objects
-     Note: fetch all rows, filter server-side (volume is manageable)
+     Query params: clinician, payer, status, serviceCode, from, to
+     Returns: filtered array of claim objects (all rows fetched, filtered server-side)
 
 POST /api/claims
      Body: { clinician, insurance, claimDate, submissionMethod, serviceCode, status,
              clientAmount, insuranceAmount, claimId?, clientId?, notes? }
      Worker derives: Week, PayPeriod, TrueClientAmount, StripeFees, TotalPayment,
                      ForecastPaymentDate, ForecastWeek
-     Action: appends row to Claims sheet
-     Returns: completed claim object with derived fields and row index
+     Returns: completed claim object with row index
 
 PUT  /api/claims/:rowIndex
      Body: { status, paymentDateReceived?, totalPayment?, insuranceAmount?,
-             clientAmount?, notes?, ... }
+             clientAmount?, notes? }
      Worker recalculates: LagDays, TimeToReceivePayment, ReceivedWeek
-     Action: updates specific row in Claims sheet
      Returns: updated claim object
 
 GET  /api/dashboard
-     Returns: {
-       currentMonth: { sessions, revenueByCliniciam, pending, received, utilizationByCliniciam },
-       sixMonthTrend: [...monthly aggregates],
-       aging: { bucket0_30, bucket31_60, bucket61_90, bucket90plus },
-       payerMix: [...payer revenue breakdown]
-     }
-     Source: computed from Claims sheet + Caseload Trends sheet (for overhead/payroll)
+     Returns: { currentMonth, sixMonthTrend, aging, payerMix }
+     Revenue derived from column R (Total Payment) via c.totalPayment
 
 GET  /api/pay-periods
      Returns: array of { start, end, payDate }
-     Cache response in Worker memory for session duration
 
 GET  /api/caseloads
      Returns: array of { clientId, clinician }
+
+POST /api/maintenance/recalculate-forecasts
+     No body. Fetches all Pending claims, recomputes forecastPaymentDate and
+     forecastWeek using the current calcForecastDate logic (3-tier recency-weighted
+     + payment-day snap), and batch-writes only the rows that changed (columns V and W).
+     Skips Payment Received, Finalized, and Denied claims.
+     Returns: { updated: number, total: number }
 ```
 
 ### CORS Policy
 ```typescript
 const ALLOWED_ORIGINS = [
   'https://admin.claritydelaware.com',
-  /^https:\/\/clarity-admin.*\.pages\.dev$/  // all preview deploys
+  /^https:\/\/clarity-admin.*\.pages\.dev$/
 ];
 ```
-
-### Google Sheets API Authentication in the Worker
-Use JWT-based service account authentication. The Worker signs a JWT using the private key from `GOOGLE_SERVICE_ACCOUNT_KEY`, exchanges it for an access token at `https://oauth2.googleapis.com/token`, then uses that token for Sheets API calls.
-
-Recommended: use the `google-auth-library` pattern or implement the JWT exchange directly with the Web Crypto API (no npm package needed in a Worker). Cache the access token in memory until expiry.
-
----
-
-## App Structure (target)
-
-```
-clarity-admin/
-├── public/
-├── src/
-│   ├── components/
-│   │   ├── layout/
-│   │   │   ├── AppShell.tsx        # Sidebar + topbar + content area
-│   │   │   ├── Sidebar.tsx         # Teal sidebar with nav links
-│   │   │   └── Topbar.tsx          # Page title, user email
-│   │   ├── ui/
-│   │   │   ├── Badge.tsx           # Status badges
-│   │   │   ├── Button.tsx
-│   │   │   ├── Card.tsx
-│   │   │   ├── Input.tsx
-│   │   │   ├── Select.tsx
-│   │   │   └── Table.tsx
-│   │   ├── claims/
-│   │   │   ├── ClaimsTable.tsx
-│   │   │   ├── ClaimsFilters.tsx
-│   │   │   ├── ClaimRow.tsx
-│   │   │   ├── ClaimForm.tsx       # Add new claim
-│   │   │   └── StatusUpdateModal.tsx
-│   │   └── dashboard/
-│   │       ├── MetricCard.tsx
-│   │       ├── RevenueChart.tsx
-│   │       ├── AgingTable.tsx
-│   │       ├── PayerMixChart.tsx
-│   │       └── UtilizationCard.tsx
-│   ├── hooks/
-│   │   ├── useClaims.ts
-│   │   └── useDashboard.ts
-│   ├── lib/
-│   │   ├── api.ts                  # Typed fetch wrappers for Worker endpoints
-│   │   └── utils.ts                # Date helpers, formatters
-│   ├── pages/
-│   │   ├── Dashboard.tsx
-│   │   ├── Claims.tsx
-│   │   └── NewClaim.tsx
-│   ├── types/
-│   │   └── index.ts                # Claim, PayPeriod, DashboardData types
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css                   # Tailwind v4 + @theme tokens
-├── CLAUDE.md                       # This file
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
-
----
-
-## Phase 1B — App Scaffolding (next task)
-
-Build the shell before any data-connected components.
-
-1. **Types** (`src/types/index.ts`) — define `Claim`, `PayPeriod`, `CaseloadEntry`, `DashboardData` TypeScript interfaces matching the column structure above.
-
-2. **API client** (`src/lib/api.ts`) — typed fetch functions for each Worker endpoint. All requests go to `/api/*` (relative path, works in both Pages dev and production via proxy).
-
-3. **AppShell** — sidebar + topbar layout. Sidebar is teal (`#254D54`), fixed width 240px on desktop, slide-out on mobile. Nav items: Dashboard (LayoutDashboard icon), Claims (FileText icon). Active state uses gold left border.
-
-4. **Router setup** (`App.tsx`) — React Router v7 with routes: `/` → redirect to `/dashboard`, `/dashboard`, `/claims`, `/claims/new`.
-
-5. **TanStack Query provider** — wrap app in `QueryClientProvider` with sensible defaults: `staleTime: 5 * 60 * 1000` (5 min), `retry: 2`.
-
-6. **Vite dev proxy** — add to `vite.config.ts` so `/api/*` requests in dev point to the Worker's `*.workers.dev` URL:
-```typescript
-server: {
-  proxy: {
-    '/api': {
-      target: 'https://clarity-admin-api.YOUR_SUBDOMAIN.workers.dev',
-      changeOrigin: true,
-    }
-  }
-}
-```
-
----
-
-## Phase 1C — Claims Module
-
-### List view (desktop)
-Full-width table. Columns: Clinician | Payer | Claim Date | Service Code | Status | Client Amt | Insurance Amt | Total | Notes (truncated). Sortable by Claim Date (default: descending). Paginated at 50 rows.
-
-Filter bar above table: Clinician (dropdown), Payer (dropdown), Status (dropdown), Date range (two date inputs), Service Code (dropdown). "Clear filters" link. Filter state lives in URL query params so the view is bookmarkable.
-
-### List view (mobile)
-Card layout. Each card: top row = Clinician + Payer + Date, second row = Status badge + Total amount. Tap to expand full detail. Filters in a slide-up drawer triggered by a filter icon button.
-
-### Add New Claim form (`/claims/new`)
-Fields in order:
-1. Claim Date (date picker — required)
-2. Clinician (select: Shannon / Jen / Emily — required)
-3. Client ID (text — autopopulate options from Caseloads sheet based on selected Clinician; allow free entry if not found)
-4. Insurance / Payer (select from known payer list — required)
-5. Claim ID (text — optional; SimplePractice claim ID)
-6. Service Code (select from CPT list — required)
-7. Submission Method (select: Manual / Electronic / Cash / Secondary — required)
-8. Status (select — default: Pending)
-9. Client Amount (number — optional; 0 if insurance-only)
-10. Insurance Amount (number — optional)
-11. Notes (textarea — optional)
-
-On submit:
-- Validate required fields
-- POST to `/api/claims`
-- Show derived fields in confirmation (Week, Pay Period, Forecast Payment Date, Stripe Fees)
-- On success: redirect to `/claims` with new row highlighted
-- On error: show inline error, do not clear form
-
-### Inline status update
-Status badge in the table is clickable. Opens a small modal with:
-- New status (select)
-- Payment Date Received (date — required if changing to Payment Received)
-- Total Payment received (number — required if changing to Payment Received)
-- Insurance Amount (number)
-- Notes (textarea)
-Submits PUT to `/api/claims/:rowIndex`.
-
----
-
-## Phase 1D — Dashboard Module
-
-### Metric cards (top row)
-- **Sessions this month** — total + per clinician breakdown (3 sub-values)
-- **Revenue this month** — total billed, by clinician
-- **Pending** — count and dollar total of Pending claims
-- **Received this month** — total payments received this calendar month
-- **Utilization** — per clinician % of target (Shannon/Jen: 25 sessions/week target; Emily: 20 sessions/week target)
-
-Cards use white background with gold left-border accent on the primary metric card.
-
-### Charts
-- **Revenue trend** — Recharts LineChart, last 6 months, one line per clinician. X-axis: month abbreviation. Y-axis: dollars. Teal/gold/muted color per clinician.
-- **Payer mix** — Recharts BarChart showing total payment $ by payer for current month.
-- **Gross margin vs income margin** — Recharts BarChart, last 6 months. Gross margin data sourced from Caseload Trends sheet (requires overhead); income margin computed from Claims.
-
-### Aging summary
-Table: four rows (0–30, 31–60, 61–90, 90+). Columns: bucket label | count | total $. Computed live from Claims where Status = Pending, using days since Claim Date. Highlight 90+ row in red if dollar amount > $0.
-
-### Mobile
-Metric cards stack full-width. Charts render at `min-width: 0` (Recharts needs explicit width management in flex containers — use `ResponsiveContainer`). Aging table is readable at mobile viewport.
 
 ---
 
 ## Business Rules & Guardrails
 
 **HIPAA:**
-- Client IDs throughout this app are hashed tokens (e.g. `fdcdd28fa306771e`), not real names. Never display, store, or transmit real client names.
-- The Worker may not log request bodies that contain client data to Cloudflare's logging infrastructure.
-- Do not use Resend or any email service without a HIPAA BAA for any functionality in this app. Paubox is the approved HIPAA email provider for Clarity.
+- Client IDs are hashed tokens only (e.g. `fdcdd28fa306771e`). Never display, store, or transmit real client names anywhere in this application.
+- The Worker must not log request bodies containing client data to Cloudflare's logging infrastructure.
+- Do not use any email service without a HIPAA BAA. Paubox is the approved provider for Clarity.
 
 **Billing rules:**
-- Health Options (Medicaid) clients cannot be charged no-show fees. If Insurance = "Health Options" and Submission Method = "Cash" or Notes contains "Late Cancellation," flag this in the UI.
-- Evaluation codes 96127 and 96136 were deliberately discontinued in mid-January 2026. If someone tries to submit a new claim with these codes for a date after 1/15/2026, show a warning (not a hard block).
-- The 90785 code is an add-on to 90837 and cannot be billed alone. If Service Code = 90785 and there is no corresponding 90837 claim for the same client/date, show a warning.
+- Health Options (Medicaid) clients cannot be charged no-show fees. If Insurance = "Health Options" and Submission Method = "Cash" or Notes contains "Late Cancellation," show a warning in the UI.
+- Codes 96127 and 96136 were discontinued after 1/15/2026. Show a warning (not a hard block) if submitted for a date after that cutoff.
+- Code 90785 is an add-on to 90837 and cannot be billed alone. Show a warning if submitted without a corresponding 90837 for the same client/date.
 
 **Highmark Health Options:**
-- There is an active contract dispute with HHO. The columns "Insurance Paid (HHO)" and "Over/Under Payment (HHO)" exist to track discrepancies. Do not conflate these columns with the standard Insurance Amount column.
+- Active contract dispute. Columns P and Q (Insurance Paid HHO / Over/Under HHO) track discrepancies. Do not conflate with the standard Insurance Amount column (O).
 
 **Financial distinctions:**
-- Revenue = money generated by session on service-date basis (Insurance Amount + Client Amount billed).
+- Revenue = Total Payment (column R) generated on a service-date basis — the sum of what was billed to client and insurance.
 - Income = funds actually received (Total Payment where Status = Payment Received).
 - Session counts for utilization exclude add-on codes (90785) and evaluation codes (96127/96136).
 
 **Stripe fees:**
-- Stripe fees apply only to client-collected payments (copays, self-pay, late cancellations). They do not apply to insurance reimbursements. Only calculate fees when Client Amount > 0.
+- Apply only to client-collected payments. Do not apply to insurance reimbursements. Only calculate when Client Amount > 0.
+
+---
+
+## Security Policy
+
+**This portal handles protected health information (PHI) and confidential financial data. The following rules are absolute and must never be overridden.**
+
+### Authentication & Access
+- Cloudflare Access is the sole authentication layer. Every route in this application must be behind Access — there are no public routes, no guest views, and no unauthenticated endpoints.
+- Never implement a login UI, session tokens, or any client-side auth logic. If Access is bypassed or misconfigured, the correct response is to fix Access, not to add app-level auth as a fallback.
+- Never add `?public=true`, `?preview=true`, or any bypass parameter that skips authentication.
+
+### Credentials & Secrets
+- The Google service account JSON key must never appear in: source code, git history, environment files (`.env`), build output, client-side bundles, or logs. It lives exclusively as a Cloudflare Worker secret (`GOOGLE_SERVICE_ACCOUNT_KEY`).
+- Never commit `.env` files. The `.gitignore` must always exclude them.
+- Never log secret values, access tokens, or service account emails in Worker console output.
+- If a secret is ever accidentally committed, treat it as compromised: revoke it immediately in Google Cloud Console and generate a new key.
+
+### Data Exposure
+- No data from this portal may ever be rendered on a public URL, embedded in a public iframe, or served without Cloudflare Access enforced upstream.
+- Never add public API endpoints, open CORS headers (`Access-Control-Allow-Origin: *`), or unauthenticated read routes to the Worker.
+- The Worker's CORS allowlist is strict: only `admin.claritydelaware.com` and `clarity-admin-*.pages.dev` preview URLs. Do not expand this without explicit instruction.
+- Never export claim data, client IDs, or financial records to third-party services (analytics, error tracking, AI APIs, etc.) without an executed BAA and explicit approval.
+
+### Client Data
+- Client IDs are hashed tokens. Never attempt to reverse, decode, or display them as names.
+- Never pass client IDs, clinician names, or financial figures into page titles, URL paths, or browser history in a way that could be captured by browser extensions or third-party scripts.
+- Do not add client-side error tracking (Sentry, Datadog, etc.) without confirming HIPAA compliance and BAA.
+
+### Infrastructure
+- Cloudflare Pages and Workers must remain on Cloudflare's infrastructure. Do not migrate to Vercel, Netlify, or any other host without a full security review.
+- Never enable Cloudflare's "development mode" (which bypasses caching rules) in production.
+- The Worker must not make outbound requests to any external service other than `sheets.googleapis.com` and `oauth2.googleapis.com`. Any new external dependency requires explicit approval.
+
+### Code Review
+- Any change that touches auth configuration, CORS policy, Worker secrets handling, or data-fetching logic must be treated as security-sensitive and reviewed carefully before deployment.
+- Do not use `dangerouslySetInnerHTML` anywhere in this application.
 
 ---
 
 ## What Not to Do
 
-- Do not store the Google service account JSON key anywhere in the codebase or git history. It lives only as a Cloudflare Worker environment secret.
+- Do not store the Google service account JSON key anywhere in the codebase or git history.
 - Do not add a database (Cloudflare D1 or otherwise) in Phase 1. The Sheet is the source of truth.
 - Do not make the app publicly accessible. Every route assumes Cloudflare Access is enforced at the edge.
 - Do not implement your own login/auth UI. Cloudflare Access handles it.
 - Do not use `any` types for claim data — use the typed interfaces from `src/types/index.ts`.
 - Do not combine the frontend Pages project and the API Worker into a single deployment. They are separate Cloudflare projects intentionally.
-- Do not use the `clarity-site` (public Astro website) repo for anything related to this admin portal. The repos are completely independent.
-
----
-
-## Pending Items Before Full Development Can Begin
-
-1. **Confirm Cloudflare Pages is connected to GitHub repo** (Step 4) — build should succeed since scaffold is already pushed.
-2. **Set up Cloudflare Access** (Step 5) — application domain should be `clarity-admin-*.pages.dev` for now; update to `admin.claritydelaware.com` after DNS cutover.
-3. **Create and deploy the Worker** (Step 6) — name: `clarity-admin-api`. Add `GOOGLE_SERVICE_ACCOUNT_KEY` and `SPREADSHEET_ID` as secrets before any API calls will work.
-4. **Paste the Spreadsheet ID** into this document where indicated.
-5. **DNS CNAME record** (Step 7) — deferred until DNS migration to Cloudflare completes.
+- Do not use the `clarity-site` (public Astro/WordPress website) repo for anything related to this admin portal. The repos are completely independent.
+- Do not remove or weaken the `num()` currency-string stripping logic in the Worker — Google Sheets returns formatted currency strings that must be cleaned before parsing.

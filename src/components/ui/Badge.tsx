@@ -1,0 +1,36 @@
+import type { ClaimStatus } from '../../types'
+
+const STYLES: Record<ClaimStatus, string> = {
+  'Pending':          'bg-gold text-ink',
+  'Payment Received': 'bg-success text-white',
+  'Finalized':        'bg-muted text-white',
+  'Denied':           'bg-error text-white',
+}
+
+interface Props {
+  status: ClaimStatus
+  onClick?: () => void
+}
+
+export default function Badge({ status, onClick }: Props) {
+  const base = 'inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium font-body whitespace-nowrap'
+  const color = STYLES[status] ?? 'bg-muted text-white'
+  const interactive = onClick
+    ? 'cursor-pointer hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal'
+    : ''
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${base} ${color} ${interactive}`}
+        title="Click to update status"
+      >
+        {status}
+      </button>
+    )
+  }
+
+  return <span className={`${base} ${color}`}>{status}</span>
+}

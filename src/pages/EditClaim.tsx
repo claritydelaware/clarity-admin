@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Loader2, AlertCircle } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, SERVICE_CODES, SUBMISSION_METHODS, CLAIM_STATUSES } from '../types'
-import type { NewClaimInput, Clinician } from '../types'
-import { useCreateClaim, useCaseloads } from '../hooks/useClaims'
-import { formatCurrency } from '../lib/utils'
+import type { Claim, ClaimFullEditInput, Clinician } from '../types'
+import { useClaim, useFullEditClaim, useCaseloads } from '../hooks/useClaims'
+import { formatCurrency, toInputDate } from '../lib/utils'
 
 interface FormValues {
   claimDate: string
@@ -25,19 +25,56 @@ const DISCONTINUED_CODES = ['96127', '96136']
 const DISCONTINUED_AFTER = new Date('2026-01-15')
 const HHO_PAYERS = ['health options']
 
-export default function NewClaim() {
+function mapClaimToFormValues(claim: Claim): FormValues {
+  return {
+    claimDate: toInputDate(claim.claimDate),
+    clinician: claim.clinician,
+    clientId: claim.clientId ?? '',
+    insurance: claim.insurance,
+    claimId: claim.claimId ?? '',
+    serviceCode: claim.serviceCode,
+    submissionMethod: claim.submissionMethod,
+    status: claim.status,
+    clientAmount: claim.clientAmount ? String(claim.clientAmount) : '',
+    insuranceAmount: claim.insuranceAmount ? String(claim.insuranceAmount) : '',
+    notes: claim.notes ?? '',
+  }
+}
+
+export default function EditClaim() {
+  const { rowIndex: rowIndexStr } = useParams<{ rowIndex: string }>()
+  const rowIndex = parseInt(rowIndexStr ?? '0', 10)
   const navigate = useNavigate()
-  const { mutate, isPending, isError, error, data: created } = useCreateClaim()
+
+  const { data: claim, isLoading, isError, error } = useClaim(rowIndex)
+  const { mutate, isPending, isError: isMutateError, error: mutateError } = useFullEditClaim()
   const { data: caseloads } = useCaseloads()
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<FormValues>({
     defaultValues: {
-      status: 'Pending',
-      submissionMethod: 'Electronic',
-      serviceCode: '90837',
+      claimDate: '',
       clinician: 'Shannon',
+      clientId: '',
+      insurance: '',
+      claimId: '',
+      serviceCode: '90837',
+      submissionMethod: 'Electronic',
+      status: 'Pending',
+      clientAmount: '',
+      insuranceAmount: '',
+      notes: '',
     },
   })
+
+  useEffect(() => {
+    if (claim && !isDirty) reset(mapClaimToFormValues(claim))
+  }, [claim])
 
   const clinician = watch('clinician')
   const claimDate = watch('claimDate')
@@ -46,12 +83,10 @@ export default function NewClaim() {
   const clientAmountRaw = watch('clientAmount')
   const submissionMethod = watch('submissionMethod')
 
-  // Derived client IDs for selected clinician
   const clientOptions = caseloads
     ?.filter(e => e.clinician === clinician)
     .map(e => e.clientId) ?? []
 
-  // Business rule warnings
   const isDiscontinuedCode = DISCONTINUED_CODES.includes(serviceCode) &&
     claimDate && new Date(claimDate) > DISCONTINUED_AFTER
 
@@ -61,30 +96,44 @@ export default function NewClaim() {
   const clientAmount = parseFloat(clientAmountRaw) || 0
   const stripeFees = clientAmount > 0 ? Math.round((clientAmount * 0.029 + 0.3) * 100) / 100 : 0
 
-  // Redirect on success with new row highlighted
-  useEffect(() => {
-    if (created) navigate('/claims', { state: { newRowIndex: created.rowIndex } })
-  }, [created, navigate])
-
   const onSubmit = (values: FormValues) => {
-    mutate({
+    const data: ClaimFullEditInput = {
       claimDate: values.claimDate,
       clinician: values.clinician as Clinician,
       clientId: values.clientId || undefined,
       insurance: values.insurance,
       claimId: values.claimId || undefined,
-      serviceCode: values.serviceCode as NewClaimInput['serviceCode'],
-      submissionMethod: values.submissionMethod as NewClaimInput['submissionMethod'],
-      status: (values.status || 'Pending') as NewClaimInput['status'],
+      serviceCode: values.serviceCode as ClaimFullEditInput['serviceCode'],
+      submissionMethod: values.submissionMethod as ClaimFullEditInput['submissionMethod'],
+      status: values.status as ClaimFullEditInput['status'],
       clientAmount: values.clientAmount ? parseFloat(values.clientAmount) : 0,
       insuranceAmount: values.insuranceAmount ? parseFloat(values.insuranceAmount) : 0,
       notes: values.notes || undefined,
-    })
+    }
+    mutate({ rowIndex, data }, { onSuccess: () => navigate('/claims') })
   }
 
   const labelClass = 'block text-xs font-medium text-muted font-body mb-1'
   const inputClass = 'w-full h-9 rounded border border-gray-200 px-3 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent'
   const errorClass = 'text-xs text-error mt-1 font-body'
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-muted">
+        <Loader2 size={20} className="animate-spin mr-2" />
+        <span className="text-sm font-body">Loading claim…</span>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
+        <AlertCircle size={16} className="shrink-0" />
+        {(error as Error).message}
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl">
@@ -96,7 +145,16 @@ export default function NewClaim() {
         Back to Claims
       </Link>
 
-      <h1 className="font-heading text-xl font-semibold text-ink mb-6">New Claim</h1>
+      <div className="mb-6">
+        <h1 className="font-heading text-xl font-semibold text-ink">Edit Claim</h1>
+        {claim && (
+          <p className="text-xs text-muted font-body mt-1">
+            {claim.clinician} · {claim.claimDate}
+            {claim.claimId && ` · ${claim.claimId}`}
+            {' · '}Row {rowIndex}
+          </p>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
 
@@ -124,13 +182,13 @@ export default function NewClaim() {
           <label className={labelClass}>Client ID</label>
           <input
             type="text"
-            list="client-options"
+            list="client-options-edit"
             {...register('clientId')}
             className={inputClass}
             placeholder="Start typing or select…"
             autoComplete="off"
           />
-          <datalist id="client-options">
+          <datalist id="client-options-edit">
             {clientOptions.map(id => <option key={id} value={id} />)}
           </datalist>
           <p className="text-xs text-muted font-body mt-1">Hashed token — never a real name</p>
@@ -240,10 +298,10 @@ export default function NewClaim() {
           </div>
         )}
 
-        {isError && (
+        {isMutateError && (
           <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-error font-body">
             <AlertTriangle size={15} className="shrink-0" />
-            {(error as Error).message}
+            {(mutateError as Error).message}
           </div>
         )}
 
@@ -260,7 +318,7 @@ export default function NewClaim() {
             className="inline-flex items-center gap-2 px-5 py-2 text-sm font-body bg-teal text-white rounded hover:bg-teal-mid transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isPending && <Loader2 size={14} className="animate-spin" />}
-            {isPending ? 'Saving…' : 'Save Claim'}
+            {isPending ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </form>
