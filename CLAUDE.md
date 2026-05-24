@@ -194,6 +194,35 @@ Light background (cream/white) content area. White sidebar with right border. Go
 - All test Date construction uses `new Date(year, month, day)` local time — never ISO string (UTC parse causes day-of-week mismatch)
 - `tsconfig.json` has `skipLibCheck: true` to resolve `@cloudflare/workers-types` vs `tinybench` conflict
 
+### Phase 3 — Analytics, Inline Editing, Capacity Alerts, Forecast Accuracy ✅ Complete (2026-05-24)
+
+**Worker version deployed:** `1f467e45-17bc-4096-a391-7df55469f0f3`
+
+| Feature | Details |
+|---|---|
+| Analytics page | `Analytics.tsx` at `/analytics`; 4 sections: Financial Performance, Clinician Productivity, Revenue Per Session, Collection Efficiency; powered by Caseload Trends sheet |
+| Capacity utilization alert | Dismissible banner on Dashboard; checks 2 most recent complete months from Caseload Trends; yellow ≥95%, red ≥100%; `useState` dismiss (session only) |
+| Forecast accuracy section | Collapsible panel at bottom of `/forecast`; average accuracy stat, Forecast vs Actual line chart (last 12 settled weeks), 8-row table with green/red difference coloring |
+| Inline cell editing | Click-to-edit on 6 fields in Claims table: Notes, Insurance Amount, Client Amount, Service Code, Submission Method; blur/Enter commits, Escape reverts; spinner during in-flight PATCH; mobile bottom-sheet modal variant |
+| Emily target corrected | Weekly session target updated from 20 → 10 in Worker and Dashboard subtitle |
+
+**New Worker endpoints:**
+- `GET /api/analytics/caseload-trends` — parses Caseload Trends sheet (cols A–AO); handles both Sheets serial dates and formatted strings; returns typed `CaseloadTrendMonth[]` sorted ascending
+- `GET /api/analytics/forecast-accuracy` — parses Actual vs Forecast sheet (cols A–E); returns `ForecastAccuracyWeek[]` sorted ascending
+- `PATCH /api/claims/:rowIndex` — single-field inline update; reuses `updateClaim` handler (already handles partial bodies); CORS updated to include PATCH
+
+**New files:**
+- `src/pages/Analytics.tsx` — new page
+- `src/hooks/useAnalytics.ts` — `useCaseloadTrends()` + `useForecastAccuracy()` hooks
+
+**Critical implementation details:**
+- `numNull()` helper in Worker strips `$`, `,`, `%` and returns `null` for empty/unparseable — used for all Caseload Trends fields
+- `parseSheetDate()` in Worker handles both Google Sheets serial numbers (days since 1899-12-30) and formatted date strings
+- Util percentages in Caseload Trends sheet are stored as decimals (0.85 = 85%) — multiply by 100 before display
+- Capacity alert compares `avgUtilPct >= 1.0` / `>= 0.95` against the decimal value; filters out current incomplete month before taking last 2
+- `useCaseloadTrends` staleTime is 5 min (not Infinity) — data refreshes naturally on Dashboard and Analytics page visits
+- Collection Efficiency chart uses Recharts `<Cell>` for per-bar color (not `fill` prop on `<Bar>`) — bars exceeding ±$2,000 render in error red
+
 ### Pending Infrastructure
 
 - **DNS cutover** — point `admin.claritydelaware.com` CNAME to Pages once DNS migrates to Cloudflare
@@ -213,29 +242,31 @@ clarity-admin/
 │   ├── components/
 │   │   ├── layout/
 │   │   │   ├── AppShell.tsx
-│   │   │   ├── Sidebar.tsx             (white bg, teal/gold active states; Phase 2: Forecast nav item)
+│   │   │   ├── Sidebar.tsx             (white bg, teal/gold active states; Phase 3: Analytics nav item)
 │   │   │   └── Topbar.tsx
 │   │   ├── ui/
 │   │   │   └── Badge.tsx               (status badges, clickable variant)
 │   │   └── claims/
-│   │       ├── ClaimsTable.tsx         (desktop table + mobile cards; Phase 2: Edit link column)
-│   │       ├── ClaimsFilters.tsx       (URL-param-driven filter bar; Phase 2: search input)
+│   │       ├── ClaimsTable.tsx         (Phase 3: InlineEditCell + MobileEditModal for 6 fields)
+│   │       ├── ClaimsFilters.tsx       (URL-param-driven filter bar; search input)
 │   │       └── StatusUpdateModal.tsx
 │   ├── hooks/
-│   │   ├── useClaims.ts                (Phase 2: +useClaim, +useFullEditClaim)
+│   │   ├── useClaims.ts                (Phase 3: +useInlineEditClaim, +InlineEditField type)
+│   │   ├── useAnalytics.ts             (Phase 3: new — useCaseloadTrends, useForecastAccuracy)
 │   │   └── useDashboard.ts
 │   ├── lib/
-│   │   ├── api.ts                      (Phase 2: +get, +fullEdit, +exportRaw; search strip)
-│   │   └── utils.ts                    (Phase 2: +toInputDate, +downloadCsv)
+│   │   ├── api.ts                      (Phase 3: +claims.patch(), +analytics.caseloadTrends/forecastAccuracy)
+│   │   └── utils.ts
 │   ├── pages/
-│   │   ├── Dashboard.tsx
-│   │   ├── Claims.tsx                  (Phase 2: client-side search + Export CSV button)
+│   │   ├── Dashboard.tsx               (Phase 3: capacity alert banner + useCapacityAlerts hook)
+│   │   ├── Analytics.tsx               (Phase 3: new — 4-section analytics page)
+│   │   ├── Claims.tsx
 │   │   ├── NewClaim.tsx
-│   │   ├── EditClaim.tsx               (Phase 2: new)
-│   │   └── Forecast.tsx                (Phase 2: new)
+│   │   ├── EditClaim.tsx
+│   │   └── Forecast.tsx                (Phase 3: +ForecastAccuracySection collapsible)
 │   ├── types/
-│   │   └── index.ts                    (Phase 2: +ClaimFullEditInput)
-│   ├── App.tsx                         (Phase 2: +EditClaim and Forecast routes)
+│   │   └── index.ts                    (Phase 3: +CaseloadTrendMonth, +ForecastAccuracyWeek)
+│   ├── App.tsx                         (Phase 3: +Analytics route)
 │   ├── main.tsx
 │   └── index.css                       (Tailwind v4 @theme tokens)
 ├── CLAUDE.md
@@ -396,6 +427,22 @@ POST /api/maintenance/recalculate-forecasts
      + payment-day snap), and batch-writes only the rows that changed (columns V and W).
      Skips Payment Received, Finalized, and Denied claims.
      Returns: { updated: number, total: number }
+
+PATCH /api/claims/:rowIndex
+     Body: any subset of claim fields (same shape as PUT).
+     Reuses PUT handler — reads current row, applies only supplied fields, writes back.
+     Used by inline cell editing in ClaimsTable. Recalculates derived fields the same
+     way PUT does (Stripe fees when clientAmount changes, etc.).
+     Returns: updated claim object
+
+GET  /api/analytics/caseload-trends
+     No params. Reads Caseload Trends!A:AO. Filters rows where Month is null.
+     Returns: CaseloadTrendMonth[] sorted ascending by month (ISO date strings).
+     Util percentages are returned as decimals (0.85 = 85%).
+
+GET  /api/analytics/forecast-accuracy
+     No params. Reads 'Actual vs Forecast'!A:E. Filters rows where both Forecast
+     and Actual are null. Returns: ForecastAccuracyWeek[] sorted ascending by weekStart.
 ```
 
 ### CORS Policy
