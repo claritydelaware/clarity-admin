@@ -223,6 +223,63 @@ Light background (cream/white) content area. White sidebar with right border. Go
 - `useCaseloadTrends` staleTime is 5 min (not Infinity) — data refreshes naturally on Dashboard and Analytics page visits
 - Collection Efficiency chart uses Recharts `<Cell>` for per-bar color (not `fill` prop on `<Bar>`) — bars exceeding ±$2,000 render in error red
 
+### Phase 4 — UI Refresh, Quarterly Analytics, Overhead, Pay Periods, Staff, Payer Performance ✅ Complete (2026-05-24)
+
+**Worker version deployed:** `387d8cae-f6c5-458d-913b-f4963610cfe2`
+
+| Feature | Details |
+|---|---|
+| Heading font → Fraunces | `index.html` Google Fonts link updated; `--font-heading` CSS variable changed in `index.css` |
+| Skeleton loading states | `Skeleton.tsx` — `SkeletonMetricCards`, `SkeletonTable`, `SkeletonChart`, `SkeletonForecastGroups`; used in Dashboard, Claims, Forecast |
+| Toast notifications | `ToastContext.tsx` — `ToastProvider` + `useToast()` hook; success/error auto-dismiss (3s); wired to all mutations in `useClaims.ts` |
+| Density toggle | Normal/compact row height on Claims table; persisted in `localStorage` under `claimsTableDensity` |
+| Dashboard date windowing | `useDateWindow.ts` — MTD/QTD/YTD/Last Month/Last Quarter selector; `DateWindowSelector` component; `DeltaBadge` shows % change vs prior period; both current + prior period returned by Worker |
+| Quarterly Analytics section | `QuarterlySection` in `Analytics.tsx` — ComposedChart (revenue/income/profit bars + margin % line overlay); per-quarter summary table; warnings for months missing overhead |
+| Payer Performance section | `PayerPerformanceSection` in `Analytics.tsx` — sortable table; oldest pending ≥90d → red; collection rate <80% → amber |
+| Overhead page | `Overhead.tsx` — reads `Xero_Import` tab (no SheetJS/file upload); preview panel with confirm/discard; history table; edit modal |
+| Pay Period Summary page | `PayPeriodSummary.tsx` — Partner tab (salary view, Shannon + Jen side-by-side) + Emily tab (hourly with admin hours/bonus, sparkline of prior 4 margins, payroll record save) |
+| Staff page | `Staff.tsx` — list with license expiry warnings; `StaffDetail.tsx` — NPI/hire/license info + editable compensation rates |
+| Forecast quarterly rollup | Collapsible banner on `/forecast` showing current-quarter forecast total, pending count, overdue count |
+| Saved filter presets | Up to 8 presets persisted in `localStorage`; pill UI above filter bar; apply/delete |
+
+**New Worker endpoints:**
+- `GET /api/dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD` — accepts optional date range; returns `{ currentPeriod, priorPeriod, sixMonthTrend, aging, payerMix }`
+- `GET /api/analytics/quarterly-summary` — groups claims by calendar quarter, joins Overhead for margin; returns `QuarterlySummary[]`
+- `GET /api/analytics/payer-performance` — aggregates per payer: avg days to pay, collection rate, pending count + oldest pending; returns `PayerPerformance[]`
+- `GET /api/overhead` — reads Overhead sheet; returns `OverheadEntry[]`
+- `POST /api/overhead/import` — reads `Xero_Import` tab, returns `XeroImportPreview` (no file upload — Bruce copies Xero P&L export into the tab manually)
+- `POST /api/overhead/save` — writes confirmed import to Overhead sheet
+- `PUT /api/overhead/:month` — updates a single overhead row
+- `GET /api/staff` — reads Staff sheet; returns `StaffMember[]`
+- `GET /api/staff/:id` — single staff member
+- `POST /api/staff` — create staff row
+- `PUT /api/staff/:id` — update staff row (compensation, license dates, etc.)
+- `GET /api/pay-periods/list` — reads cols A–F from Pay Periods; returns salary + hourly arrays
+- `GET /api/pay-periods/summary?type=salary|hourly&periodStart=YYYY-MM-DD` — returns `PartnerPeriodSummary` or `EmilyPayPeriodSummary`
+- `POST /api/pay-periods/payroll-record` — writes to Payroll_Records sheet
+
+**New files (frontend):**
+- `src/components/ui/Skeleton.tsx` — skeleton loading components
+- `src/context/ToastContext.tsx` — toast notification context + container
+- `src/hooks/useDateWindow.ts` — date window state with localStorage persistence
+- `src/hooks/useQuarterlySummary.ts` — queries `/api/analytics/quarterly-summary`
+- `src/hooks/usePayerPerformance.ts` — queries `/api/analytics/payer-performance`
+- `src/hooks/useStaff.ts` — CRUD hooks for Staff with toast wiring
+- `src/hooks/useOverhead.ts` — import/save/update hooks for Overhead with toast wiring
+- `src/hooks/usePayPeriodSummary.ts` — pay period list + summary + payroll record save
+- `src/pages/Overhead.tsx` — overhead management page
+- `src/pages/PayPeriodSummary.tsx` — pay period summary with partner + Emily tabs
+- `src/pages/Staff.tsx` — staff list page
+- `src/pages/StaffDetail.tsx` — staff detail + compensation editing page
+
+**Critical implementation details:**
+- Overhead import reads `Xero_Import` tab in the Claim Tracking spreadsheet instead of using SheetJS (avoids Worker 1MB bundle limit)
+- `computePeriodMetrics()` extracted as a pure Worker function; called twice (current + prior) for dashboard date windowing
+- `useDashboard` queryKey includes `from` and `to` so different date windows never share stale cache
+- Badge's `onClick` prop updated to `React.MouseEventHandler<HTMLButtonElement>` so ClaimsTable can call `e.stopPropagation()` before opening the status modal
+- All Recharts `formatter` callbacks typed as `(v: unknown) => ...` with `v as number` cast internally — Recharts `ValueType` is `number | string | undefined | null`
+- `localStorage` keys in use: `dashboardDateWindow`, `claimsTableDensity`, `claimsFilterPresets`
+
 ### Pending Infrastructure
 
 - **DNS cutover** — point `admin.claritydelaware.com` CNAME to Pages once DNS migrates to Cloudflare
@@ -241,36 +298,49 @@ clarity-admin/
 ├── src/
 │   ├── components/
 │   │   ├── layout/
-│   │   │   ├── AppShell.tsx
-│   │   │   ├── Sidebar.tsx             (white bg, teal/gold active states; Phase 3: Analytics nav item)
+│   │   │   ├── AppShell.tsx            (Phase 4: wraps children with ToastProvider)
+│   │   │   ├── Sidebar.tsx             (Phase 4: +Pay Periods, Overhead, Staff nav items)
 │   │   │   └── Topbar.tsx
 │   │   ├── ui/
-│   │   │   └── Badge.tsx               (status badges, clickable variant)
+│   │   │   ├── Badge.tsx               (Phase 4: onClick typed as MouseEventHandler)
+│   │   │   └── Skeleton.tsx            (Phase 4: new — SkeletonMetricCards, SkeletonTable, SkeletonChart, SkeletonForecastGroups)
 │   │   └── claims/
-│   │       ├── ClaimsTable.tsx         (Phase 3: InlineEditCell + MobileEditModal for 6 fields)
-│   │       ├── ClaimsFilters.tsx       (URL-param-driven filter bar; search input)
+│   │       ├── ClaimsTable.tsx         (Phase 3: InlineEditCell + MobileEditModal; Phase 4: compact prop)
+│   │       ├── ClaimsFilters.tsx       (Phase 4: saved filter presets via localStorage)
 │   │       └── StatusUpdateModal.tsx
+│   ├── context/
+│   │   └── ToastContext.tsx            (Phase 4: new — toast provider + useToast hook)
 │   ├── hooks/
-│   │   ├── useClaims.ts                (Phase 3: +useInlineEditClaim, +InlineEditField type)
-│   │   ├── useAnalytics.ts             (Phase 3: new — useCaseloadTrends, useForecastAccuracy)
-│   │   └── useDashboard.ts
+│   │   ├── useClaims.ts                (Phase 4: toast wired to all mutations)
+│   │   ├── useAnalytics.ts             (Phase 3: useCaseloadTrends, useForecastAccuracy)
+│   │   ├── useDashboard.ts             (Phase 4: accepts from/to params)
+│   │   ├── useDateWindow.ts            (Phase 4: new — MTD/QTD/YTD/Last Month/Last Quarter)
+│   │   ├── useOverhead.ts              (Phase 4: new — import/save/update overhead)
+│   │   ├── usePayPeriodSummary.ts      (Phase 4: new — list, partner/emily summary, payroll record save)
+│   │   ├── usePayerPerformance.ts      (Phase 4: new — payer performance analytics)
+│   │   ├── useQuarterlySummary.ts      (Phase 4: new — quarterly revenue/margin summary)
+│   │   └── useStaff.ts                 (Phase 4: new — staff CRUD)
 │   ├── lib/
-│   │   ├── api.ts                      (Phase 3: +claims.patch(), +analytics.caseloadTrends/forecastAccuracy)
+│   │   ├── api.ts                      (Phase 4: +api.staff.*, api.overhead.*, api.payPeriodsFull.*, api.analytics.quarterlySummary/payerPerformance; dashboard accepts date range)
 │   │   └── utils.ts
 │   ├── pages/
-│   │   ├── Dashboard.tsx               (Phase 3: capacity alert banner + useCapacityAlerts hook)
-│   │   ├── Analytics.tsx               (Phase 3: new — 4-section analytics page)
-│   │   ├── Claims.tsx
+│   │   ├── Dashboard.tsx               (Phase 4: date window selector + delta badges + skeleton loading)
+│   │   ├── Analytics.tsx               (Phase 4: +QuarterlySection, +PayerPerformanceSection)
+│   │   ├── Claims.tsx                  (Phase 4: density toggle + skeleton loading)
 │   │   ├── NewClaim.tsx
 │   │   ├── EditClaim.tsx
-│   │   └── Forecast.tsx                (Phase 3: +ForecastAccuracySection collapsible)
+│   │   ├── Forecast.tsx                (Phase 4: quarterly rollup banner + toast on recalculate)
+│   │   ├── Overhead.tsx                (Phase 4: new)
+│   │   ├── PayPeriodSummary.tsx        (Phase 4: new)
+│   │   ├── Staff.tsx                   (Phase 4: new)
+│   │   └── StaffDetail.tsx             (Phase 4: new)
 │   ├── types/
-│   │   └── index.ts                    (Phase 3: +CaseloadTrendMonth, +ForecastAccuracyWeek)
-│   ├── App.tsx                         (Phase 3: +Analytics route)
+│   │   └── index.ts                    (Phase 4: +DateWindow, +DashboardPeriodMetrics, +QuarterlySummary, +OverheadEntry, +XeroImportPreview, +SalaryPayPeriod, +HourlyPayPeriod, +PartnerPeriodSummary, +EmilyPayPeriodSummary, +PayerPerformance, +StaffMember)
+│   ├── App.tsx                         (Phase 4: +overhead, pay-periods, staff, staff/:id routes)
 │   ├── main.tsx
-│   └── index.css                       (Tailwind v4 @theme tokens)
+│   └── index.css                       (Phase 4: --font-heading changed to Fraunces)
 ├── CLAUDE.md
-├── index.html
+├── index.html                          (Phase 4: Fraunces added to Google Fonts link)
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
