@@ -7,4 +7,12 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://clarity-admin-api.bruce-5f2.workers.dev',
+        changeOrigin: true,
+      },
+    },
+  },
 })

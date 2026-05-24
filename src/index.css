@@ -10,20 +10,15 @@
   --color-gold-dark:  #C9922A;
   --color-gold-tint:  #FDF3D6;
   --color-cream:      #F9F7F4;
-  --color-white:      #FFFFFF;
+  --color-ink:        #1A1A1A;
+  --color-muted:      #6B7280;
+  --color-success:    #16A34A;
+  --color-error:      #DC2626;
 
-  /* Semantic text */
-  --color-text-primary: #1A1A1A;
-  --color-text-muted:   #6B7280;
-
-  /* Status colors */
-  --color-success: #16A34A;
-  --color-error:   #DC2626;
-
-  /* Typography */
-  --font-family-heading: 'Playfair Display', serif;
-  --font-family-body:    'DM Sans', sans-serif;
-  --font-family-accent:  'Lora', serif;
+  /* Typography — must use --font-* for Tailwind v4 font-{name} utilities */
+  --font-heading: 'Playfair Display', serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-accent:  'Lora', serif;
 }
 
 *, *::before, *::after {
@@ -32,8 +27,8 @@
 
 body {
   margin: 0;
-  font-family: var(--font-family-body);
+  font-family: var(--font-body);
   background-color: var(--color-cream);
-  color: var(--color-text-primary);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
