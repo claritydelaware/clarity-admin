@@ -407,6 +407,35 @@ Light background (cream/white) content area. White sidebar with right border. Go
 2. Add Shannon's FL and PA licenses via Licenses section in her StaffDetail
 3. Create `Payroll_Submissions` IMPORTRANGE tab in Claim Tracking workbook (pointing to Emily's Google Form responses sheet)
 
+### Phase 6 — Claims Page QoL Enhancements ✅ Complete (2026-05-25)
+
+**Worker version deployed:** `43049172-b3aa-496f-b2b4-aaab9b2357ac`
+
+**No new Worker endpoints. No new Google Sheets columns. No new frontend files.**
+
+| Feature | Details |
+|---|---|
+| Profile link auto-population | `claimToRow()` in Worker now writes `https://secure.simplepractice.com/clients/{clientId}` into column A on every row write; empty string when `clientId` is blank |
+| New Claim form defaults | `claimDate` defaults to today (local date, string-split — no UTC shift); `submissionMethod` defaults to `'Manual'` |
+| Client ID auto-fill | `watch('clientId')` + `useEffect` in `NewClaim.tsx`; Source 1: clinician from Caseloads; Source 2: insurance/serviceCode/submissionMethod/clientAmount from most recent matching claim in TanStack Query cache; auto-filled fields render with `bg-blue-50` + "Auto-filled" label |
+| Claim ID column | Second desktop column (after profile link icon, before Clinician); monospace ID text + `Copy` icon → swaps to `Check` for 1500ms; blank rows show `—`; included in mobile expanded card with same copy behavior |
+| Color-coded payer badges | `getPayerStyle(payer)` in `utils.ts` (exact match before prefix); `PayerBadge` component exported from `Badge.tsx`; inline styles (not Tailwind arbitrary values) per Tailwind v4 CSS-first setup; wired into desktop and mobile card |
+
+**Modified files:**
+| File | Change |
+|---|---|
+| `clarity-admin-api/src/index.ts` | `claimToRow()` index 0: profile link URL derived from `clientId` |
+| `src/pages/NewClaim.tsx` | `todayInputDate()` helper; `useClaims` import; `setValue` from `useForm`; `clientIdValue` watch; auto-fill `useEffect`; `autoFilledFields` state; `inputAutoClass()` + `autoLabel()` helpers applied to 5 fields |
+| `src/components/claims/ClaimsTable.tsx` | `Copy`/`Check` lucide imports; `PayerBadge` import; `copiedRowIndex` state; `handleCopyClaimId()`; Claim ID column header + cell; `colSpan` 12→13; payer column uses `<PayerBadge>`; mobile card: local `copiedId` state, Claim ID row, payer uses `<PayerBadge>` |
+| `src/lib/utils.ts` | `PAYER_EXACT_COLORS` map + `getPayerStyle()` exported |
+| `src/components/ui/Badge.tsx` | `getPayerStyle` import; `PayerBadge` named export |
+
+**Critical implementation details:**
+- `getPayerStyle` evaluates exact matches before prefix matches — prevents `"United"` color from accidentally applying to `"United-MA"`
+- Copy feedback uses `copiedRowIndex` (desktop table) vs local `copiedId` bool (mobile card) — mobile card is a separate component instance
+- Auto-fill `clientAmount` uses `String(recent.clientAmount)` — `FormValues.clientAmount` is a string type for number input
+- `useClaims()` in `NewClaim.tsx` with no filter fetches all claims; already warm in cache when navigating from Claims page
+
 ### Pending Infrastructure
 
 - **DNS cutover** — point `admin.claritydelaware.com` CNAME to Pages once DNS migrates to Cloudflare
