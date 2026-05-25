@@ -315,6 +315,45 @@ Light background (cream/white) content area. White sidebar with right border. Go
 - Multi-select URL param is comma-separated: `?status=Pending,Finalized`; empty string = no status filter
 - `localStorage` key added: `claimsViewMode` (`'active'` | `'all'`, default `'active'`)
 
+### Phase 5 — Bug Fixes & Staff CRUD ✅ Complete (2026-05-24)
+
+**Worker version deployed:** `3bad7f88-5201-48e5-acd1-7aef0ed97558`
+
+| Bug / Feature | Details |
+|---|---|
+| Bug 4: Staff tab crash | `getStaff` / `getStaffById` wrapped in try/catch → return `[]` / 404 when tab absent (mirrors `getOverhead` pattern) |
+| Bug 4: createStaff tab bootstrap | Auto-creates `Staff` tab + writes header row on first call; 409 on duplicate ID |
+| Bug 4: Pay Periods silent failure | `getPayPeriodSummary` — added `.catch(() => [])` to the `Staff!A:O` read in `Promise.all` (same pattern already applied to `Payroll_Records`) |
+| Bug 1: `Payment Pending` status | Added to Worker `ClaimStatus` union, frontend `CLAIM_STATUSES` array (position: after `Pending`); badge color `bg-[#d9ead3] text-ink` (pre-existing, committed now); `recalculateForecasts` now processes `Pending`, `Payment Pending`, and `Deductible` |
+| Bug 2: Pay Periods error state | `PartnerTab` and `EmilyTab` now show a red error banner when `usePartnerSummary` / `useEmilySummary` fails |
+| Bug 3: Forecast shows archived | `Forecast.tsx` `weeks` useMemo + `QuarterlyRollup` overdue filter both guarded with `!isArchived(c)` |
+| Staff CRUD: NewStaff page | Full-page form at `/staff/new`; generates UUID client-side; redirects to `/staff/:id` on success |
+| Staff CRUD: StaffDetail expanded | Profile panel (Name, Role, NPI, License Type/Number/State/Expiration, Hire Date, Active toggle) now editable; single Save button covers both panels |
+| Staff CRUD: navigation | `Staff.tsx` `+ Add Staff` button now navigates to `/staff/new` via `useNavigate`; `AddStaffModal` removed |
+
+**No new Worker endpoints or Google Sheets columns.**
+
+**New files (frontend):**
+- `src/pages/NewStaff.tsx` — full-page staff creation form
+
+**Modified files:**
+| File | Change |
+|---|---|
+| `clarity-admin-api/src/index.ts` | `ClaimStatus` type expanded; `getStaff`/`getStaffById`/`createStaff` resilient; `getPayPeriodSummary` catch on Staff read; `recalculateForecasts` active-status filter |
+| `src/types/index.ts` | `CLAIM_STATUSES` expanded with `'Payment Pending'` |
+| `src/components/ui/Badge.tsx` | Committed pre-existing `'Payment Pending'` badge color |
+| `src/pages/Forecast.tsx` | `isArchived` imported; applied to `weeks` filter and `QuarterlyRollup.overdue` |
+| `src/pages/PayPeriodSummary.tsx` | `isError`/`error` destructured in `PartnerTab` and `EmilyTab`; error banner added |
+| `src/pages/Staff.tsx` | `showAdd` state + `AddStaffModal` removed; `+ Add Staff` uses `useNavigate('/staff/new')` |
+| `src/pages/StaffDetail.tsx` | All profile fields editable; `active` toggle; save button moved outside panels |
+| `src/App.tsx` | `/staff/new` route added before `/staff/:id` |
+
+**Critical implementation details:**
+- Staff tab header row columns match `staffToRow()` order: `id, name, role, npi, licenseType, licenseNumber, licenseState, licenseExpiration, hireDate, compensationType, annualSalary, sessionRate, adminHourlyRate, active, notes`
+- Worker `getStaff()` filters `s.active === true` — inactive staff are hidden from the list (but `getStaffById` returns them for editing)
+- `StaffDetail.tsx` date inputs receive ISO `YYYY-MM-DD` directly from Worker's `parseSheetDate()` — no client-side conversion needed
+- After deploying, use the portal to add Shannon, Jen, and Emily — the Staff tab auto-creates on the first submission
+
 ### Pending Infrastructure
 
 - **DNS cutover** — point `admin.claritydelaware.com` CNAME to Pages once DNS migrates to Cloudflare
@@ -337,7 +376,7 @@ clarity-admin/
 │   │   │   ├── Sidebar.tsx             (Phase 4: +Pay Periods, Overhead, Staff nav items)
 │   │   │   └── Topbar.tsx
 │   │   ├── ui/
-│   │   │   ├── Badge.tsx               (Phase 4: onClick typed as MouseEventHandler; Phase 4.5: Deductible + Sent to Secondary colors)
+│   │   │   ├── Badge.tsx               (Phase 4: onClick typed as MouseEventHandler; Phase 4.5: Deductible + Sent to Secondary; Phase 5: Payment Pending color committed)
 │   │   │   └── Skeleton.tsx            (Phase 4: new — SkeletonMetricCards, SkeletonTable, SkeletonChart, SkeletonForecastGroups)
 │   │   └── claims/
 │   │       ├── ClaimsTable.tsx         (Phase 3: InlineEditCell + MobileEditModal; Phase 4: compact prop; Phase 4.5: compound sort, profile link column, expanded sortable cols)
@@ -364,14 +403,15 @@ clarity-admin/
 │   │   ├── Claims.tsx                  (Phase 4: density toggle + skeleton loading; Phase 4.5: Active/All toggle, archive filter, client-side status filter)
 │   │   ├── NewClaim.tsx
 │   │   ├── EditClaim.tsx
-│   │   ├── Forecast.tsx                (Phase 4: quarterly rollup banner + toast on recalculate)
+│   │   ├── Forecast.tsx                (Phase 4: quarterly rollup banner + toast on recalculate; Phase 5: isArchived filter on weeks + QuarterlyRollup overdue)
 │   │   ├── Overhead.tsx                (Phase 4: new)
-│   │   ├── PayPeriodSummary.tsx        (Phase 4: new)
-│   │   ├── Staff.tsx                   (Phase 4: new)
-│   │   └── StaffDetail.tsx             (Phase 4: new)
+│   │   ├── PayPeriodSummary.tsx        (Phase 4: new; Phase 5: error banners in PartnerTab + EmilyTab)
+│   │   ├── Staff.tsx                   (Phase 4: new; Phase 5: AddStaffModal removed, navigates to /staff/new)
+│   │   ├── StaffDetail.tsx             (Phase 4: new; Phase 5: profile panel fully editable, active toggle, save button outside panels)
+│   │   └── NewStaff.tsx               (Phase 5: new — full-page staff creation form)
 │   ├── types/
-│   │   └── index.ts                    (Phase 4: +DateWindow, +DashboardPeriodMetrics, +QuarterlySummary, +OverheadEntry, +XeroImportPreview, +SalaryPayPeriod, +HourlyPayPeriod, +PartnerPeriodSummary, +EmilyPayPeriodSummary, +PayerPerformance, +StaffMember; Phase 4.5: CLAIM_STATUSES expanded with Deductible + Sent to Secondary)
-│   ├── App.tsx                         (Phase 4: +overhead, pay-periods, staff, staff/:id routes)
+│   │   └── index.ts                    (Phase 4: +DateWindow, +DashboardPeriodMetrics, +QuarterlySummary, +OverheadEntry, +XeroImportPreview, +SalaryPayPeriod, +HourlyPayPeriod, +PartnerPeriodSummary, +EmilyPayPeriodSummary, +PayerPerformance, +StaffMember; Phase 4.5: CLAIM_STATUSES expanded with Deductible + Sent to Secondary; Phase 5: +Payment Pending)
+│   ├── App.tsx                         (Phase 4: +overhead, pay-periods, staff, staff/:id routes; Phase 5: +staff/new route)
 │   ├── main.tsx
 │   └── index.css                       (Phase 4: --font-heading changed to Fraunces)
 ├── CLAUDE.md
