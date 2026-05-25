@@ -107,6 +107,8 @@ export default function NewClaim() {
       filled.add('submissionMethod')
       setValue('clientAmount', String(recent.clientAmount))
       filled.add('clientAmount')
+      setValue('insuranceAmount', String(recent.insuranceAmount))
+      filled.add('insuranceAmount')
       // Fall back to claim's clinician if caseload had no match
       if (!caseload) {
         setValue('clinician', recent.clinician as Clinician)
@@ -271,9 +273,10 @@ export default function NewClaim() {
               step="0.01"
               min="0"
               {...register('insuranceAmount')}
-              className={inputClass}
+              className={inputAutoClass('insuranceAmount')}
               placeholder="0.00"
             />
+            {autoLabel('insuranceAmount')}
           </div>
         </div>
 
