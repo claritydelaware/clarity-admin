@@ -169,7 +169,7 @@ function PartnerTab({ periods }: { periods: SalaryPayPeriod[] }) {
 
 function EmilyHistoryTable({ rows }: { rows: EmilyPaymentAnalysisRow[] }) {
   const fmt = formatCurrency
-  const pct = (n: number) => `${(n * 100).toFixed(1)}%`
+  const pct = (n: number) => `${n.toFixed(1)}%`
 
   if (rows.length === 0) {
     return <p className="text-sm font-body text-muted italic">No pay history available yet.</p>
