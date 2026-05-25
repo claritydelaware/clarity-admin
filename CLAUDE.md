@@ -354,6 +354,59 @@ Light background (cream/white) content area. White sidebar with right border. Go
 - `StaffDetail.tsx` date inputs receive ISO `YYYY-MM-DD` directly from Worker's `parseSheetDate()` — no client-side conversion needed
 - After deploying, use the portal to add Shannon, Jen, and Emily — the Staff tab auto-creates on the first submission
 
+### Phase 5.5 — Multi-License Staff Profiles, Multi-Rate Payroll, Emily Pay Analysis ✅ Complete (2026-05-24)
+
+**Worker version deployed:** `0b418cfd-8839-444e-9c09-218be96ee615`
+
+| Feature | Details |
+|---|---|
+| Staff CAQH ID | `caqhId` field added to `StaffMember`; displayed + editable in StaffDetail and NewStaff |
+| Staff schema expansion | Staff sheet now A:S (19 cols); added `caqhId`, `therapySessionRate`, `otherSessionRate`, `noShowRate` |
+| Staff_Licenses tab | New Google Sheets tab; auto-bootstrapped on first license creation; supports unlimited state licenses per clinician with effective/expiration dates and active soft-delete |
+| StaffDetail Licenses section | Independent section below save button: inline add form, table with edit rows, soft-delete (two-click confirm), loading skeleton, license status badge (active/expiring-soon/expired) |
+| Multi-rate payroll | Emily pay now uses 4 rates: therapy sessions (90837/90791), other sessions (90834/90832/90847/90846), no-shows, admin/consulting |
+| Overhead formula corrected | `overheadCosts = totalPay × 9.56% + $110.80` (replaces old Overhead tab lookup) |
+| Emily Pay Analysis: pre-population | Emily tab reads `Payroll_Submissions` IMPORTRANGE tab; meeting+training hours, consultations pre-filled from submission form |
+| Emily Pay Analysis: reconciliation | Collapsible panel comparing submission counts vs Claims data for therapy sessions, other sessions, late cancellations |
+| Emily Pay Analysis: history | Collapsible table from `Emily Payment Analysis` sheet tab (read-only, formula-maintained) |
+| NewStaff: 3-rate fields | Replaced single `sessionRate` with `therapySessionRate`, `otherSessionRate`, `noShowRate`, `adminHourlyRate` inputs |
+
+**New Worker endpoints:**
+- `GET /api/staff/:id/licenses` — list licenses from `Staff_Licenses!A:H`
+- `POST /api/staff/:id/licenses` — create license row; auto-bootstraps `Staff_Licenses` tab if absent
+- `PUT /api/staff/:id/licenses/:licenseId` — update license row
+- `DELETE /api/staff/:id/licenses/:licenseId` — soft-delete (sets `active=FALSE`)
+- `GET /api/emily/submission?periodStart=YYYY-MM-DD` — reads `Payroll_Submissions!A:X`; returns `EmilySubmission` with counts, adminHours, emilySelfCalc sub-objects
+- `GET /api/emily/payment-analysis` — reads `Emily Payment Analysis!A:P`; returns `EmilyPaymentAnalysisRow[]`
+
+**New files (frontend):**
+- `src/hooks/useEmilyPayroll.ts` — `useEmilySubmission(periodStart)` + `useEmilyPaymentAnalysis()`
+
+**Modified files:**
+| File | Change |
+|---|---|
+| `clarity-admin-api/src/index.ts` | CORS +DELETE; payroll constants; Staff A:S + 4 new fields; StaffLicense CRUD handlers; Emily endpoints; multi-rate Emily pay calculation; expanded savePayrollRecord |
+| `src/types/index.ts` | `StaffMember` +caqhId/therapySessionRate/otherSessionRate/noShowRate; `EmilyPayPeriodSummary` expanded; new `StaffLicense`, `EmilySubmission`, `EmilyPaymentAnalysisRow` interfaces |
+| `src/lib/api.ts` | `api.staff.licenses` sub-object (list/create/update/remove); `api.emily` group (submission/paymentAnalysis); `saveRecord` accepts session breakdown fields |
+| `src/hooks/useStaff.ts` | `useStaffLicenses`, `useCreateLicense`, `useUpdateLicense`, `useDeleteLicense` hooks |
+| `src/pages/StaffDetail.tsx` | CAQH ID field; 3-rate compensation inputs with CPT code labels; independent Licenses section |
+| `src/pages/PayPeriodSummary.tsx` | Emily tab: multi-rate pay breakdown, pre-population from submission, reconciliation panel, history table |
+| `src/pages/NewStaff.tsx` | CAQH ID field; therapy/other/no-show/admin rate fields replace single sessionRate |
+
+**Critical implementation details:**
+- `"Late Cancellation"` is an insurance/payer value (not a ClaimStatus) — no-show filter is `c.insurance === 'Late Cancellation'`
+- Staff sheet header row now 19 cols: `id, name, role, npi, licenseType, licenseNumber, licenseState, licenseExpiration, hireDate, compensationType, annualSalary, sessionRate, adminHourlyRate, active, notes, caqhId, therapySessionRate, otherSessionRate, noShowRate`
+- `Staff_Licenses` tab columns: `id, staffId, licenseType, licenseNumber, licenseState, effectiveDate, expirationDate, active`
+- `Payroll_Submissions` tab must be created manually by Bruce via IMPORTRANGE from Emily's form responses sheet
+- Old `Payroll_Records` adminHours at index 9 maps to new `trainingHours` column — backward compat preserved since `(meetingHours + trainingHours) * adminHourlyRate` still equals old `adminHours * adminHourlyRate`
+- `useEmilySubmission` staleTime 5 min; `useEmilyPaymentAnalysis` staleTime 10 min
+- License routes registered BEFORE generic `/api/staff/:id` match to prevent routing conflict
+
+**Post-deploy manual steps for Bruce:**
+1. Open StaffDetail for Emily → set therapySessionRate: 50, otherSessionRate: 40, noShowRate: 40, adminHourlyRate: 25
+2. Add Shannon's FL and PA licenses via Licenses section in her StaffDetail
+3. Create `Payroll_Submissions` IMPORTRANGE tab in Claim Tracking workbook (pointing to Emily's Google Form responses sheet)
+
 ### Pending Infrastructure
 
 - **DNS cutover** — point `admin.claritydelaware.com` CNAME to Pages once DNS migrates to Cloudflare
@@ -389,13 +442,14 @@ clarity-admin/
 │   │   ├── useAnalytics.ts             (Phase 3: useCaseloadTrends, useForecastAccuracy)
 │   │   ├── useDashboard.ts             (Phase 4: accepts from/to params)
 │   │   ├── useDateWindow.ts            (Phase 4: new — MTD/QTD/YTD/Last Month/Last Quarter)
+│   │   ├── useEmilyPayroll.ts          (Phase 5.5: new — useEmilySubmission + useEmilyPaymentAnalysis)
 │   │   ├── useOverhead.ts              (Phase 4: new — import/save/update overhead)
 │   │   ├── usePayPeriodSummary.ts      (Phase 4: new — list, partner/emily summary, payroll record save)
 │   │   ├── usePayerPerformance.ts      (Phase 4: new — payer performance analytics)
 │   │   ├── useQuarterlySummary.ts      (Phase 4: new — quarterly revenue/margin summary)
-│   │   └── useStaff.ts                 (Phase 4: new — staff CRUD)
+│   │   └── useStaff.ts                 (Phase 4: new — staff CRUD; Phase 5.5: +license CRUD hooks)
 │   ├── lib/
-│   │   ├── api.ts                      (Phase 4: +api.staff.*, api.overhead.*, api.payPeriodsFull.*, api.analytics.quarterlySummary/payerPerformance; dashboard accepts date range; Phase 4.5: status stripped from claims.list() params)
+│   │   ├── api.ts                      (Phase 4: +api.staff.*, api.overhead.*, api.payPeriodsFull.*, api.analytics.quarterlySummary/payerPerformance; dashboard accepts date range; Phase 4.5: status stripped from claims.list() params; Phase 5.5: +api.staff.licenses, +api.emily)
 │   │   └── utils.ts                    (Phase 4.5: +isArchived())
 │   ├── pages/
 │   │   ├── Dashboard.tsx               (Phase 4: date window selector + delta badges + skeleton loading)
@@ -405,12 +459,12 @@ clarity-admin/
 │   │   ├── EditClaim.tsx
 │   │   ├── Forecast.tsx                (Phase 4: quarterly rollup banner + toast on recalculate; Phase 5: isArchived filter on weeks + QuarterlyRollup overdue)
 │   │   ├── Overhead.tsx                (Phase 4: new)
-│   │   ├── PayPeriodSummary.tsx        (Phase 4: new; Phase 5: error banners in PartnerTab + EmilyTab)
+│   │   ├── PayPeriodSummary.tsx        (Phase 4: new; Phase 5: error banners; Phase 5.5: Emily multi-rate breakdown, submission pre-population, reconciliation panel, history table)
 │   │   ├── Staff.tsx                   (Phase 4: new; Phase 5: AddStaffModal removed, navigates to /staff/new)
-│   │   ├── StaffDetail.tsx             (Phase 4: new; Phase 5: profile panel fully editable, active toggle, save button outside panels)
-│   │   └── NewStaff.tsx               (Phase 5: new — full-page staff creation form)
+│   │   ├── StaffDetail.tsx             (Phase 4: new; Phase 5: profile panel fully editable, active toggle; Phase 5.5: CAQH ID, 3-rate comp inputs, Licenses section)
+│   │   └── NewStaff.tsx               (Phase 5: new; Phase 5.5: CAQH ID + 3-rate session fields)
 │   ├── types/
-│   │   └── index.ts                    (Phase 4: +DateWindow, +DashboardPeriodMetrics, +QuarterlySummary, +OverheadEntry, +XeroImportPreview, +SalaryPayPeriod, +HourlyPayPeriod, +PartnerPeriodSummary, +EmilyPayPeriodSummary, +PayerPerformance, +StaffMember; Phase 4.5: CLAIM_STATUSES expanded with Deductible + Sent to Secondary; Phase 5: +Payment Pending)
+│   │   └── index.ts                    (Phase 4: +DateWindow, +DashboardPeriodMetrics, +QuarterlySummary, +OverheadEntry, +XeroImportPreview, +SalaryPayPeriod, +HourlyPayPeriod, +PartnerPeriodSummary, +EmilyPayPeriodSummary, +PayerPerformance, +StaffMember; Phase 4.5: CLAIM_STATUSES expanded with Deductible + Sent to Secondary; Phase 5: +Payment Pending; Phase 5.5: StaffMember expanded, +StaffLicense, +EmilySubmission, +EmilyPaymentAnalysisRow)
 │   ├── App.tsx                         (Phase 4: +overhead, pay-periods, staff, staff/:id routes; Phase 5: +staff/new route)
 │   ├── main.tsx
 │   └── index.css                       (Phase 4: --font-heading changed to Fraunces)
