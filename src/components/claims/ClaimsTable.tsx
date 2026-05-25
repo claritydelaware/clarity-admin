@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronUp, ChevronDown, Loader2, X, ExternalLink, RotateCcw } from 'lucide-react'
+import { ChevronUp, ChevronDown, Loader2, X, ExternalLink, RotateCcw, Copy, Check } from 'lucide-react'
 import type { Claim } from '../../types'
 import { SERVICE_CODES, SUBMISSION_METHODS } from '../../types'
 import { formatCurrency, formatDate, toInputDate } from '../../lib/utils'
-import Badge from '../ui/Badge'
+import Badge, { PayerBadge } from '../ui/Badge'
 import { useInlineEditClaim, type InlineEditField } from '../../hooks/useClaims'
 
 const PAGE_SIZE = 50
@@ -280,6 +280,14 @@ function MobileEditModal({ claim, field, label, rawValue, inputType, options, on
 export default function ClaimsTable({ claims, onStatusClick, compact = false }: Props) {
   const [userSort, setUserSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' } | null>(null)
   const [page, setPage] = useState(1)
+  const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null)
+
+  function handleCopyClaimId(claim: Claim, e: React.MouseEvent) {
+    e.stopPropagation()
+    navigator.clipboard.writeText(claim.claimId ?? '')
+    setCopiedRowIndex(claim.rowIndex)
+    setTimeout(() => setCopiedRowIndex(null), 1500)
+  }
   const rowPy = compact ? 'py-1.5' : 'py-3'
   const cellText = compact ? 'text-xs' : 'text-sm'
 
@@ -334,6 +342,7 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="w-10 px-2 py-3" />
+              {th('Claim ID')}
               {th('Clinician', 'clinician')}
               {th('Payer', 'insurance')}
               {th('Date', 'claimDate')}
@@ -350,7 +359,7 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
           <tbody className="divide-y divide-gray-100">
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-muted text-sm">
+                <td colSpan={13} className="px-4 py-8 text-center text-muted text-sm">
                   No claims match the current filters.
                 </td>
               </tr>
@@ -371,8 +380,27 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
                     </a>
                   )}
                 </td>
+                <td className={`px-4 ${rowPy} ${cellText}`}>
+                  {claim.claimId ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="font-mono text-xs text-ink">{claim.claimId}</span>
+                      <button
+                        type="button"
+                        title="Copy Claim ID"
+                        onClick={e => handleCopyClaimId(claim, e)}
+                        className="text-muted hover:text-teal transition-colors p-0.5 shrink-0"
+                      >
+                        {copiedRowIndex === claim.rowIndex
+                          ? <Check size={13} className="text-green-600" />
+                          : <Copy size={13} />}
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
+                </td>
                 <td className={`px-4 ${rowPy} font-medium text-ink ${cellText}`}>{claim.clinician}</td>
-                <td className={`px-4 ${rowPy} text-muted ${cellText}`}>{claim.insurance}</td>
+                <td className={`px-4 ${rowPy} ${cellText}`}><PayerBadge payer={claim.insurance} /></td>
                 <td className={`px-4 ${rowPy} text-muted whitespace-nowrap ${cellText}`}>{formatDate(claim.claimDate)}</td>
                 <td className={`px-4 ${rowPy} font-mono text-xs text-ink`}>
                   <InlineEditCell
@@ -480,6 +508,7 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
 
 function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c: Claim) => void }) {
   const [expanded, setExpanded] = useState(false)
+  const [copiedId, setCopiedId] = useState(false)
   const [mobileEdit, setMobileEdit] = useState<{
     field: InlineEditField
     label: string
@@ -520,7 +549,7 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <span className="font-medium text-ink text-sm">{claim.clinician}</span>
-            <span className="text-muted text-xs truncate">{claim.insurance}</span>
+            <PayerBadge payer={claim.insurance} />
             <span className="text-muted text-xs whitespace-nowrap">{formatDate(claim.claimDate)}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -568,6 +597,22 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
             >
               {claim.notes ? <>Notes: <span className="text-ink">{claim.notes}</span></> : <span className="text-teal">+ Add notes</span>}
             </button>
+            {claim.claimId && (
+              <button
+                className="col-span-2 text-left inline-flex items-center gap-1 hover:text-teal transition-colors"
+                onClick={e => {
+                  e.stopPropagation()
+                  navigator.clipboard.writeText(claim.claimId ?? '')
+                  setCopiedId(true)
+                  setTimeout(() => setCopiedId(false), 1500)
+                }}
+              >
+                Claim ID: <span className="font-mono text-ink">{claim.claimId}</span>
+                {copiedId
+                  ? <Check size={11} className="text-green-600 ml-1" />
+                  : <Copy size={11} className="text-muted ml-1" />}
+              </button>
+            )}
             <span className="col-span-2 pt-1 flex items-center gap-4">
               <Link
                 to={`/claims/${claim.rowIndex}/edit`}

@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, SERVICE_CODES, SUBMISSION_METHODS, CLAIM_STATUSES } from '../types'
 import type { NewClaimInput, Clinician } from '../types'
-import { useCreateClaim, useCaseloads } from '../hooks/useClaims'
+import { useCreateClaim, useCaseloads, useClaims } from '../hooks/useClaims'
 import { formatCurrency } from '../lib/utils'
 
 interface FormValues {
@@ -25,15 +25,26 @@ const DISCONTINUED_CODES = ['96127', '96136']
 const DISCONTINUED_AFTER = new Date('2026-01-15')
 const HHO_PAYERS = ['health options']
 
+function todayInputDate(): string {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 export default function NewClaim() {
   const navigate = useNavigate()
   const { mutate, isPending, isError, error, data: created } = useCreateClaim()
   const { data: caseloads } = useCaseloads()
+  const { data: claims } = useClaims()
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
+      claimDate: todayInputDate(),
       status: 'Pending',
-      submissionMethod: 'Electronic',
+      submissionMethod: 'Manual',
       serviceCode: '90837',
       clinician: 'Shannon',
     },
@@ -45,6 +56,7 @@ export default function NewClaim() {
   const insurance = watch('insurance')
   const clientAmountRaw = watch('clientAmount')
   const submissionMethod = watch('submissionMethod')
+  const clientIdValue = watch('clientId')
 
   // Derived client IDs for selected clinician
   const clientOptions = caseloads
@@ -66,6 +78,45 @@ export default function NewClaim() {
     if (created) navigate('/claims', { state: { newRowIndex: created.rowIndex } })
   }, [created, navigate])
 
+  // Auto-fill from caseloads + most recent claim when clientId changes
+  useEffect(() => {
+    if (!clientIdValue) {
+      setAutoFilledFields(new Set())
+      return
+    }
+    const filled = new Set<string>()
+
+    // Clinician from caseloads (authoritative)
+    const caseload = caseloads?.find(e => e.clientId === clientIdValue)
+    if (caseload) {
+      setValue('clinician', caseload.clinician as Clinician)
+      filled.add('clinician')
+    }
+
+    // Billing details from most recent claim
+    const recent = [...(claims ?? [])]
+      .filter(c => c.clientId === clientIdValue)
+      .sort((a, b) => new Date(b.claimDate).getTime() - new Date(a.claimDate).getTime())[0]
+
+    if (recent) {
+      setValue('insurance', recent.insurance)
+      filled.add('insurance')
+      setValue('serviceCode', recent.serviceCode as FormValues['serviceCode'])
+      filled.add('serviceCode')
+      setValue('submissionMethod', recent.submissionMethod)
+      filled.add('submissionMethod')
+      setValue('clientAmount', String(recent.clientAmount))
+      filled.add('clientAmount')
+      // Fall back to claim's clinician if caseload had no match
+      if (!caseload) {
+        setValue('clinician', recent.clinician as Clinician)
+        filled.add('clinician')
+      }
+    }
+
+    setAutoFilledFields(filled)
+  }, [clientIdValue, caseloads, claims, setValue])
+
   const onSubmit = (values: FormValues) => {
     mutate({
       claimDate: values.claimDate,
@@ -83,8 +134,14 @@ export default function NewClaim() {
   }
 
   const labelClass = 'block text-xs font-medium text-muted font-body mb-1'
-  const inputClass = 'w-full h-9 rounded border border-gray-200 px-3 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent'
+  const inputClass = 'w-full h-9 rounded border border-gray-200 px-3 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-colors'
+  const inputAutoClass = (field: string) =>
+    autoFilledFields.has(field) ? `${inputClass} bg-blue-50` : inputClass
   const errorClass = 'text-xs text-error mt-1 font-body'
+  const autoLabel = (field: string) =>
+    autoFilledFields.has(field)
+      ? <p className="text-xs text-blue-500 font-body mt-0.5">Auto-filled</p>
+      : null
 
   return (
     <div className="max-w-2xl">
@@ -113,9 +170,10 @@ export default function NewClaim() {
           </div>
           <div>
             <label className={labelClass}>Clinician *</label>
-            <select {...register('clinician', { required: 'Required' })} className={inputClass}>
+            <select {...register('clinician', { required: 'Required' })} className={inputAutoClass('clinician')}>
               {CLINICIANS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            {autoLabel('clinician')}
           </div>
         </div>
 
@@ -140,11 +198,12 @@ export default function NewClaim() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Insurance / Payer *</label>
-            <select {...register('insurance', { required: 'Required' })} className={inputClass}>
+            <select {...register('insurance', { required: 'Required' })} className={inputAutoClass('insurance')}>
               <option value="">Select payer…</option>
               {KNOWN_PAYERS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
             {errors.insurance && <p className={errorClass}>{errors.insurance.message}</p>}
+            {autoLabel('insurance')}
           </div>
           <div>
             <label className={labelClass}>Claim ID</label>
@@ -161,16 +220,18 @@ export default function NewClaim() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Service Code *</label>
-            <select {...register('serviceCode', { required: 'Required' })} className={inputClass}>
+            <select {...register('serviceCode', { required: 'Required' })} className={inputAutoClass('serviceCode')}>
               {SERVICE_CODES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             {errors.serviceCode && <p className={errorClass}>{errors.serviceCode.message}</p>}
+            {autoLabel('serviceCode')}
           </div>
           <div>
             <label className={labelClass}>Submission Method *</label>
-            <select {...register('submissionMethod', { required: 'Required' })} className={inputClass}>
+            <select {...register('submissionMethod', { required: 'Required' })} className={inputAutoClass('submissionMethod')}>
               {SUBMISSION_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
+            {autoLabel('submissionMethod')}
           </div>
         </div>
 
@@ -193,9 +254,10 @@ export default function NewClaim() {
               step="0.01"
               min="0"
               {...register('clientAmount')}
-              className={inputClass}
+              className={inputAutoClass('clientAmount')}
               placeholder="0.00"
             />
+            {autoLabel('clientAmount')}
             {clientAmount > 0 && (
               <p className="text-xs text-muted font-body mt-1">
                 Stripe fee: {formatCurrency(stripeFees)} → Net: {formatCurrency(clientAmount - stripeFees)}

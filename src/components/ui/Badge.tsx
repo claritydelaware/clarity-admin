@@ -1,4 +1,5 @@
 import type { ClaimStatus } from '../../types'
+import { getPayerStyle } from '../../lib/utils'
 
 const STYLES: Record<ClaimStatus, string> = {
   'Pending':            'bg-[#f1c232] text-ink',
@@ -36,4 +37,14 @@ export default function Badge({ status, onClick }: Props) {
   }
 
   return <span className={`${base} ${color}`}>{status}</span>
+}
+
+const PILL = 'inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium font-body whitespace-nowrap'
+
+export function PayerBadge({ payer }: { payer: string }) {
+  return (
+    <span className={PILL} style={getPayerStyle(payer)}>
+      {payer}
+    </span>
+  )
 }

@@ -44,6 +44,23 @@ export function toInputDate(sheetDate: string): string {
   return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
 }
 
+const PAYER_EXACT_COLORS: Record<string, string> = {
+  'BCBS':           '#a4c2f4',
+  'BCBS-MA':        '#c9daf8',
+  'Aetna':          '#b4a7d6',
+  'United':         '#f9cb9c',
+  'Meritain':       '#d5a6bd',
+  'Health Options': '#a2c4c9',
+  'Medicare':       '#b7e1cd',
+}
+
+export function getPayerStyle(payer: string): { backgroundColor: string; color: string } {
+  if (PAYER_EXACT_COLORS[payer]) return { backgroundColor: PAYER_EXACT_COLORS[payer], color: '#1A1A1A' }
+  if (payer.startsWith('United-')) return { backgroundColor: '#fce5cd', color: '#1A1A1A' }
+  if (payer.startsWith('BCBS-')) return { backgroundColor: '#c9daf8', color: '#1A1A1A' }
+  return { backgroundColor: '#E5E7EB', color: '#374151' }
+}
+
 // Download a 2D string array as a CSV file in the browser.
 // Each cell is quoted and embedded quotes are escaped to handle commas in notes.
 export function downloadCsv(rows: string[][], filename: string): void {
