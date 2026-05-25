@@ -1,8 +1,9 @@
 import type {
   Claim, NewClaimInput, ClaimUpdateInput, ClaimFullEditInput, PayPeriod, CaseloadEntry,
   DashboardData, CaseloadTrendMonth, ForecastAccuracyWeek,
-  StaffMember, OverheadEntry, QuarterlySummary, PayerPerformance,
+  StaffMember, StaffLicense, OverheadEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
+  EmilySubmission, EmilyPaymentAnalysisRow,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -107,6 +108,22 @@ export const api = {
       apiFetch<StaffMember>('/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
     update: (id: string, data: Partial<StaffMember>): Promise<StaffMember> =>
       apiFetch<StaffMember>(`/staff/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+    licenses: {
+      list: (staffId: string): Promise<StaffLicense[]> =>
+        apiFetch<StaffLicense[]>(`/staff/${staffId}/licenses`),
+      create: (staffId: string, data: Omit<StaffLicense, 'id' | 'staffId'>): Promise<StaffLicense> =>
+        apiFetch<StaffLicense>(`/staff/${staffId}/licenses`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+      update: (staffId: string, licenseId: string, data: Partial<StaffLicense>): Promise<StaffLicense> =>
+        apiFetch<StaffLicense>(`/staff/${staffId}/licenses/${licenseId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+      remove: (staffId: string, licenseId: string): Promise<{ ok: boolean }> =>
+        apiFetch<{ ok: boolean }>(`/staff/${staffId}/licenses/${licenseId}`, { method: 'DELETE' }),
+    },
+  },
+  emily: {
+    submission: (periodStart: string): Promise<EmilySubmission | null> =>
+      apiFetch<EmilySubmission | null>(`/emily/submission?periodStart=${encodeURIComponent(periodStart)}`),
+    paymentAnalysis: (): Promise<EmilyPaymentAnalysisRow[]> =>
+      apiFetch<EmilyPaymentAnalysisRow[]>('/emily/payment-analysis'),
   },
   overhead: {
     list: (): Promise<OverheadEntry[]> => apiFetch<OverheadEntry[]>('/overhead'),
@@ -120,7 +137,12 @@ export const api = {
       apiFetch('/pay-periods/list'),
     summary: (type: 'salary' | 'hourly', periodStart: string): Promise<PartnerPeriodSummary[] | EmilyPayPeriodSummary> =>
       apiFetch(`/pay-periods/summary?type=${type}&periodStart=${encodeURIComponent(periodStart)}`),
-    saveRecord: (data: { periodStart: string; periodEnd?: string; payDate?: string; clinician: string; adminHours?: number; bonusPay?: number; notes?: string }): Promise<{ ok: boolean }> =>
+    saveRecord: (data: {
+      periodStart: string; periodEnd?: string; payDate?: string; clinician: string
+      therapySessions?: number; otherSessions?: number; noShows?: number; consultations?: number
+      meetingHours?: number; trainingHours?: number
+      adminHours?: number; bonusPay?: number; notes?: string
+    }): Promise<{ ok: boolean }> =>
       apiFetch('/pay-periods/record', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   },
 }

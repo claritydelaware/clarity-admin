@@ -261,6 +261,23 @@ export interface EmilyPayPeriodSummary {
   paymentsReceived: number
   pctReceivedByPayDate: number
   unreceivedPayments: number
+  // multi-rate fields (Phase 5.5)
+  therapySessions: number
+  therapySessionRate: number
+  therapyPay: number
+  otherSessions: number
+  otherSessionRate: number
+  otherPay: number
+  noShows: number
+  noShowRate: number
+  noShowPay: number
+  consultations: number
+  consultPay: number
+  meetingHours: number
+  trainingHours: number
+  overheadCosts: number
+  totalExpenses: number
+  // backward-compat fields
   sessionRate: number
   sessionPay: number
   adminHourlyRate: number
@@ -298,4 +315,68 @@ export interface StaffMember {
   adminHourlyRate: number | null
   active: boolean
   notes: string
+  caqhId: string
+  therapySessionRate: number | null
+  otherSessionRate: number | null
+  noShowRate: number | null
+}
+
+export interface StaffLicense {
+  id: string
+  staffId: string
+  licenseType: string
+  licenseNumber: string
+  licenseState: string
+  effectiveDate: string | null
+  expirationDate: string | null
+  active: boolean
+}
+
+export interface EmilySubmission {
+  periodStart: string
+  periodEnd: string
+  payDate: string
+  submissionDate: string
+  counts: {
+    '90837': number
+    '90791': number
+    '90834': number
+    '90832': number
+    '90847': number
+    '90846': number
+    totalSessions: number
+    lateCancel: number
+    medicaidNoShow: number
+  }
+  adminHours: {
+    meeting: number
+    training: number
+    consultations: number
+  }
+  emilySelfCalc: {
+    sessionPay: number
+    noShowPay: number
+    adminPay: number
+    totalPay: number
+  }
+  notes: string
+}
+
+export interface EmilyPaymentAnalysisRow {
+  periodStart: string
+  periodEnd: string
+  payDate: string
+  claimCount: number
+  revenue: number
+  paymentsReceived: number
+  pctReceivedByPayDate: number
+  unreceivedPayments: number
+  sessionPay: number
+  adminHours: number
+  adminPay: number
+  bonusPay: number
+  overheadCosts: number
+  totalExpenses: number
+  profit: number
+  profitMargin: number
 }

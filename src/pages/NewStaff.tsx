@@ -9,6 +9,7 @@ interface FormValues {
   name: string
   role: 'partner' | 'w2'
   npi: string
+  caqhId: string
   licenseType: string
   licenseNumber: string
   licenseState: string
@@ -16,7 +17,9 @@ interface FormValues {
   hireDate: string
   compensationType: 'salary' | 'session-rate'
   annualSalary: string
-  sessionRate: string
+  therapySessionRate: string
+  otherSessionRate: string
+  noShowRate: string
   adminHourlyRate: string
   notes: string
 }
@@ -30,6 +33,7 @@ export default function NewStaff() {
       role: 'partner',
       licenseState: 'DE',
       compensationType: 'salary',
+      caqhId: '',
     },
   })
 
@@ -40,11 +44,13 @@ export default function NewStaff() {
   }, [created, navigate])
 
   const onSubmit = (values: FormValues) => {
+    const isSessionRate = values.compensationType === 'session-rate'
     const member: StaffMember = {
       id: crypto.randomUUID(),
       name: values.name,
       role: values.role,
       npi: values.npi,
+      caqhId: values.caqhId ?? '',
       licenseType: values.licenseType,
       licenseNumber: values.licenseNumber,
       licenseState: values.licenseState,
@@ -52,8 +58,11 @@ export default function NewStaff() {
       hireDate: values.hireDate,
       compensationType: values.compensationType,
       annualSalary: values.compensationType === 'salary' && values.annualSalary ? parseFloat(values.annualSalary) : null,
-      sessionRate: values.compensationType === 'session-rate' && values.sessionRate ? parseFloat(values.sessionRate) : null,
-      adminHourlyRate: values.compensationType === 'session-rate' && values.adminHourlyRate ? parseFloat(values.adminHourlyRate) : null,
+      sessionRate: null,
+      therapySessionRate: isSessionRate && values.therapySessionRate ? parseFloat(values.therapySessionRate) : null,
+      otherSessionRate:   isSessionRate && values.otherSessionRate   ? parseFloat(values.otherSessionRate)   : null,
+      noShowRate:         isSessionRate && values.noShowRate         ? parseFloat(values.noShowRate)         : null,
+      adminHourlyRate:    isSessionRate && values.adminHourlyRate    ? parseFloat(values.adminHourlyRate)    : null,
       active: true,
       notes: values.notes,
     }
@@ -99,10 +108,16 @@ export default function NewStaff() {
           </div>
         </div>
 
-        {/* NPI */}
-        <div>
-          <label className={labelClass}>NPI</label>
-          <input type="text" {...register('npi')} className={inputClass} placeholder="10-digit NPI" />
+        {/* NPI + CAQH ID */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>NPI</label>
+            <input type="text" {...register('npi')} className={inputClass} placeholder="10-digit NPI" />
+          </div>
+          <div>
+            <label className={labelClass}>CAQH ID</label>
+            <input type="text" {...register('caqhId')} className={inputClass} placeholder="Optional" />
+          </div>
         </div>
 
         {/* License fields */}
@@ -163,16 +178,28 @@ export default function NewStaff() {
         )}
 
         {compensationType === 'session-rate' && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Session Rate ($/session)</label>
-              <input type="number" step="0.01" min="0" {...register('sessionRate')} className={inputClass} placeholder="75" />
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Therapy Session Rate — 90837 / 90791 ($/session)</label>
+                <input type="number" step="0.01" min="0" {...register('therapySessionRate')} className={inputClass} placeholder="50" />
+              </div>
+              <div>
+                <label className={labelClass}>Other Session Rate — 90834 / 90832 / 90847 / 90846 ($/session)</label>
+                <input type="number" step="0.01" min="0" {...register('otherSessionRate')} className={inputClass} placeholder="40" />
+              </div>
             </div>
-            <div>
-              <label className={labelClass}>Admin Hourly Rate ($/hr)</label>
-              <input type="number" step="0.01" min="0" {...register('adminHourlyRate')} className={inputClass} placeholder="25" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>No-Show / Late Cancel Rate ($/occurrence)</label>
+                <input type="number" step="0.01" min="0" {...register('noShowRate')} className={inputClass} placeholder="40" />
+              </div>
+              <div>
+                <label className={labelClass}>Admin Hourly Rate ($/hr)</label>
+                <input type="number" step="0.01" min="0" {...register('adminHourlyRate')} className={inputClass} placeholder="25" />
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* Notes */}

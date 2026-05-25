@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Loader2, AlertCircle, Copy, Check } from 'lucide-react'
+import { Loader2, AlertCircle, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   LineChart, Line, ResponsiveContainer, Tooltip,
 } from 'recharts'
 import { usePayPeriodList, usePartnerSummary, useEmilySummary, useSavePayrollRecord } from '../hooks/usePayPeriodSummary'
+import { useEmilySubmission, useEmilyPaymentAnalysis } from '../hooks/useEmilyPayroll'
 import { formatCurrency } from '../lib/utils'
-import type { PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod } from '../types'
+import type { PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod, EmilyPaymentAnalysisRow } from '../types'
 
 function formatPeriodLabel(start: string, end: string): string {
   if (!start) return '—'
@@ -164,6 +165,48 @@ function PartnerTab({ periods }: { periods: SalaryPayPeriod[] }) {
   )
 }
 
+// ─── EMILY PAY HISTORY TABLE ──────────────────────────────────────────────────
+
+function EmilyHistoryTable({ rows }: { rows: EmilyPaymentAnalysisRow[] }) {
+  const fmt = formatCurrency
+  const pct = (n: number) => `${(n * 100).toFixed(1)}%`
+
+  if (rows.length === 0) {
+    return <p className="text-sm font-body text-muted italic">No pay history available yet.</p>
+  }
+
+  return (
+    <div className="overflow-x-auto -mx-5">
+      <table className="w-full min-w-200 px-5 text-xs font-body">
+        <thead>
+          <tr className="border-b border-gray-100">
+            {['Period', 'Revenue', 'Received', '% by Pay Date', 'Session Pay', 'Admin Pay', 'Bonus', 'Overhead', 'Total Exp.', 'Profit', 'Margin'].map(h => (
+              <th key={h} className="text-left text-muted uppercase tracking-wide font-medium pb-2 pr-3 whitespace-nowrap">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-t border-gray-50">
+              <td className="py-1.5 pr-3 whitespace-nowrap text-ink">{r.periodStart ? new Date(r.periodStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'}</td>
+              <td className="py-1.5 pr-3 tabular-nums text-ink">{fmt(r.revenue)}</td>
+              <td className="py-1.5 pr-3 tabular-nums text-success">{fmt(r.paymentsReceived)}</td>
+              <td className="py-1.5 pr-3 tabular-nums text-muted">{pct(r.pctReceivedByPayDate)}</td>
+              <td className="py-1.5 pr-3 tabular-nums text-ink">{fmt(r.sessionPay)}</td>
+              <td className="py-1.5 pr-3 tabular-nums text-ink">{fmt(r.adminPay)}</td>
+              <td className="py-1.5 pr-3 tabular-nums text-ink">{fmt(r.bonusPay)}</td>
+              <td className="py-1.5 pr-3 tabular-nums text-muted">{fmt(r.overheadCosts)}</td>
+              <td className="py-1.5 pr-3 tabular-nums text-muted">{fmt(r.totalExpenses)}</td>
+              <td className={`py-1.5 pr-3 tabular-nums font-medium ${r.profit >= 0 ? 'text-success' : 'text-error'}`}>{fmt(r.profit)}</td>
+              <td className={`py-1.5 pr-3 tabular-nums ${r.profit >= 0 ? 'text-success' : 'text-error'}`}>{pct(r.profitMargin)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ─── EMILY TAB ────────────────────────────────────────────────────────────────
 
 function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
@@ -173,54 +216,99 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
   }, [periods])
 
   const [selectedPeriod, setSelectedPeriod] = useState(mostRecent)
-  const [adminHours, setAdminHours] = useState('')
+  const [meetingHours, setMeetingHours] = useState('')
+  const [consultations, setConsultations] = useState('')
   const [bonusPay, setBonusPay] = useState('')
   const [notes, setNotes] = useState('')
+  const [reconcOpen, setReconcOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const { data: rawData, isLoading, isError, error } = useEmilySummary(selectedPeriod)
   const summary = rawData as EmilyPayPeriodSummary | undefined
+  const { data: submission } = useEmilySubmission(selectedPeriod)
+  const { data: history, isLoading: historyLoading } = useEmilyPaymentAnalysis()
   const { mutate: saveRecord, isPending: isSaving } = useSavePayrollRecord()
   const { copied, copy } = useCopied()
 
-  // Sync admin hours from saved data when period changes
-  const savedAdminHours = summary?.adminHours ?? 0
-  const savedBonusPay   = summary?.bonusPay   ?? 0
-
-  const adminH   = parseFloat(adminHours) || savedAdminHours
-  const bonusP   = parseFloat(bonusPay)   || savedBonusPay
-  const sessionP = (summary?.sessions ?? 0) * (summary?.sessionRate ?? 75)
-  const adminP   = adminH * (summary?.adminHourlyRate ?? 25)
-  const totalP   = sessionP + adminP + bonusP
-
   const period = periods.find(p => p.periodStart === selectedPeriod)
+
+  // Derive display values: override inputs > submission > saved summary
+  const savedMeetingH    = (summary?.meetingHours ?? 0) + (summary?.trainingHours ?? 0)
+  const savedConsults    = summary?.consultations   ?? 0
+  const savedBonusPay    = summary?.bonusPay        ?? 0
+
+  const subMeetingH   = submission ? submission.adminHours.meeting    : null
+  const subTrainingH  = submission ? submission.adminHours.training   : null
+  const subConsults   = submission ? submission.adminHours.consultations : null
+
+  const effMeetingH  = parseFloat(meetingHours)  || (subMeetingH  !== null ? subMeetingH  + (subTrainingH ?? 0) : savedMeetingH)
+  const effConsults  = parseInt(consultations)   || (subConsults  ?? savedConsults)
+  const effBonusP    = parseFloat(bonusPay)      || savedBonusPay
+
+  const sparklineData = (summary?.priorPeriodMargins ?? []).map((m, i) => ({ i, margin: Math.round(m * 100) }))
 
   const copyText = summary ? [
     `Emily Payroll Summary — ${formatPeriodLabel(summary.periodStart, summary.periodEnd)}`,
     '',
-    `Sessions: ${summary.sessions}`,
-    `Revenue: ${formatCurrency(summary.revenue)}`,
-    `Payments Received: ${formatCurrency(summary.paymentsReceived)} (${Math.round(summary.pctReceivedByPayDate * 100)}%)`,
-    '',
-    `Session Pay: ${summary.sessions} × $${summary.sessionRate} = ${formatCurrency(sessionP)}`,
-    `Admin Pay: ${adminH}h × $${summary.adminHourlyRate} = ${formatCurrency(adminP)}`,
-    bonusP > 0 ? `Bonus: ${formatCurrency(bonusP)}` : null,
-    `Total Pay: ${formatCurrency(totalP)}`,
+    `Therapy Sessions (${summary.therapySessions} × $${summary.therapySessionRate}): ${formatCurrency(summary.therapyPay)}`,
+    `Other Sessions   (${summary.otherSessions} × $${summary.otherSessionRate}): ${formatCurrency(summary.otherPay)}`,
+    `No-Shows         (${summary.noShows} × $${summary.noShowRate}): ${formatCurrency(summary.noShowPay)}`,
+    `Session Pay subtotal: ${formatCurrency(summary.sessionPay)}`,
+    `Admin Pay: ${formatCurrency(summary.adminPay)}`,
+    effBonusP > 0 ? `Bonus: ${formatCurrency(effBonusP)}` : null,
+    `Total Pay: ${formatCurrency(summary.totalPay)}`,
+    `Overhead: ${formatCurrency(summary.overheadCosts)}`,
+    `Profit: ${formatCurrency(summary.profit)} (${Math.round(summary.profitMargin * 100)}% margin)`,
   ].filter(Boolean).join('\n') : ''
 
   const handleSave = () => {
-    if (!selectedPeriod) return
+    if (!selectedPeriod || !summary) return
     saveRecord({
       periodStart: selectedPeriod,
       periodEnd: period?.periodEnd,
       payDate: period?.payDate,
       clinician: 'Emily',
-      adminHours: parseFloat(adminHours) || 0,
-      bonusPay: parseFloat(bonusPay) || 0,
+      therapySessions: summary.therapySessions,
+      otherSessions: summary.otherSessions,
+      noShows: summary.noShows,
+      consultations: effConsults,
+      meetingHours: effMeetingH,
+      trainingHours: 0,
+      bonusPay: effBonusP,
       notes,
     })
   }
 
-  const sparklineData = (summary?.priorPeriodMargins ?? []).map((m, i) => ({ i, margin: Math.round(m * 100) }))
+  // Reconciliation data
+  const reconcCodes = ['90837', '90791', '90834', '90832', '90847', '90846', 'Late Cancel'] as const
+  const emilyReported = submission ? {
+    '90837': submission.counts['90837'],
+    '90791': submission.counts['90791'],
+    '90834': submission.counts['90834'],
+    '90832': submission.counts['90832'],
+    '90847': submission.counts['90847'],
+    '90846': submission.counts['90846'],
+    'Late Cancel': submission.counts.lateCancel,
+  } : null
+  const inClaims = summary ? {
+    '90837': summary.therapySessions,  // approximate — server groups by code set
+    '90791': 0,                        // placeholder (server gives grouped totals)
+    '90834': 0,
+    '90832': 0,
+    '90847': 0,
+    '90846': 0,
+    'Late Cancel': summary.noShows,
+  } : null
+
+  // For the reconciliation we compare total therapy vs total therapy, total other vs total other
+  const reconcRows = submission && summary ? [
+    { label: 'Therapy sessions (90837 + 90791)', reported: submission.counts['90837'] + submission.counts['90791'], claims: summary.therapySessions },
+    { label: 'Other sessions (90834/90832/90847/90846)', reported: submission.counts['90834'] + submission.counts['90832'] + submission.counts['90847'] + submission.counts['90846'], claims: summary.otherSessions },
+    { label: 'Late Cancel / No-Show', reported: submission.counts.lateCancel, claims: summary.noShows },
+  ] : []
+  void reconcCodes; void emilyReported; void inClaims
+
+  const allMatch = reconcRows.length > 0 && reconcRows.every(r => r.reported === r.claims)
 
   return (
     <div className="space-y-4">
@@ -305,58 +393,145 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-4 space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-body text-muted">Session Pay ({summary.sessions} × ${summary.sessionRate})</p>
-                <p className="font-heading text-base font-semibold text-ink tabular-nums">{formatCurrency(sessionP)}</p>
-              </div>
+          {/* Multi-rate pay breakdown */}
+          <div className="border-t border-gray-100 pt-4 space-y-2 text-sm font-body">
+            <div className="flex justify-between text-muted text-xs">
+              <span>Therapy sessions ({summary.therapySessions} × ${summary.therapySessionRate})</span>
+              <span className="tabular-nums text-ink">{formatCurrency(summary.therapyPay)}</span>
+            </div>
+            <div className="flex justify-between text-muted text-xs">
+              <span>Other sessions ({summary.otherSessions} × ${summary.otherSessionRate})</span>
+              <span className="tabular-nums text-ink">{formatCurrency(summary.otherPay)}</span>
+            </div>
+            <div className="flex justify-between text-muted text-xs">
+              <span>No-shows ({summary.noShows} × ${summary.noShowRate})</span>
+              <span className="tabular-nums text-ink">{formatCurrency(summary.noShowPay)}</span>
+            </div>
+            <div className="flex justify-between font-medium border-t border-dashed border-gray-200 pt-1.5 text-xs">
+              <span>Session Pay subtotal</span>
+              <span className="tabular-nums">{formatCurrency(summary.sessionPay)}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Admin inputs */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <label className="block">
-                <span className="text-xs font-body text-muted uppercase tracking-wide">Admin Hours</span>
-                <div className="flex items-center gap-2 mt-1">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    placeholder={String(savedAdminHours)}
-                    value={adminHours}
-                    onChange={e => setAdminHours(e.target.value)}
-                    className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
-                  />
-                  <span className="text-xs text-muted font-body whitespace-nowrap">@ ${summary.adminHourlyRate}/hr = {formatCurrency(adminP)}</span>
-                </div>
-              </label>
-
-              <label className="block">
-                <span className="text-xs font-body text-muted uppercase tracking-wide">Bonus Pay ($)</span>
+                <span className="text-xs text-muted uppercase tracking-wide">Meeting / Training Hours</span>
                 <input
-                  type="number"
-                  min="0"
-                  placeholder={String(savedBonusPay)}
-                  value={bonusPay}
-                  onChange={e => setBonusPay(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
+                  type="number" min="0" step="0.5"
+                  placeholder={String(subMeetingH != null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)}
+                  value={meetingHours}
+                  onChange={e => setMeetingHours(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal"
                 />
+                {submission && <p className="text-xs text-muted mt-0.5">From Emily's submission: {submission.adminHours.meeting + submission.adminHours.training}h</p>}
+              </label>
+              <label className="block">
+                <span className="text-xs text-muted uppercase tracking-wide">Consultations</span>
+                <input
+                  type="number" min="0" step="1"
+                  placeholder={String(subConsults != null ? subConsults : savedConsults)}
+                  value={consultations}
+                  onChange={e => setConsultations(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal"
+                />
+                {submission && <p className="text-xs text-muted mt-0.5">From Emily's submission: {submission.adminHours.consultations}</p>}
               </label>
             </div>
 
+            <div className="flex justify-between text-muted text-xs">
+              <span>Consultations ({effConsults} × ${(summary.adminHourlyRate / 4).toFixed(2)})</span>
+              <span className="tabular-nums text-ink">{formatCurrency(summary.consultPay)}</span>
+            </div>
+            <div className="flex justify-between text-muted text-xs">
+              <span>Meeting / Training ({effMeetingH}h × ${summary.adminHourlyRate}/hr)</span>
+              <span className="tabular-nums text-ink">{formatCurrency((effMeetingH) * summary.adminHourlyRate)}</span>
+            </div>
+            <div className="flex justify-between font-medium border-t border-dashed border-gray-200 pt-1.5 text-xs">
+              <span>Admin Pay subtotal</span>
+              <span className="tabular-nums">{formatCurrency(summary.adminPay)}</span>
+            </div>
+
+            <label className="block pt-1">
+              <span className="text-xs text-muted uppercase tracking-wide">Bonus Pay ($)</span>
+              <input
+                type="number" min="0"
+                placeholder={String(savedBonusPay)}
+                value={bonusPay}
+                onChange={e => setBonusPay(e.target.value)}
+                className="mt-1 w-48 rounded border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal"
+              />
+            </label>
+
+            <div className="flex justify-between font-medium text-sm border-t-2 border-gray-200 pt-2">
+              <span>Total Pay</span>
+              <span className="tabular-nums text-teal text-lg font-heading">{formatCurrency(summary.totalPay)}</span>
+            </div>
+            <div className="flex justify-between text-muted text-xs">
+              <span>Overhead (pay × 9.56% + $110.80)</span>
+              <span className="tabular-nums">{formatCurrency(summary.overheadCosts)}</span>
+            </div>
+            <div className="flex justify-between text-xs font-medium">
+              <span>Total Expenses</span>
+              <span className="tabular-nums">{formatCurrency(summary.totalExpenses)}</span>
+            </div>
             <div className="flex items-center justify-between pt-2 border-t border-gray-100">
               <div>
-                <p className="text-xs font-body text-muted">Total Pay</p>
-                <p className="font-heading text-2xl font-semibold text-teal tabular-nums">{formatCurrency(totalP)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-body text-muted">Profit (est.)</p>
+                <p className="text-xs font-body text-muted">Profit</p>
                 <p className={`font-heading text-xl font-semibold tabular-nums ${summary.profit >= 0 ? 'text-success' : 'text-error'}`}>
                   {formatCurrency(summary.profit)}
                 </p>
-                <p className="text-xs text-muted font-body">{Math.round(summary.profitMargin * 100)}% margin</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-body text-muted">Margin</p>
+                <p className={`font-heading text-xl font-semibold tabular-nums ${summary.profitMargin >= 0 ? 'text-success' : 'text-error'}`}>
+                  {Math.round(summary.profitMargin * 100)}%
+                </p>
               </div>
             </div>
           </div>
+
+          {/* Reconciliation panel */}
+          {submission && (
+            <div className="border-t border-gray-100 pt-4">
+              <button
+                onClick={() => setReconcOpen(v => !v)}
+                className="flex items-center gap-1.5 text-xs font-body font-medium text-muted uppercase tracking-wide hover:text-teal transition-colors"
+              >
+                {reconcOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                Submission vs. Claim Tracking
+                {allMatch && <span className="ml-2 text-success">✓ Counts match</span>}
+              </button>
+              {reconcOpen && (
+                <div className="mt-3">
+                  <table className="w-full text-xs font-body">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left text-muted pb-1.5 font-medium">Code / Category</th>
+                        <th className="text-right text-muted pb-1.5 font-medium">Emily Reported</th>
+                        <th className="text-right text-muted pb-1.5 font-medium">In Claims</th>
+                        <th className="text-right text-muted pb-1.5 font-medium">Delta</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reconcRows.map(r => {
+                        const delta = r.reported - r.claims
+                        return (
+                          <tr key={r.label} className="border-t border-gray-50">
+                            <td className="py-1.5 text-ink">{r.label}</td>
+                            <td className="py-1.5 text-right tabular-nums">{r.reported}</td>
+                            <td className="py-1.5 text-right tabular-nums">{r.claims}</td>
+                            <td className={`py-1.5 text-right tabular-nums font-medium ${delta !== 0 ? 'text-amber-600' : 'text-muted'}`}>
+                              {delta !== 0 ? (delta > 0 ? `+${delta}` : String(delta)) : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
           <label className="block">
             <span className="text-xs font-body text-muted uppercase tracking-wide">Notes</span>
@@ -379,6 +554,26 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
           </button>
         </div>
       )}
+
+      {/* Pay Period History */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <button
+          onClick={() => setHistoryOpen(v => !v)}
+          className="flex items-center gap-1.5 font-heading text-base font-semibold text-ink hover:text-teal transition-colors w-full text-left"
+        >
+          {historyOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          Pay Period History
+        </button>
+        {historyOpen && (
+          historyLoading ? (
+            <div className="flex items-center gap-2 text-muted text-sm font-body">
+              <Loader2 size={14} className="animate-spin" /> Loading…
+            </div>
+          ) : (
+            <EmilyHistoryTable rows={history ?? []} />
+          )
+        )}
+      </div>
 
       <p className="text-xs font-body text-muted italic">Revenue generated this period — reference only, not a payroll calculation.</p>
     </div>
