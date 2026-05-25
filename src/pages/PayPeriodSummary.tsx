@@ -241,9 +241,21 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
   const subTrainingH  = submission ? submission.adminHours.training   : null
   const subConsults   = submission ? submission.adminHours.consultations : null
 
-  const effMeetingH  = parseFloat(meetingHours)  || (subMeetingH  !== null ? subMeetingH  + (subTrainingH ?? 0) : savedMeetingH)
-  const effConsults  = parseInt(consultations)   || (subConsults  ?? savedConsults)
-  const effBonusP    = parseFloat(bonusPay)      || savedBonusPay
+  // Use !== '' so user can explicitly type 0 without falling back to the server value
+  const effMeetingH  = meetingHours  !== '' ? (parseFloat(meetingHours)  || 0) : (subMeetingH  !== null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)
+  const effConsults  = consultations !== '' ? (parseInt(consultations)   || 0) : (subConsults  ?? savedConsults)
+  const effBonusP    = bonusPay      !== '' ? (parseFloat(bonusPay)      || 0) : savedBonusPay
+
+  // Locally-computed pay values — update in real time as user edits inputs
+  const adminHourlyRate = summary?.adminHourlyRate ?? 25
+  const effConsultPay   = effConsults * (adminHourlyRate / 4)
+  const effAdminPay     = effMeetingH * adminHourlyRate + effConsultPay
+  const effTotalPay     = (summary?.sessionPay ?? 0) + effAdminPay + effBonusP
+  const effOverhead     = effTotalPay * 0.0956 + 110.80
+  const effTotalExp     = effTotalPay + effOverhead
+  const effPaymentsRcv  = summary?.paymentsReceived ?? 0
+  const effProfit       = effPaymentsRcv - effTotalExp
+  const effMargin       = effPaymentsRcv > 0 ? effProfit / effPaymentsRcv : 0
 
   const sparklineData = (summary?.priorPeriodMargins ?? []).map((m, i) => ({ i, margin: Math.round(m * 100) }))
 
@@ -254,11 +266,11 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
     `Other Sessions   (${summary.otherSessions} × $${summary.otherSessionRate}): ${formatCurrency(summary.otherPay)}`,
     `No-Shows         (${summary.noShows} × $${summary.noShowRate}): ${formatCurrency(summary.noShowPay)}`,
     `Session Pay subtotal: ${formatCurrency(summary.sessionPay)}`,
-    `Admin Pay: ${formatCurrency(summary.adminPay)}`,
+    `Admin Pay: ${formatCurrency(effAdminPay)}`,
     effBonusP > 0 ? `Bonus: ${formatCurrency(effBonusP)}` : null,
-    `Total Pay: ${formatCurrency(summary.totalPay)}`,
-    `Overhead: ${formatCurrency(summary.overheadCosts)}`,
-    `Profit: ${formatCurrency(summary.profit)} (${Math.round(summary.profitMargin * 100)}% margin)`,
+    `Total Pay: ${formatCurrency(effTotalPay)}`,
+    `Overhead: ${formatCurrency(effOverhead)}`,
+    `Profit: ${formatCurrency(effProfit)} (${Math.round(effMargin * 100)}% margin)`,
   ].filter(Boolean).join('\n') : ''
 
   const handleSave = () => {
@@ -439,16 +451,16 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
             </div>
 
             <div className="flex justify-between text-muted text-xs">
-              <span>Consultations ({effConsults} × ${(summary.adminHourlyRate / 4).toFixed(2)})</span>
-              <span className="tabular-nums text-ink">{formatCurrency(summary.consultPay)}</span>
+              <span>Consultations ({effConsults} × ${(adminHourlyRate / 4).toFixed(2)})</span>
+              <span className="tabular-nums text-ink">{formatCurrency(effConsultPay)}</span>
             </div>
             <div className="flex justify-between text-muted text-xs">
-              <span>Meeting / Training ({effMeetingH}h × ${summary.adminHourlyRate}/hr)</span>
-              <span className="tabular-nums text-ink">{formatCurrency((effMeetingH) * summary.adminHourlyRate)}</span>
+              <span>Meeting / Training ({effMeetingH}h × ${adminHourlyRate}/hr)</span>
+              <span className="tabular-nums text-ink">{formatCurrency(effMeetingH * adminHourlyRate)}</span>
             </div>
             <div className="flex justify-between font-medium border-t border-dashed border-gray-200 pt-1.5 text-xs">
               <span>Admin Pay subtotal</span>
-              <span className="tabular-nums">{formatCurrency(summary.adminPay)}</span>
+              <span className="tabular-nums">{formatCurrency(effAdminPay)}</span>
             </div>
 
             <label className="block pt-1">
@@ -464,27 +476,27 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
 
             <div className="flex justify-between font-medium text-sm border-t-2 border-gray-200 pt-2">
               <span>Total Pay</span>
-              <span className="tabular-nums text-teal text-lg font-heading">{formatCurrency(summary.totalPay)}</span>
+              <span className="tabular-nums text-teal text-lg font-heading">{formatCurrency(effTotalPay)}</span>
             </div>
             <div className="flex justify-between text-muted text-xs">
               <span>Overhead (pay × 9.56% + $110.80)</span>
-              <span className="tabular-nums">{formatCurrency(summary.overheadCosts)}</span>
+              <span className="tabular-nums">{formatCurrency(effOverhead)}</span>
             </div>
             <div className="flex justify-between text-xs font-medium">
               <span>Total Expenses</span>
-              <span className="tabular-nums">{formatCurrency(summary.totalExpenses)}</span>
+              <span className="tabular-nums">{formatCurrency(effTotalExp)}</span>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-gray-100">
               <div>
                 <p className="text-xs font-body text-muted">Profit</p>
-                <p className={`font-heading text-xl font-semibold tabular-nums ${summary.profit >= 0 ? 'text-success' : 'text-error'}`}>
-                  {formatCurrency(summary.profit)}
+                <p className={`font-heading text-xl font-semibold tabular-nums ${effProfit >= 0 ? 'text-success' : 'text-error'}`}>
+                  {formatCurrency(effProfit)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-xs font-body text-muted">Margin</p>
-                <p className={`font-heading text-xl font-semibold tabular-nums ${summary.profitMargin >= 0 ? 'text-success' : 'text-error'}`}>
-                  {Math.round(summary.profitMargin * 100)}%
+                <p className={`font-heading text-xl font-semibold tabular-nums ${effMargin >= 0 ? 'text-success' : 'text-error'}`}>
+                  {Math.round(effMargin * 100)}%
                 </p>
               </div>
             </div>
