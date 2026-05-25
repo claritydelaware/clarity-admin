@@ -9,7 +9,7 @@ import { useClaims } from '../hooks/useClaims'
 import { useForecastAccuracy } from '../hooks/useAnalytics'
 import { useToast } from '../context/ToastContext'
 import { api } from '../lib/api'
-import { formatCurrency } from '../lib/utils'
+import { formatCurrency, isArchived } from '../lib/utils'
 import type { Claim, ForecastAccuracyWeek } from '../types'
 
 interface WeekGroup {
@@ -216,7 +216,7 @@ function QuarterlyRollup({ claims }: { claims: Claim[] }) {
       const fw = new Date(c.forecastWeek)
       return fw >= qStart && fw <= qEnd
     })
-    const overdue = claims.filter(c => c.forecastWeek && new Date(c.forecastWeek) < today)
+    const overdue = claims.filter(c => c.forecastWeek && !isArchived(c) && new Date(c.forecastWeek) < today)
 
     return {
       label: `Q${q} ${now.getFullYear()}`,
@@ -283,7 +283,7 @@ export default function Forecast() {
   // which sorts inconsistently across browsers
   const weeks = useMemo((): WeekGroup[] => {
     if (!claims) return []
-    const valid = claims.filter(c => c.forecastWeek)
+    const valid = claims.filter(c => c.forecastWeek && !isArchived(c))
     const map = new Map<string, Claim[]>()
     for (const c of valid) {
       if (!map.has(c.forecastWeek)) map.set(c.forecastWeek, [])

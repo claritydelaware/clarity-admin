@@ -7,7 +7,7 @@ export type ServiceCode = typeof SERVICE_CODES[number]
 export const SUBMISSION_METHODS = ['Manual', 'Electronic', 'Cash', 'Secondary'] as const
 export type SubmissionMethod = typeof SUBMISSION_METHODS[number]
 
-export const CLAIM_STATUSES = ['Pending', 'Finalized', 'Deductible', 'Sent to Secondary', 'Payment Received', 'Denied'] as const
+export const CLAIM_STATUSES = ['Pending', 'Payment Pending', 'Finalized', 'Deductible', 'Sent to Secondary', 'Payment Received', 'Denied'] as const
 export type ClaimStatus = typeof CLAIM_STATUSES[number]
 
 export const KNOWN_PAYERS = [

@@ -12,15 +12,6 @@ function licenseStatus(exp: string | null): 'ok' | 'warning' | 'expired' | null 
   return 'ok'
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs font-body font-medium text-muted uppercase tracking-wide mb-1">{label}</dt>
-      <dd className="text-sm font-body text-ink">{children}</dd>
-    </div>
-  )
-}
-
 function Input({ label, value, onChange, type = 'text', disabled = false }: {
   label: string; value: string | number; onChange: (v: string) => void
   type?: string; disabled?: boolean
@@ -39,11 +30,43 @@ function Input({ label, value, onChange, type = 'text', disabled = false }: {
   )
 }
 
+function SelectField({ label, value, onChange, options }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-body font-medium text-muted uppercase tracking-wide">{label}</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="mt-1 block w-full rounded border border-gray-200 px-3 py-2 text-sm font-body text-ink bg-white focus:outline-none focus:ring-2 focus:ring-teal"
+      >
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </label>
+  )
+}
+
 export default function StaffDetail() {
   const { id } = useParams<{ id: string }>()
   const { data: member, isLoading, isError, error } = useStaffMember(id ?? '')
   const { mutate: updateStaff, isPending: isSaving } = useUpdateStaff()
 
+  // Profile fields
+  const [name, setName] = useState('')
+  const [role, setRole] = useState<'partner' | 'w2'>('partner')
+  const [npi, setNpi] = useState('')
+  const [licenseType, setLicenseType] = useState('')
+  const [licenseNumber, setLicenseNumber] = useState('')
+  const [licenseState, setLicenseState] = useState('')
+  const [licenseExpiration, setLicenseExpiration] = useState('')
+  const [hireDate, setHireDate] = useState('')
+  const [active, setActive] = useState(true)
+
+  // Compensation fields
   const [annualSalary, setAnnualSalary] = useState('')
   const [sessionRate, setSessionRate] = useState('')
   const [adminHourlyRate, setAdminHourlyRate] = useState('')
@@ -51,6 +74,15 @@ export default function StaffDetail() {
 
   useEffect(() => {
     if (member) {
+      setName(member.name)
+      setRole(member.role)
+      setNpi(member.npi)
+      setLicenseType(member.licenseType)
+      setLicenseNumber(member.licenseNumber)
+      setLicenseState(member.licenseState)
+      setLicenseExpiration(member.licenseExpiration ?? '')
+      setHireDate(member.hireDate)
+      setActive(member.active)
       setAnnualSalary(member.annualSalary != null ? String(member.annualSalary) : '')
       setSessionRate(member.sessionRate != null ? String(member.sessionRate) : '')
       setAdminHourlyRate(member.adminHourlyRate != null ? String(member.adminHourlyRate) : '')
@@ -79,7 +111,18 @@ export default function StaffDetail() {
   const lStatus = licenseStatus(member.licenseExpiration)
 
   const handleSave = () => {
-    const updates: Partial<StaffMember> = { notes }
+    const updates: Partial<StaffMember> = {
+      name,
+      role,
+      npi,
+      licenseType,
+      licenseNumber,
+      licenseState,
+      licenseExpiration: licenseExpiration || null,
+      hireDate,
+      active,
+      notes,
+    }
     if (member.compensationType === 'salary') {
       updates.annualSalary = parseFloat(annualSalary) || null
     } else {
@@ -102,44 +145,58 @@ export default function StaffDetail() {
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-teal-pale flex items-center justify-center shrink-0">
-              <span className="font-heading text-teal font-semibold">{member.name[0]}</span>
+              <span className="font-heading text-teal font-semibold">{name[0] ?? '?'}</span>
             </div>
-            <div>
-              <h1 className="font-heading text-lg font-semibold text-ink">{member.name}</h1>
-              <span className={[
-                'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-body mt-0.5',
-                member.role === 'partner' ? 'bg-teal-pale text-teal' : 'bg-gold-tint text-gold-dark',
-              ].join(' ')}>
-                {member.role === 'partner' ? 'Partner' : 'W-2'}
-              </span>
-            </div>
+            <h1 className="font-heading text-lg font-semibold text-ink">{member.name}</h1>
           </div>
 
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <Field label="NPI">{member.npi || '—'}</Field>
-            <Field label="Hire Date">
-              {member.hireDate ? new Date(member.hireDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-            </Field>
-            <Field label="License Type">{member.licenseType || '—'}</Field>
-            <Field label="License Number">{member.licenseNumber || '—'}</Field>
-            <Field label="License State">{member.licenseState || '—'}</Field>
-            <Field label="License Expiration">
-              {member.licenseExpiration ? (
-                <span className={
-                  lStatus === 'expired' ? 'text-error font-medium' :
-                  lStatus === 'warning' ? 'text-amber-600 font-medium' : undefined
-                }>
-                  {new Date(member.licenseExpiration).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {lStatus === 'expired' && (
-                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded bg-red-100 text-error text-xs">Expired</span>
-                  )}
-                  {lStatus === 'warning' && (
-                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-xs">Expiring soon</span>
-                  )}
-                </span>
-              ) : '—'}
-            </Field>
-          </dl>
+          {lStatus === 'expired' && (
+            <div className="flex items-center gap-2 rounded bg-red-50 border border-red-200 px-3 py-2 text-xs text-error font-body">
+              <AlertCircle size={13} />
+              License expired
+            </div>
+          )}
+          {lStatus === 'warning' && (
+            <div className="flex items-center gap-2 rounded bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 font-body">
+              <AlertCircle size={13} />
+              License expiring soon
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <Input label="Name" value={name} onChange={setName} />
+            <SelectField
+              label="Role"
+              value={role}
+              onChange={v => setRole(v as 'partner' | 'w2')}
+              options={[{ value: 'partner', label: 'Partner' }, { value: 'w2', label: 'W-2' }]}
+            />
+            <Input label="NPI" value={npi} onChange={setNpi} />
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="License Type" value={licenseType} onChange={setLicenseType} />
+              <Input label="License Number" value={licenseNumber} onChange={setLicenseNumber} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="License State" value={licenseState} onChange={setLicenseState} />
+              <Input label="License Expiration" value={licenseExpiration} onChange={setLicenseExpiration} type="date" />
+            </div>
+            <Input label="Hire Date" value={hireDate} onChange={setHireDate} type="date" />
+
+            {/* Active toggle */}
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={e => setActive(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-9 h-5 rounded-full transition-colors ${active ? 'bg-teal' : 'bg-gray-300'}`} />
+                <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${active ? 'translate-x-4' : ''}`} />
+              </div>
+              <span className="text-xs font-body font-medium text-muted uppercase tracking-wide">Active</span>
+            </label>
+          </div>
         </div>
 
         {/* Compensation panel */}
@@ -176,17 +233,18 @@ export default function StaffDetail() {
             )}
             <Input label="Notes" value={notes} onChange={setNotes} />
           </div>
-
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors disabled:opacity-60"
-          >
-            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Save Changes
-          </button>
         </div>
       </div>
+
+      {/* Single save button covering both panels */}
+      <button
+        onClick={handleSave}
+        disabled={isSaving}
+        className="inline-flex items-center gap-2 px-4 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors disabled:opacity-60"
+      >
+        {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+        Save Changes
+      </button>
     </div>
   )
 }

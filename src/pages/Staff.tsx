@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Loader2, AlertCircle, User } from 'lucide-react'
 import { useStaff } from '../hooks/useStaff'
 import type { StaffMember } from '../types'
@@ -26,15 +25,15 @@ function RoleBadge({ role }: { role: 'partner' | 'w2' }) {
 }
 
 export default function Staff() {
+  const navigate = useNavigate()
   const { data: staff, isLoading, isError, error } = useStaff()
-  const [showAdd, setShowAdd] = useState(false)
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl font-semibold text-ink">Staff</h1>
         <button
-          onClick={() => setShowAdd(true)}
+          onClick={() => navigate('/staff/new')}
           className="inline-flex items-center gap-1.5 px-3 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
         >
           <Plus size={15} strokeWidth={2.5} />
@@ -118,29 +117,6 @@ export default function Staff() {
           </table>
         </div>
       )}
-
-      {showAdd && <AddStaffModal onClose={() => setShowAdd(false)} />}
-    </div>
-  )
-}
-
-function AddStaffModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
-        <h2 className="font-heading text-lg font-semibold text-ink">Add Staff Member</h2>
-        <p className="text-sm font-body text-muted">
-          To add a staff member, seed the <code className="bg-gray-100 px-1 rounded">Staff</code> tab in the Claim Tracking spreadsheet with their record, then refresh this page.
-        </p>
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

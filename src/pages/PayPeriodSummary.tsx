@@ -85,7 +85,7 @@ function PartnerTab({ periods }: { periods: SalaryPayPeriod[] }) {
   }, [periods])
 
   const [selectedPeriod, setSelectedPeriod] = useState(mostRecent)
-  const { data, isLoading } = usePartnerSummary(selectedPeriod)
+  const { data, isLoading, isError, error } = usePartnerSummary(selectedPeriod)
   const summaries = data as PartnerPeriodSummary[] | undefined
   const { copied, copy } = useCopied()
 
@@ -146,6 +146,13 @@ function PartnerTab({ periods }: { periods: SalaryPayPeriod[] }) {
         </div>
       )}
 
+      {isError && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
+          <AlertCircle size={16} className="shrink-0" />
+          {(error as Error).message}
+        </div>
+      )}
+
       {summaries && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {summaries.map(s => <PartnerCard key={s.clinician} summary={s} />)}
@@ -170,7 +177,7 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
   const [bonusPay, setBonusPay] = useState('')
   const [notes, setNotes] = useState('')
 
-  const { data: rawData, isLoading } = useEmilySummary(selectedPeriod)
+  const { data: rawData, isLoading, isError, error } = useEmilySummary(selectedPeriod)
   const summary = rawData as EmilyPayPeriodSummary | undefined
   const { mutate: saveRecord, isPending: isSaving } = useSavePayrollRecord()
   const { copied, copy } = useCopied()
@@ -250,6 +257,13 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
         <div className="flex items-center justify-center py-12 text-muted">
           <Loader2 size={18} className="animate-spin mr-2" />
           <span className="text-sm font-body">Loading…</span>
+        </div>
+      )}
+
+      {isError && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
+          <AlertCircle size={16} className="shrink-0" />
+          {(error as Error).message}
         </div>
       )}
 
