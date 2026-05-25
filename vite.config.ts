@@ -7,6 +7,7 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  assetsInclude: ['**/*.xlsx'],
   server: {
     proxy: {
       '/api': {

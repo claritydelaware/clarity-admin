@@ -1,9 +1,91 @@
 import { useState } from 'react'
-import { Loader2, AlertCircle, Upload, ChevronDown, ChevronUp, Edit2, Check, X } from 'lucide-react'
+import * as XLSX from 'xlsx'
+import { Loader2, AlertCircle, FileSpreadsheet, ChevronDown, ChevronUp, Edit2, Check, X } from 'lucide-react'
 import { useOverhead, useSaveOverhead, useUpdateOverhead } from '../hooks/useOverhead'
-import { api } from '../lib/api'
 import { formatCurrency } from '../lib/utils'
 import type { OverheadEntry, XeroImportPreview } from '../types'
+
+// Discovered at build time from reporting/*.xlsx
+const xlsxAssets = import.meta.glob('../../reporting/*.xlsx', { query: '?url', import: 'default', eager: true }) as Record<string, string>
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+const SKIP_LABELS = new Set([
+  'Total Income', 'Gross Profit', 'Total Operating Expenses',
+  'Operating Income', 'Total Other Income / (Expense)', 'Net Income',
+  'Account', 'Income', 'Operating Expenses', 'Other Income / (Expense)',
+  'Income Statement (Profit and Loss)',
+])
+
+const PAYROLL_ACCOUNTS = new Set([
+  'Compensation -  Clinicians', 'Compensation -  Officers',
+  'Payroll Taxes -  Clinicians', 'Payroll Taxes -  Officers',
+])
+
+interface ReportingFile {
+  label: string
+  url: string
+  sortKey: number
+}
+
+function labelToMonthKey(label: string): string {
+  const parts = label.split(' ')
+  const monthIdx = MONTH_NAMES.findIndex(m => m === parts[0])
+  if (monthIdx < 0 || !parts[1]) return ''
+  return `${parts[1]}-${String(monthIdx + 1).padStart(2, '0')}-01`
+}
+
+function parseFilename(path: string): { label: string; sortKey: number } | null {
+  const name = path.split('/').pop() ?? ''
+  const m = name.match(/^(\w+)_(\d{4})_PL\.xlsx$/i)
+  if (!m) return null
+  const monthIdx = MONTH_NAMES.findIndex(mn => mn.toLowerCase() === m[1].toLowerCase())
+  if (monthIdx < 0) return null
+  const year = parseInt(m[2])
+  return { label: `${MONTH_NAMES[monthIdx]} ${year}`, sortKey: year * 100 + monthIdx }
+}
+
+function parseXeroRows(rows: (string | number)[][]): XeroImportPreview | string {
+  const periodRow = String(rows[2]?.[0] ?? '')
+  const periodMatch = periodRow.match(/For the month ended (\w+)\s+\d+,?\s+(\d{4})/i)
+  if (!periodMatch) return `Could not parse period from row 3: "${periodRow}"`
+
+  const monthIdx = MONTH_NAMES.findIndex(m => m.toLowerCase() === periodMatch[1].toLowerCase())
+  if (monthIdx < 0) return `Unknown month: ${periodMatch[1]}`
+  const year = parseInt(periodMatch[2])
+  const month = `${year}-${String(monthIdx + 1).padStart(2, '0')}-01`
+  const periodLabel = `${MONTH_NAMES[monthIdx]} ${year}`
+
+  const lineItems: XeroImportPreview['lineItems'] = []
+  let section: 'income' | 'expenses' | 'other' = 'income'
+
+  for (let i = 4; i < rows.length; i++) {
+    const account = String(rows[i]?.[0] ?? '').trim()
+    const raw = rows[i]?.[1]
+    if (!account) continue
+    if (account === 'Operating Expenses') { section = 'expenses'; continue }
+    if (account === 'Other Income / (Expense)') { section = 'other'; continue }
+    if (account === 'Income' && i < 8) { section = 'income'; continue }
+    if (SKIP_LABELS.has(account)) continue
+    const amount = typeof raw === 'number' ? raw : parseFloat(String(raw ?? '').replace(/[$,()]/g, ''))
+    if (isNaN(amount)) continue
+    let category: XeroImportPreview['lineItems'][0]['category']
+    if (section === 'income') category = 'income'
+    else if (section === 'other') category = 'other'
+    else if (PAYROLL_ACCOUNTS.has(account)) category = 'payroll'
+    else category = 'operational'
+    lineItems.push({ account, amount, category })
+  }
+
+  const totalIncome = lineItems.filter(l => l.category === 'income').reduce((s, l) => s + l.amount, 0)
+  const payrollExpenses = lineItems.filter(l => l.category === 'payroll').reduce((s, l) => s + l.amount, 0)
+  const operationalExpenses = lineItems.filter(l => l.category === 'operational').reduce((s, l) => s + l.amount, 0)
+  const otherIncome = lineItems.filter(l => l.category === 'other').reduce((s, l) => s + l.amount, 0)
+  const totalExpenses = payrollExpenses + operationalExpenses
+  const netIncome = totalIncome - totalExpenses + otherIncome
+
+  return { month, periodLabel, totalIncome, payrollExpenses, operationalExpenses, totalExpenses, netIncome, lineItems }
+}
 
 function ImportBadge({ source }: { source: 'xero-import' | 'manual' }) {
   return (
@@ -29,7 +111,7 @@ function PreviewPanel({ preview, onConfirm, onDiscard, existing }: {
       <div className="flex items-start justify-between">
         <div>
           <h3 className="font-heading text-base font-semibold text-ink">{preview.periodLabel}</h3>
-          <p className="text-xs font-body text-muted mt-0.5">Parsed from Xero_Import tab</p>
+          <p className="text-xs font-body text-muted mt-0.5">Parsed from Xero P&amp;L export</p>
         </div>
         {existing && (
           <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-body">
@@ -166,21 +248,40 @@ export default function Overhead() {
   const { mutate: saveOverhead } = useSaveOverhead()
 
   const [preview, setPreview] = useState<XeroImportPreview | null>(null)
-  const [importing, setImporting] = useState(false)
+  const [importing, setImporting] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
   const [editEntry, setEditEntry] = useState<OverheadEntry | null>(null)
 
-  const handleImport = async () => {
-    setImporting(true)
+  // Build sorted list of available P&L files from reporting/
+  const reportingFiles: ReportingFile[] = Object.entries(xlsxAssets)
+    .map(([path, url]) => {
+      const parsed = parseFilename(path)
+      if (!parsed) return null
+      return { label: parsed.label, url, sortKey: parsed.sortKey }
+    })
+    .filter((f): f is ReportingFile => f !== null)
+    .sort((a, b) => b.sortKey - a.sortKey)
+
+  const handleImport = async (file: ReportingFile) => {
+    setImporting(file.label)
     setImportError(null)
     try {
-      const result = await api.overhead.importFromSheet()
-      setPreview(result)
+      const resp = await fetch(file.url)
+      const buf = await resp.arrayBuffer()
+      const wb = XLSX.read(buf, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json<(string | number)[]>(ws, { header: 1, defval: '' })
+      const result = parseXeroRows(rows)
+      if (typeof result === 'string') {
+        setImportError(result)
+      } else {
+        setPreview(result)
+      }
     } catch (e) {
       setImportError((e as Error).message)
     } finally {
-      setImporting(false)
+      setImporting(null)
     }
   }
 
@@ -212,10 +313,12 @@ export default function Overhead() {
 
       {/* Import section */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <h2 className="font-heading text-base font-semibold text-ink">Import from Xero</h2>
-        <p className="text-sm font-body text-muted">
-          Download the monthly P&amp;L from Xero, copy it into a tab named <code className="bg-gray-100 px-1 rounded">Xero_Import</code> in the Claim Tracking spreadsheet, then click Import below.
-        </p>
+        <div>
+          <h2 className="font-heading text-base font-semibold text-ink">Import from Xero</h2>
+          <p className="text-sm font-body text-muted mt-1">
+            Drop monthly P&amp;L files from Xero into the <code className="bg-gray-100 px-1 rounded">reporting/</code> folder, then click a month to import.
+          </p>
+        </div>
 
         {importError && (
           <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
@@ -225,14 +328,35 @@ export default function Overhead() {
         )}
 
         {!preview && (
-          <button
-            onClick={handleImport}
-            disabled={importing}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors disabled:opacity-60"
-          >
-            {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            {importing ? 'Reading…' : 'Read from Xero_Import tab'}
-          </button>
+          reportingFiles.length === 0 ? (
+            <p className="text-sm font-body text-muted italic">No P&amp;L files found in <code className="bg-gray-100 px-1 rounded">reporting/</code>.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {reportingFiles.map(file => {
+                const alreadyImported = existingMonths.has(labelToMonthKey(file.label))
+                return (
+                <button
+                  key={file.url}
+                  onClick={() => handleImport(file)}
+                  disabled={importing !== null}
+                  className={[
+                    'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm font-body transition-colors',
+                    alreadyImported
+                      ? 'border-gray-200 text-muted hover:bg-gray-50'
+                      : 'border-gray-200 text-ink hover:border-teal/40 hover:bg-teal-pale/20',
+                    importing === file.label ? 'opacity-60 cursor-wait' : '',
+                  ].join(' ')}
+                >
+                  {importing === file.label
+                    ? <Loader2 size={14} className="shrink-0 animate-spin text-teal" />
+                    : <FileSpreadsheet size={14} className="shrink-0 text-teal" />
+                  }
+                  <span>{file.label}</span>
+                </button>
+                )
+              })}
+            </div>
+          )
         )}
 
         {preview && (
@@ -290,14 +414,14 @@ export default function Overhead() {
               {displayedEntries.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-muted text-sm">
-                    No overhead entries yet. Import from Xero above.
+                    No overhead entries yet. Import a month above.
                   </td>
                 </tr>
               )}
               {displayedEntries.map(entry => (
                 <tr key={entry.month} className="hover:bg-cream transition-colors">
                   <td className="px-5 py-3 font-medium text-ink">
-                    {new Date(entry.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {new Date(entry.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(entry.totalIncome)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted">{formatCurrency(entry.payrollExpenses)}</td>

@@ -11,15 +11,6 @@ export function useOverhead() {
   })
 }
 
-export function useImportOverhead() {
-  return useQuery({
-    queryKey: ['overhead-import'],
-    queryFn: () => api.overhead.importFromSheet(),
-    enabled: false,
-    retry: false,
-  })
-}
-
 export function useSaveOverhead() {
   const qc = useQueryClient()
   const toast = useToast()

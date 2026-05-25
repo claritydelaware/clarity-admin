@@ -1,3 +1,13 @@
+import type { Claim } from '../types'
+
+export function isArchived(claim: Claim): boolean {
+  if (claim.status === 'Denied') return true
+  if (claim.status === 'Sent to Secondary') return true
+  if (claim.status === 'Payment Received' && !!claim.paymentDateReceived) return true
+  if (claim.status === 'Deductible' && !!claim.paymentDateReceived) return true
+  return false
+}
+
 export function getSundayOfWeek(date: Date): Date {
   const d = new Date(date)
   d.setDate(d.getDate() - d.getDay())

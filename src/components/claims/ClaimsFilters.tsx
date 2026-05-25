@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { X, Bookmark } from 'lucide-react'
+import { X, Bookmark, ChevronDown } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, CLAIM_STATUSES, SERVICE_CODES } from '../../types'
 
 const MAX_PRESETS = 8
@@ -44,11 +44,22 @@ export default function ClaimsFilters() {
   const [presets, setPresets] = useState<Preset[]>(loadPresets)
   const [saving, setSaving] = useState(false)
   const [presetName, setPresetName] = useState('')
+  const [statusOpen, setStatusOpen] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const statusPopoverRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (saving) nameInputRef.current?.focus()
   }, [saving])
+
+  useEffect(() => {
+    if (!statusOpen) return
+    function handleClick(e: MouseEvent) {
+      if (!statusPopoverRef.current?.contains(e.target as Node)) setStatusOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [statusOpen])
 
   const set = (key: string, value: string) => {
     const next = new URLSearchParams(sp)
@@ -83,6 +94,18 @@ export default function ClaimsFilters() {
 
   const applyPreset = (params: string) => {
     setSp(new URLSearchParams(params), { replace: true })
+  }
+
+  const selectedStatuses = (sp.get('status') ?? '').split(',').filter(Boolean)
+  const statusLabel = selectedStatuses.length === 0
+    ? 'All Statuses'
+    : `${selectedStatuses.length} status${selectedStatuses.length > 1 ? 'es' : ''}`
+
+  const toggleStatus = (s: string) => {
+    const next = selectedStatuses.includes(s)
+      ? selectedStatuses.filter(x => x !== s)
+      : [...selectedStatuses, s]
+    set('status', next.join(','))
   }
 
   const selectClass =
@@ -128,10 +151,38 @@ export default function ClaimsFilters() {
           {KNOWN_PAYERS.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
 
-        <select value={sp.get('status') ?? ''} onChange={e => set('status', e.target.value)} className={selectClass}>
-          <option value="">All Statuses</option>
-          {CLAIM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="relative" ref={statusPopoverRef}>
+          <button
+            type="button"
+            onClick={() => setStatusOpen(o => !o)}
+            className={[
+              selectClass,
+              'inline-flex items-center gap-1.5 cursor-pointer',
+              selectedStatuses.length > 0 ? 'border-teal text-teal' : '',
+            ].join(' ')}
+          >
+            {statusLabel}
+            <ChevronDown size={12} className="opacity-50 shrink-0" />
+          </button>
+          {statusOpen && (
+            <div className="absolute z-20 top-9 left-0 bg-white border border-gray-200 rounded-lg shadow-md py-1 min-w-48">
+              {CLAIM_STATUSES.map(s => (
+                <label
+                  key={s}
+                  className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm font-body text-ink"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedStatuses.includes(s)}
+                    onChange={() => toggleStatus(s)}
+                    className="rounded border-gray-300 accent-teal"
+                  />
+                  {s}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
 
         <select value={sp.get('serviceCode') ?? ''} onChange={e => set('serviceCode', e.target.value)} className={selectClass}>
           <option value="">All Codes</option>

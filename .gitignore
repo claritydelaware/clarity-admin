@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Financial data files — not committed
+reporting/
+*.xlsx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

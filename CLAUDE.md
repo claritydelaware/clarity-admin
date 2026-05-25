@@ -273,12 +273,47 @@ Light background (cream/white) content area. White sidebar with right border. Go
 - `src/pages/StaffDetail.tsx` — staff detail + compensation editing page
 
 **Critical implementation details:**
-- Overhead import reads `Xero_Import` tab in the Claim Tracking spreadsheet instead of using SheetJS (avoids Worker 1MB bundle limit)
+- Overhead import originally read `Xero_Import` tab; rearchitected in Phase 4.5 to read `.xlsx` files from `reporting/` using SheetJS (xlsx npm package). Drop Xero monthly P&L exports as `Month_YYYY_PL.xlsx` into `reporting/`; the Overhead page auto-discovers them via `import.meta.glob`. The `reporting/` folder is gitignored (financial data, not committed).
 - `computePeriodMetrics()` extracted as a pure Worker function; called twice (current + prior) for dashboard date windowing
 - `useDashboard` queryKey includes `from` and `to` so different date windows never share stale cache
 - Badge's `onClick` prop updated to `React.MouseEventHandler<HTMLButtonElement>` so ClaimsTable can call `e.stopPropagation()` before opening the status modal
 - All Recharts `formatter` callbacks typed as `(v: unknown) => ...` with `v as number` cast internally — Recharts `ValueType` is `number | string | undefined | null`
-- `localStorage` keys in use: `dashboardDateWindow`, `claimsTableDensity`, `claimsFilterPresets`
+- `localStorage` keys in use: `dashboardDateWindow`, `claimsTableDensity`, `claimsFilterPresets`, `claimsViewMode`
+
+### Phase 4.5 — Claims Workflow Enhancements ✅ Complete (2026-05-24)
+
+**Scope:** Frontend-only. No new Worker endpoints. No new Google Sheets columns. All changes in the React SPA.
+
+| Feature | Details |
+|---|---|
+| New claim statuses | `'Deductible'` and `'Sent to Secondary'` added to `CLAIM_STATUSES`; display order: Pending → Finalized → Deductible → Sent to Secondary → Payment Received → Denied |
+| Badge colors | Deductible → `bg-violet-600` (#7C3AED); Sent to Secondary → `bg-blue-600` (#2563EB) |
+| Archive logic | `isArchived(claim)` in `utils.ts`; true for Denied, Sent to Secondary, Payment Received with date, Deductible with date |
+| Active view default | Claims page defaults to active-only view; Active / All Claims segmented toggle in header; persisted in `localStorage` under `claimsViewMode` |
+| Multi-select status filter | Status `<select>` replaced with checkbox popover; comma-separated URL param (`?status=Pending,Finalized`); stripped before API call (client-side only, same as `search`) |
+| Compound sort default | No user sort → status (A→Z) → payer (A→Z) → claim date (asc) → payment date (asc, nulls last); column header click overrides; "Reset sort" restores compound |
+| Expanded sortable columns | All meaningful columns now sortable: Clinician, Payer, Date, Code, Method, Status, Client Amount, Insurance Amount, Total Payment |
+| Profile link column | First desktop column: `ExternalLink` icon → `https://secure.simplepractice.com/clients/{clientId}`; hidden when `clientId` falsy; "View in SimplePractice" in mobile expanded card |
+
+**No new Worker endpoints. No new files — modifications to existing files only:**
+
+| File | Change |
+|---|---|
+| `src/types/index.ts` | `CLAIM_STATUSES` array expanded with new statuses and reordered |
+| `src/lib/utils.ts` | `isArchived(claim: Claim): boolean` added |
+| `src/lib/api.ts` | `status` stripped from API params in `claims.list()` alongside `search` |
+| `src/components/ui/Badge.tsx` | Two new entries in `STYLES` for Deductible and Sent to Secondary |
+| `src/components/claims/ClaimsFilters.tsx` | Status `<select>` → checkbox popover with click-outside close |
+| `src/components/claims/ClaimsTable.tsx` | `userSort` state (null = compound); `compoundSort()` + `singleKeySort()` helpers; profile link first column; expanded `SortKey` type; reset sort button |
+| `src/pages/Claims.tsx` | `useViewMode()` hook; Active/All toggle in header; archive + status filters applied client-side |
+
+**Critical implementation details:**
+- `CLAIM_STATUSES` array order is the canonical display order used in all dropdowns and the multi-select popover — StatusUpdateModal, NewClaim, EditClaim all pick up new statuses automatically via `.map()`
+- `isArchived()` lives in `utils.ts` so it can be imported wherever needed (currently only Claims.tsx)
+- `status` is stripped in `api.ts` (not `Claims.tsx`) using the same destructure pattern as `search` — `ClaimsFilter` interface retains the field for call-site compatibility
+- Compound sort priority: status (A→Z) → payer (A→Z) → claim date (oldest first) → payment date (oldest first, nulls last)
+- Multi-select URL param is comma-separated: `?status=Pending,Finalized`; empty string = no status filter
+- `localStorage` key added: `claimsViewMode` (`'active'` | `'all'`, default `'active'`)
 
 ### Pending Infrastructure
 
@@ -302,11 +337,11 @@ clarity-admin/
 │   │   │   ├── Sidebar.tsx             (Phase 4: +Pay Periods, Overhead, Staff nav items)
 │   │   │   └── Topbar.tsx
 │   │   ├── ui/
-│   │   │   ├── Badge.tsx               (Phase 4: onClick typed as MouseEventHandler)
+│   │   │   ├── Badge.tsx               (Phase 4: onClick typed as MouseEventHandler; Phase 4.5: Deductible + Sent to Secondary colors)
 │   │   │   └── Skeleton.tsx            (Phase 4: new — SkeletonMetricCards, SkeletonTable, SkeletonChart, SkeletonForecastGroups)
 │   │   └── claims/
-│   │       ├── ClaimsTable.tsx         (Phase 3: InlineEditCell + MobileEditModal; Phase 4: compact prop)
-│   │       ├── ClaimsFilters.tsx       (Phase 4: saved filter presets via localStorage)
+│   │       ├── ClaimsTable.tsx         (Phase 3: InlineEditCell + MobileEditModal; Phase 4: compact prop; Phase 4.5: compound sort, profile link column, expanded sortable cols)
+│   │       ├── ClaimsFilters.tsx       (Phase 4: saved filter presets via localStorage; Phase 4.5: multi-select status popover)
 │   │       └── StatusUpdateModal.tsx
 │   ├── context/
 │   │   └── ToastContext.tsx            (Phase 4: new — toast provider + useToast hook)
@@ -321,12 +356,12 @@ clarity-admin/
 │   │   ├── useQuarterlySummary.ts      (Phase 4: new — quarterly revenue/margin summary)
 │   │   └── useStaff.ts                 (Phase 4: new — staff CRUD)
 │   ├── lib/
-│   │   ├── api.ts                      (Phase 4: +api.staff.*, api.overhead.*, api.payPeriodsFull.*, api.analytics.quarterlySummary/payerPerformance; dashboard accepts date range)
-│   │   └── utils.ts
+│   │   ├── api.ts                      (Phase 4: +api.staff.*, api.overhead.*, api.payPeriodsFull.*, api.analytics.quarterlySummary/payerPerformance; dashboard accepts date range; Phase 4.5: status stripped from claims.list() params)
+│   │   └── utils.ts                    (Phase 4.5: +isArchived())
 │   ├── pages/
 │   │   ├── Dashboard.tsx               (Phase 4: date window selector + delta badges + skeleton loading)
 │   │   ├── Analytics.tsx               (Phase 4: +QuarterlySection, +PayerPerformanceSection)
-│   │   ├── Claims.tsx                  (Phase 4: density toggle + skeleton loading)
+│   │   ├── Claims.tsx                  (Phase 4: density toggle + skeleton loading; Phase 4.5: Active/All toggle, archive filter, client-side status filter)
 │   │   ├── NewClaim.tsx
 │   │   ├── EditClaim.tsx
 │   │   ├── Forecast.tsx                (Phase 4: quarterly rollup banner + toast on recalculate)
@@ -335,7 +370,7 @@ clarity-admin/
 │   │   ├── Staff.tsx                   (Phase 4: new)
 │   │   └── StaffDetail.tsx             (Phase 4: new)
 │   ├── types/
-│   │   └── index.ts                    (Phase 4: +DateWindow, +DashboardPeriodMetrics, +QuarterlySummary, +OverheadEntry, +XeroImportPreview, +SalaryPayPeriod, +HourlyPayPeriod, +PartnerPeriodSummary, +EmilyPayPeriodSummary, +PayerPerformance, +StaffMember)
+│   │   └── index.ts                    (Phase 4: +DateWindow, +DashboardPeriodMetrics, +QuarterlySummary, +OverheadEntry, +XeroImportPreview, +SalaryPayPeriod, +HourlyPayPeriod, +PartnerPeriodSummary, +EmilyPayPeriodSummary, +PayerPerformance, +StaffMember; Phase 4.5: CLAIM_STATUSES expanded with Deductible + Sent to Secondary)
 │   ├── App.tsx                         (Phase 4: +overhead, pay-periods, staff, staff/:id routes)
 │   ├── main.tsx
 │   └── index.css                       (Phase 4: --font-heading changed to Fraunces)

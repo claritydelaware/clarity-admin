@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronUp, ChevronDown, Loader2, X } from 'lucide-react'
+import { ChevronUp, ChevronDown, Loader2, X, ExternalLink, RotateCcw } from 'lucide-react'
 import type { Claim } from '../../types'
 import { SERVICE_CODES, SUBMISSION_METHODS } from '../../types'
 import { formatCurrency, formatDate, toInputDate } from '../../lib/utils'
@@ -15,7 +15,75 @@ interface Props {
   compact?: boolean
 }
 
-type SortKey = 'claimDate' | 'clinician' | 'totalPayment'
+type SortKey =
+  | 'claimDate'
+  | 'paymentDateReceived'
+  | 'forecastPaymentDate'
+  | 'status'
+  | 'insurance'
+  | 'clinician'
+  | 'serviceCode'
+  | 'submissionMethod'
+  | 'totalPayment'
+  | 'insuranceAmount'
+  | 'clientAmount'
+
+function parseDate(s: string | undefined): number {
+  if (!s) return 0
+  const t = new Date(s).getTime()
+  return isNaN(t) ? 0 : t
+}
+
+function compoundSort(a: Claim, b: Claim): number {
+  let cmp = a.status.localeCompare(b.status)
+  if (cmp !== 0) return cmp
+  cmp = a.insurance.localeCompare(b.insurance)
+  if (cmp !== 0) return cmp
+  cmp = parseDate(a.claimDate) - parseDate(b.claimDate)
+  if (cmp !== 0) return cmp
+  const aPay = parseDate(a.paymentDateReceived)
+  const bPay = parseDate(b.paymentDateReceived)
+  if (!aPay && !bPay) return 0
+  if (!aPay) return 1
+  if (!bPay) return -1
+  return aPay - bPay
+}
+
+function singleKeySort(a: Claim, b: Claim, key: SortKey, dir: 'asc' | 'desc'): number {
+  let cmp = 0
+  switch (key) {
+    case 'claimDate':
+      cmp = parseDate(a.claimDate) - parseDate(b.claimDate)
+      break
+    case 'paymentDateReceived': {
+      const aPay = parseDate(a.paymentDateReceived)
+      const bPay = parseDate(b.paymentDateReceived)
+      if (!aPay && !bPay) return 0
+      if (!aPay) return dir === 'asc' ? 1 : -1
+      if (!bPay) return dir === 'asc' ? -1 : 1
+      cmp = aPay - bPay
+      break
+    }
+    case 'forecastPaymentDate': {
+      const aF = parseDate(a.forecastPaymentDate)
+      const bF = parseDate(b.forecastPaymentDate)
+      if (!aF && !bF) return 0
+      if (!aF) return dir === 'asc' ? 1 : -1
+      if (!bF) return dir === 'asc' ? -1 : 1
+      cmp = aF - bF
+      break
+    }
+    case 'status': cmp = a.status.localeCompare(b.status); break
+    case 'insurance': cmp = a.insurance.localeCompare(b.insurance); break
+    case 'clinician': cmp = a.clinician.localeCompare(b.clinician); break
+    case 'serviceCode': cmp = a.serviceCode.localeCompare(b.serviceCode); break
+    case 'submissionMethod': cmp = a.submissionMethod.localeCompare(b.submissionMethod); break
+    case 'totalPayment': cmp = a.totalPayment - b.totalPayment; break
+    case 'insuranceAmount': cmp = a.insuranceAmount - b.insuranceAmount; break
+    case 'clientAmount': cmp = a.clientAmount - b.clientAmount; break
+  }
+  return dir === 'asc' ? cmp : -cmp
+}
 
 // ─── INLINE EDIT CELL ────────────────────────────────────────────────────────
 
@@ -210,32 +278,28 @@ function MobileEditModal({ claim, field, label, rawValue, inputType, options, on
 // ─── MAIN TABLE ───────────────────────────────────────────────────────────────
 
 export default function ClaimsTable({ claims, onStatusClick, compact = false }: Props) {
-  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
-    key: 'claimDate', dir: 'desc',
-  })
+  const [userSort, setUserSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' } | null>(null)
   const [page, setPage] = useState(1)
   const rowPy = compact ? 'py-1.5' : 'py-3'
   const cellText = compact ? 'text-xs' : 'text-sm'
 
-  const sorted = [...claims].sort((a, b) => {
-    let cmp = 0
-    if (sort.key === 'claimDate') cmp = new Date(a.claimDate).getTime() - new Date(b.claimDate).getTime()
-    if (sort.key === 'clinician') cmp = a.clinician.localeCompare(b.clinician)
-    if (sort.key === 'totalPayment') cmp = a.totalPayment - b.totalPayment
-    return sort.dir === 'asc' ? cmp : -cmp
-  })
+  const sorted = [...claims].sort((a, b) =>
+    userSort ? singleKeySort(a, b, userSort.key, userSort.dir) : compoundSort(a, b)
+  )
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const toggleSort = (key: SortKey) => {
     setPage(1)
-    setSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })
+    setUserSort(s => s?.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' })
   }
 
+  const resetSort = () => { setUserSort(null); setPage(1) }
+
   const SortIcon = ({ col }: { col: SortKey }) =>
-    sort.key === col
-      ? sort.dir === 'asc' ? <ChevronUp size={13} className="inline ml-0.5" /> : <ChevronDown size={13} className="inline ml-0.5" />
+    userSort?.key === col
+      ? userSort.dir === 'asc' ? <ChevronUp size={13} className="inline ml-0.5" /> : <ChevronDown size={13} className="inline ml-0.5" />
       : <ChevronDown size={13} className="inline ml-0.5 opacity-25" />
 
   const th = (label: string, col?: SortKey) => (
@@ -252,19 +316,32 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
 
   return (
     <div>
+      {userSort && (
+        <div className="flex justify-end mb-1">
+          <button
+            type="button"
+            onClick={resetSort}
+            className="inline-flex items-center gap-1 text-xs text-muted hover:text-teal font-body transition-colors"
+          >
+            <RotateCcw size={11} /> Reset sort
+          </button>
+        </div>
+      )}
+
       {/* Desktop table */}
       <div className="hidden md:block overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm font-body">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
+              <th className="w-10 px-2 py-3" />
               {th('Clinician', 'clinician')}
-              {th('Payer')}
+              {th('Payer', 'insurance')}
               {th('Date', 'claimDate')}
-              {th('Code')}
-              {th('Method')}
-              {th('Status')}
-              {th('Client')}
-              {th('Insurance')}
+              {th('Code', 'serviceCode')}
+              {th('Method', 'submissionMethod')}
+              {th('Status', 'status')}
+              {th('Client', 'clientAmount')}
+              {th('Insurance', 'insuranceAmount')}
               {th('Total', 'totalPayment')}
               {th('Notes')}
               {th('')}
@@ -273,13 +350,27 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
           <tbody className="divide-y divide-gray-100">
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-muted text-sm">
+                <td colSpan={12} className="px-4 py-8 text-center text-muted text-sm">
                   No claims match the current filters.
                 </td>
               </tr>
             )}
             {paginated.map(claim => (
               <tr key={claim.rowIndex} className="hover:bg-cream transition-colors">
+                <td className="w-10 px-2 py-0 text-center">
+                  {claim.clientId && (
+                    <a
+                      href={`https://secure.simplepractice.com/clients/${claim.clientId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open in SimplePractice"
+                      onClick={e => e.stopPropagation()}
+                      className="inline-flex items-center justify-center text-muted hover:text-teal transition-colors p-1"
+                    >
+                      <ExternalLink size={14} />
+                    </a>
+                  )}
+                </td>
                 <td className={`px-4 ${rowPy} font-medium text-ink ${cellText}`}>{claim.clinician}</td>
                 <td className={`px-4 ${rowPy} text-muted ${cellText}`}>{claim.insurance}</td>
                 <td className={`px-4 ${rowPy} text-muted whitespace-nowrap ${cellText}`}>{formatDate(claim.claimDate)}</td>
@@ -477,7 +568,7 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
             >
               {claim.notes ? <>Notes: <span className="text-ink">{claim.notes}</span></> : <span className="text-teal">+ Add notes</span>}
             </button>
-            <span className="col-span-2 pt-1">
+            <span className="col-span-2 pt-1 flex items-center gap-4">
               <Link
                 to={`/claims/${claim.rowIndex}/edit`}
                 className="text-xs text-teal hover:underline font-body"
@@ -485,6 +576,17 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
               >
                 Full edit
               </Link>
+              {claim.clientId && (
+                <a
+                  href={`https://secure.simplepractice.com/clients/${claim.clientId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-muted hover:text-teal font-body transition-colors"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <ExternalLink size={12} /> View in SimplePractice
+                </a>
+              )}
             </span>
           </div>
         )}

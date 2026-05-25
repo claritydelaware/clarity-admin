@@ -1,10 +1,12 @@
 import type { ClaimStatus } from '../../types'
 
 const STYLES: Record<ClaimStatus, string> = {
-  'Pending':          'bg-gold text-ink',
-  'Payment Received': 'bg-success text-white',
-  'Finalized':        'bg-muted text-white',
-  'Denied':           'bg-error text-white',
+  'Pending':            'bg-gold text-ink',
+  'Payment Received':   'bg-success text-white',
+  'Finalized':          'bg-muted text-white',
+  'Denied':             'bg-error text-white',
+  'Deductible':         'bg-violet-600 text-white',
+  'Sent to Secondary':  'bg-blue-600 text-white',
 }
 
 interface Props {

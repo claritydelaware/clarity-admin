@@ -1,7 +1,7 @@
 import type {
   Claim, NewClaimInput, ClaimUpdateInput, ClaimFullEditInput, PayPeriod, CaseloadEntry,
   DashboardData, CaseloadTrendMonth, ForecastAccuracyWeek,
-  StaffMember, OverheadEntry, XeroImportPreview, QuarterlySummary, PayerPerformance,
+  StaffMember, OverheadEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
 } from '../types'
 
@@ -22,7 +22,7 @@ export async function apiFetchWithParams<T>(path: string, params: URLSearchParam
 export interface ClaimsFilter {
   clinician?: string
   payer?: string
-  status?: string
+  status?: string  // client-side only — not sent to API
   serviceCode?: string
   from?: string   // YYYY-MM-DD
   to?: string     // YYYY-MM-DD
@@ -32,8 +32,8 @@ export interface ClaimsFilter {
 export const api = {
   claims: {
     list(filter?: ClaimsFilter): Promise<Claim[]> {
-      // Strip search — it is client-side only and must not be forwarded to the API
-      const { search: _search, ...apiFilter } = filter ?? {}
+      // Strip search and status — both are client-side only and must not be forwarded to the API
+      const { search: _search, status: _status, ...apiFilter } = filter ?? {}
       const params = new URLSearchParams(
         Object.entries(apiFilter).filter((e): e is [string, string] => Boolean(e[1]))
       )
@@ -110,7 +110,6 @@ export const api = {
   },
   overhead: {
     list: (): Promise<OverheadEntry[]> => apiFetch<OverheadEntry[]>('/overhead'),
-    importFromSheet: (): Promise<XeroImportPreview> => apiFetch<XeroImportPreview>('/overhead/import'),
     save: (data: OverheadEntry): Promise<OverheadEntry> =>
       apiFetch<OverheadEntry>('/overhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
     update: (month: string, data: Partial<OverheadEntry>): Promise<OverheadEntry> =>
