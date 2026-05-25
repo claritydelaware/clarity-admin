@@ -216,6 +216,9 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
   }, [periods])
 
   const [selectedPeriod, setSelectedPeriod] = useState(mostRecent)
+  const [therapySessions, setTherapySessions] = useState('')
+  const [otherSessions, setOtherSessions] = useState('')
+  const [noShows, setNoShows] = useState('')
   const [meetingHours, setMeetingHours] = useState('')
   const [consultations, setConsultations] = useState('')
   const [bonusPay, setBonusPay] = useState('')
@@ -242,15 +245,22 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
   const subConsults   = submission ? submission.adminHours.consultations : null
 
   // Use !== '' so user can explicitly type 0 without falling back to the server value
-  const effMeetingH  = meetingHours  !== '' ? (parseFloat(meetingHours)  || 0) : (subMeetingH  !== null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)
-  const effConsults  = consultations !== '' ? (parseInt(consultations)   || 0) : (subConsults  ?? savedConsults)
-  const effBonusP    = bonusPay      !== '' ? (parseFloat(bonusPay)      || 0) : savedBonusPay
+  const effTherapySessions = therapySessions !== '' ? (parseInt(therapySessions) || 0) : (summary?.therapySessions ?? 0)
+  const effOtherSessions   = otherSessions   !== '' ? (parseInt(otherSessions)   || 0) : (summary?.otherSessions   ?? 0)
+  const effNoShows         = noShows         !== '' ? (parseInt(noShows)         || 0) : (summary?.noShows         ?? 0)
+  const effMeetingH        = meetingHours    !== '' ? (parseFloat(meetingHours)  || 0) : (subMeetingH !== null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)
+  const effConsults        = consultations   !== '' ? (parseInt(consultations)   || 0) : (subConsults  ?? savedConsults)
+  const effBonusP          = bonusPay        !== '' ? (parseFloat(bonusPay)      || 0) : savedBonusPay
 
   // Locally-computed pay values — update in real time as user edits inputs
   const adminHourlyRate = summary?.adminHourlyRate ?? 25
+  const effTherapyPay   = effTherapySessions * (summary?.therapySessionRate ?? 50)
+  const effOtherPay     = effOtherSessions   * (summary?.otherSessionRate   ?? 40)
+  const effNoShowPay    = effNoShows         * (summary?.noShowRate         ?? 40)
+  const effSessionPay   = effTherapyPay + effOtherPay + effNoShowPay
   const effConsultPay   = effConsults * (adminHourlyRate / 4)
   const effAdminPay     = effMeetingH * adminHourlyRate + effConsultPay
-  const effTotalPay     = (summary?.sessionPay ?? 0) + effAdminPay + effBonusP
+  const effTotalPay     = effSessionPay + effAdminPay + effBonusP
   const effOverhead     = effTotalPay * 0.0956 + 110.80
   const effTotalExp     = effTotalPay + effOverhead
   const effPaymentsRcv  = summary?.paymentsReceived ?? 0
@@ -262,10 +272,10 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
   const copyText = summary ? [
     `Emily Payroll Summary — ${formatPeriodLabel(summary.periodStart, summary.periodEnd)}`,
     '',
-    `Therapy Sessions (${summary.therapySessions} × $${summary.therapySessionRate}): ${formatCurrency(summary.therapyPay)}`,
-    `Other Sessions   (${summary.otherSessions} × $${summary.otherSessionRate}): ${formatCurrency(summary.otherPay)}`,
-    `No-Shows         (${summary.noShows} × $${summary.noShowRate}): ${formatCurrency(summary.noShowPay)}`,
-    `Session Pay subtotal: ${formatCurrency(summary.sessionPay)}`,
+    `Therapy Sessions (${effTherapySessions} × $${summary.therapySessionRate}): ${formatCurrency(effTherapyPay)}`,
+    `Other Sessions   (${effOtherSessions} × $${summary.otherSessionRate}): ${formatCurrency(effOtherPay)}`,
+    `No-Shows         (${effNoShows} × $${summary.noShowRate}): ${formatCurrency(effNoShowPay)}`,
+    `Session Pay subtotal: ${formatCurrency(effSessionPay)}`,
     `Admin Pay: ${formatCurrency(effAdminPay)}`,
     effBonusP > 0 ? `Bonus: ${formatCurrency(effBonusP)}` : null,
     `Total Pay: ${formatCurrency(effTotalPay)}`,
@@ -280,9 +290,9 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
       periodEnd: period?.periodEnd,
       payDate: period?.payDate,
       clinician: 'Emily',
-      therapySessions: summary.therapySessions,
-      otherSessions: summary.otherSessions,
-      noShows: summary.noShows,
+      therapySessions: effTherapySessions,
+      otherSessions: effOtherSessions,
+      noShows: effNoShows,
       consultations: effConsults,
       meetingHours: effMeetingH,
       trainingHours: 0,
@@ -407,21 +417,51 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
 
           {/* Multi-rate pay breakdown */}
           <div className="border-t border-gray-100 pt-4 space-y-2 text-sm font-body">
-            <div className="flex justify-between text-muted text-xs">
-              <span>Therapy sessions ({summary.therapySessions} × ${summary.therapySessionRate})</span>
-              <span className="tabular-nums text-ink">{formatCurrency(summary.therapyPay)}</span>
+            <div className="flex items-center justify-between text-muted text-xs">
+              <span className="flex items-center gap-1">
+                Therapy sessions (
+                <input
+                  type="number" min="0" step="1"
+                  placeholder={String(summary.therapySessions)}
+                  value={therapySessions}
+                  onChange={e => setTherapySessions(e.target.value)}
+                  className="w-12 rounded border border-gray-200 px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                />
+                × ${summary.therapySessionRate})
+              </span>
+              <span className="tabular-nums text-ink">{formatCurrency(effTherapyPay)}</span>
             </div>
-            <div className="flex justify-between text-muted text-xs">
-              <span>Other sessions ({summary.otherSessions} × ${summary.otherSessionRate})</span>
-              <span className="tabular-nums text-ink">{formatCurrency(summary.otherPay)}</span>
+            <div className="flex items-center justify-between text-muted text-xs">
+              <span className="flex items-center gap-1">
+                Other sessions (
+                <input
+                  type="number" min="0" step="1"
+                  placeholder={String(summary.otherSessions)}
+                  value={otherSessions}
+                  onChange={e => setOtherSessions(e.target.value)}
+                  className="w-12 rounded border border-gray-200 px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                />
+                × ${summary.otherSessionRate})
+              </span>
+              <span className="tabular-nums text-ink">{formatCurrency(effOtherPay)}</span>
             </div>
-            <div className="flex justify-between text-muted text-xs">
-              <span>No-shows ({summary.noShows} × ${summary.noShowRate})</span>
-              <span className="tabular-nums text-ink">{formatCurrency(summary.noShowPay)}</span>
+            <div className="flex items-center justify-between text-muted text-xs">
+              <span className="flex items-center gap-1">
+                No-shows (
+                <input
+                  type="number" min="0" step="1"
+                  placeholder={String(summary.noShows)}
+                  value={noShows}
+                  onChange={e => setNoShows(e.target.value)}
+                  className="w-12 rounded border border-gray-200 px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                />
+                × ${summary.noShowRate})
+              </span>
+              <span className="tabular-nums text-ink">{formatCurrency(effNoShowPay)}</span>
             </div>
             <div className="flex justify-between font-medium border-t border-dashed border-gray-200 pt-1.5 text-xs">
               <span>Session Pay subtotal</span>
-              <span className="tabular-nums">{formatCurrency(summary.sessionPay)}</span>
+              <span className="tabular-nums">{formatCurrency(effSessionPay)}</span>
             </div>
 
             {/* Admin inputs */}
