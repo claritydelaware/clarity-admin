@@ -3,7 +3,7 @@ import type {
   DashboardData, CaseloadTrendMonth, ForecastAccuracyWeek,
   StaffMember, StaffLicense, OverheadEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
-  EmilySubmission, EmilyPaymentAnalysisRow,
+  EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -81,10 +81,11 @@ export const api = {
     },
   },
   dashboard: {
-    get: (from?: string, to?: string): Promise<DashboardData> => {
+    get: (from?: string, to?: string, window?: string): Promise<DashboardData> => {
       const p = new URLSearchParams()
-      if (from) p.set('from', from)
-      if (to) p.set('to', to)
+      if (from)   p.set('from', from)
+      if (to)     p.set('to', to)
+      if (window) p.set('window', window)
       const qs = p.toString()
       return apiFetch<DashboardData>(qs ? `/dashboard?${qs}` : '/dashboard')
     },
@@ -99,6 +100,7 @@ export const api = {
     caseloadTrends: (): Promise<CaseloadTrendMonth[]> => apiFetch<CaseloadTrendMonth[]>('/analytics/caseload-trends'),
     forecastAccuracy: (): Promise<ForecastAccuracyWeek[]> => apiFetch<ForecastAccuracyWeek[]>('/analytics/forecast-accuracy'),
     quarterlySummary: (): Promise<QuarterlySummary[]> => apiFetch<QuarterlySummary[]>('/analytics/quarterly-summary'),
+    quarterProjection: (): Promise<QuarterProjection> => apiFetch<QuarterProjection>('/analytics/quarter-projection'),
     payerPerformance: (): Promise<PayerPerformance[]> => apiFetch<PayerPerformance[]>('/analytics/payer-performance'),
   },
   staff: {

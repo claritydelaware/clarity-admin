@@ -18,6 +18,8 @@ interface FormValues {
   status: string
   clientAmount: string
   insuranceAmount: string
+  insurancePaidHHO: string
+  paymentDateReceived: string
   notes: string
 }
 
@@ -37,6 +39,8 @@ function mapClaimToFormValues(claim: Claim): FormValues {
     status: claim.status,
     clientAmount: claim.clientAmount ? String(claim.clientAmount) : '',
     insuranceAmount: claim.insuranceAmount ? String(claim.insuranceAmount) : '',
+    insurancePaidHHO: claim.insurancePaidHHO != null ? String(claim.insurancePaidHHO) : '',
+    paymentDateReceived: claim.paymentDateReceived ? toInputDate(claim.paymentDateReceived) : '',
     notes: claim.notes ?? '',
   }
 }
@@ -68,6 +72,8 @@ export default function EditClaim() {
       status: 'Pending',
       clientAmount: '',
       insuranceAmount: '',
+      insurancePaidHHO: '',
+      paymentDateReceived: '',
       notes: '',
     },
   })
@@ -81,7 +87,14 @@ export default function EditClaim() {
   const serviceCode = watch('serviceCode')
   const insurance = watch('insurance')
   const clientAmountRaw = watch('clientAmount')
+  const insuranceAmountRaw = watch('insuranceAmount')
+  const insurancePaidHHORaw = watch('insurancePaidHHO')
   const submissionMethod = watch('submissionMethod')
+  const status = watch('status')
+
+  const PAYMENT_DATE_STATUSES = ['Payment Received', 'Payment Pending', 'Deductible'] as const
+  const showPaymentDate = PAYMENT_DATE_STATUSES.includes(status as typeof PAYMENT_DATE_STATUSES[number])
+  const paymentDateRequired = status === 'Payment Received'
 
   const clientOptions = caseloads
     ?.filter(e => e.clinician === clinician)
@@ -90,13 +103,21 @@ export default function EditClaim() {
   const isDiscontinuedCode = DISCONTINUED_CODES.includes(serviceCode) &&
     claimDate && new Date(claimDate) > DISCONTINUED_AFTER
 
-  const isHHOCash = HHO_PAYERS.includes((insurance ?? '').toLowerCase()) &&
+  const isHHO = HHO_PAYERS.includes((insurance ?? '').toLowerCase())
+
+  const isHHOCash = isHHO &&
     (submissionMethod === 'Cash' || (watch('notes') ?? '').toLowerCase().includes('late cancellation'))
 
   const clientAmount = parseFloat(clientAmountRaw) || 0
   const stripeFees = clientAmount > 0 ? Math.round((clientAmount * 0.029 + 0.3) * 100) / 100 : 0
 
+  const insurancePaidHHOVal = parseFloat(insurancePaidHHORaw) || 0
+  const insuranceAmountVal = parseFloat(insuranceAmountRaw) || 0
+  const overUnderHHO = insurancePaidHHOVal - insuranceAmountVal
+  const hasHHOAmounts = insurancePaidHHORaw !== '' && insuranceAmountRaw !== ''
+
   const onSubmit = (values: FormValues) => {
+    const isHHOSubmit = HHO_PAYERS.includes((values.insurance ?? '').toLowerCase())
     const data: ClaimFullEditInput = {
       claimDate: values.claimDate,
       clinician: values.clinician as Clinician,
@@ -108,6 +129,10 @@ export default function EditClaim() {
       status: values.status as ClaimFullEditInput['status'],
       clientAmount: values.clientAmount ? parseFloat(values.clientAmount) : 0,
       insuranceAmount: values.insuranceAmount ? parseFloat(values.insuranceAmount) : 0,
+      insurancePaidHHO: isHHOSubmit && values.insurancePaidHHO !== ''
+        ? parseFloat(values.insurancePaidHHO)
+        : undefined,
+      paymentDateReceived: values.paymentDateReceived || undefined,
       notes: values.notes || undefined,
     }
     mutate({ rowIndex, data }, { onSuccess: () => navigate('/claims') })
@@ -232,7 +257,7 @@ export default function EditClaim() {
           </div>
         </div>
 
-        {/* Status */}
+        {/* Status + Payment Date */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Status</label>
@@ -240,6 +265,23 @@ export default function EditClaim() {
               {CLAIM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+          {showPaymentDate && (
+            <div>
+              <label className={labelClass}>
+                Payment Date Received{paymentDateRequired ? ' *' : ''}
+              </label>
+              <input
+                type="date"
+                {...register('paymentDateReceived', {
+                  required: paymentDateRequired ? 'Required for Payment Received' : false,
+                })}
+                className={inputClass}
+              />
+              {errors.paymentDateReceived && (
+                <p className={errorClass}>{errors.paymentDateReceived.message}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Row 4: Amounts */}
@@ -272,6 +314,41 @@ export default function EditClaim() {
             />
           </div>
         </div>
+
+        {/* HHO dispute tracking — Health Options only */}
+        {isHHO && (
+          <div className="grid grid-cols-2 gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <div>
+              <label className={labelClass}>
+                Ins. Paid (HHO)
+                <span className="ml-1.5 font-normal text-[10px] text-muted normal-case">col P — what HHO actually paid</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                {...register('insurancePaidHHO')}
+                className={inputClass}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>
+                Over/Under (HHO)
+                <span className="ml-1.5 font-normal text-[10px] text-muted normal-case">HHO Paid − Insurance Amount</span>
+              </label>
+              <div className={[
+                'flex h-9 items-center px-3 rounded border border-gray-200 bg-gray-50 text-sm font-body tabular-nums select-none',
+                hasHHOAmounts && overUnderHHO > 0 ? 'text-green-700 font-medium' :
+                hasHHOAmounts && overUnderHHO < 0 ? 'text-error font-medium' : 'text-muted',
+              ].join(' ')}>
+                {hasHHOAmounts
+                  ? (overUnderHHO > 0 ? '+' : '') + formatCurrency(overUnderHHO)
+                  : <span className="italic text-xs">enter both amounts</span>}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Notes */}
         <div>

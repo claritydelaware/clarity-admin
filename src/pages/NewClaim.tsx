@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react'
@@ -18,7 +18,15 @@ interface FormValues {
   status: string
   clientAmount: string
   insuranceAmount: string
+  paymentDateReceived: string
   notes: string
+  supplemental?: {
+    serviceCode: string
+    claimId: string
+    clientAmount: string
+    insuranceAmount: string
+    notes: string
+  }
 }
 
 const DISCONTINUED_CODES = ['96127', '96136']
@@ -35,18 +43,27 @@ function todayInputDate(): string {
 
 export default function NewClaim() {
   const navigate = useNavigate()
-  const { mutate, isPending, isError, error, data: created } = useCreateClaim()
+  const { mutateAsync: mutatePrimary, isPending: primaryPending, isError, error } = useCreateClaim()
+  const { mutateAsync: mutateSupplemental, isPending: suppPending } = useCreateClaim()
   const { data: caseloads } = useCaseloads()
   const { data: claims } = useClaims()
-  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
+  const [showSupplemental, setShowSupplemental] = useState(false)
+  const [suppError, setSuppError] = useState<string | null>(null)
+  const [comboOpen, setComboOpen] = useState(false)
+  const [comboQuery, setComboQuery] = useState('')
+  const comboRef = useRef<HTMLDivElement>(null)
+
+  const { register, handleSubmit, watch, setValue, unregister, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
       claimDate: todayInputDate(),
       status: 'Pending',
       submissionMethod: 'Manual',
       serviceCode: '90837',
       clinician: 'Shannon',
+      clientId: '',
+      paymentDateReceived: '',
     },
   })
 
@@ -57,26 +74,51 @@ export default function NewClaim() {
   const clientAmountRaw = watch('clientAmount')
   const submissionMethod = watch('submissionMethod')
   const clientIdValue = watch('clientId')
+  const supplemental = watch('supplemental')
+  const status = watch('status')
 
-  // Derived client IDs for selected clinician
+  const PAYMENT_DATE_STATUSES = ['Payment Received', 'Payment Pending', 'Deductible'] as const
+  const showPaymentDate = PAYMENT_DATE_STATUSES.includes(status as typeof PAYMENT_DATE_STATUSES[number])
+  const paymentDateRequired = status === 'Payment Received'
+
   const clientOptions = caseloads
     ?.filter(e => e.clinician === clinician)
     .map(e => e.clientId) ?? []
 
-  // Business rule warnings
+  const filteredOptions = comboQuery.length === 0
+    ? []
+    : clientOptions.filter(id => id.toLowerCase().includes(comboQuery.toLowerCase()))
+
   const isDiscontinuedCode = DISCONTINUED_CODES.includes(serviceCode) &&
     claimDate && new Date(claimDate) > DISCONTINUED_AFTER
 
   const isHHOCash = HHO_PAYERS.includes((insurance ?? '').toLowerCase()) &&
     (submissionMethod === 'Cash' || (watch('notes') ?? '').toLowerCase().includes('late cancellation'))
 
+  const is90785Alone = serviceCode === '90785' && !showSupplemental
+
   const clientAmount = parseFloat(clientAmountRaw) || 0
   const stripeFees = clientAmount > 0 ? Math.round((clientAmount * 0.029 + 0.3) * 100) / 100 : 0
 
-  // Redirect on success with new row highlighted
+  const suppClientAmount = parseFloat(supplemental?.clientAmount ?? '0') || 0
+  const suppStripeFees = suppClientAmount > 0 ? Math.round((suppClientAmount * 0.029 + 0.3) * 100) / 100 : 0
+
+  // Sync comboQuery on mount if clientId was pre-filled
   useEffect(() => {
-    if (created) navigate('/claims', { state: { newRowIndex: created.rowIndex } })
-  }, [created, navigate])
+    const initial = watch('clientId')
+    if (initial) setComboQuery(initial)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Click-outside to close combobox dropdown
+  useEffect(() => {
+    function handleMouseDown(e: MouseEvent) {
+      if (comboRef.current && !comboRef.current.contains(e.target as Node)) {
+        setComboOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [])
 
   // Auto-fill from caseloads + most recent claim when clientId changes
   useEffect(() => {
@@ -86,14 +128,12 @@ export default function NewClaim() {
     }
     const filled = new Set<string>()
 
-    // Clinician from caseloads (authoritative)
     const caseload = caseloads?.find(e => e.clientId === clientIdValue)
     if (caseload) {
       setValue('clinician', caseload.clinician as Clinician)
       filled.add('clinician')
     }
 
-    // Billing details from most recent claim
     const recent = [...(claims ?? [])]
       .filter(c => c.clientId === clientIdValue)
       .sort((a, b) => new Date(b.claimDate).getTime() - new Date(a.claimDate).getTime())[0]
@@ -109,7 +149,6 @@ export default function NewClaim() {
       filled.add('clientAmount')
       setValue('insuranceAmount', String(recent.insuranceAmount))
       filled.add('insuranceAmount')
-      // Fall back to claim's clinician if caseload had no match
       if (!caseload) {
         setValue('clinician', recent.clinician as Clinician)
         filled.add('clinician')
@@ -119,20 +158,50 @@ export default function NewClaim() {
     setAutoFilledFields(filled)
   }, [clientIdValue, caseloads, claims, setValue])
 
-  const onSubmit = (values: FormValues) => {
-    mutate({
-      claimDate: values.claimDate,
-      clinician: values.clinician as Clinician,
-      clientId: values.clientId || undefined,
-      insurance: values.insurance,
-      claimId: values.claimId || undefined,
-      serviceCode: values.serviceCode as NewClaimInput['serviceCode'],
-      submissionMethod: values.submissionMethod as NewClaimInput['submissionMethod'],
-      status: (values.status || 'Pending') as NewClaimInput['status'],
-      clientAmount: values.clientAmount ? parseFloat(values.clientAmount) : 0,
-      insuranceAmount: values.insuranceAmount ? parseFloat(values.insuranceAmount) : 0,
-      notes: values.notes || undefined,
-    })
+  const onSubmit = async (values: FormValues) => {
+    setSuppError(null)
+    try {
+      const primaryResult = await mutatePrimary({
+        claimDate: values.claimDate,
+        clinician: values.clinician,
+        clientId: values.clientId || undefined,
+        insurance: values.insurance,
+        claimId: values.claimId || undefined,
+        serviceCode: values.serviceCode as NewClaimInput['serviceCode'],
+        submissionMethod: values.submissionMethod as NewClaimInput['submissionMethod'],
+        status: (values.status || 'Pending') as NewClaimInput['status'],
+        clientAmount: values.clientAmount ? parseFloat(values.clientAmount) : 0,
+        insuranceAmount: values.insuranceAmount ? parseFloat(values.insuranceAmount) : 0,
+        paymentDateReceived: values.paymentDateReceived || undefined,
+        notes: values.notes || undefined,
+      })
+
+      if (values.supplemental && showSupplemental) {
+        try {
+          await mutateSupplemental({
+            claimDate: values.claimDate,
+            clinician: values.clinician,
+            clientId: values.clientId || undefined,
+            insurance: values.insurance,
+            claimId: values.supplemental.claimId || undefined,
+            serviceCode: values.supplemental.serviceCode as NewClaimInput['serviceCode'],
+            submissionMethod: values.submissionMethod as NewClaimInput['submissionMethod'],
+            status: (values.status || 'Pending') as NewClaimInput['status'],
+            clientAmount: parseFloat(values.supplemental.clientAmount) || 0,
+            insuranceAmount: parseFloat(values.supplemental.insuranceAmount) || 0,
+            paymentDateReceived: values.paymentDateReceived || undefined,
+            notes: values.supplemental.notes || undefined,
+          })
+        } catch {
+          setSuppError(`Primary claim saved (row ${primaryResult.rowIndex}). Supplemental entry failed — please retry or add it manually.`)
+          return
+        }
+      }
+
+      navigate('/claims', { state: { newRowIndex: primaryResult.rowIndex } })
+    } catch {
+      // Primary failure shown via isError + error from hook
+    }
   }
 
   const labelClass = 'block text-xs font-medium text-muted font-body mb-1'
@@ -179,20 +248,51 @@ export default function NewClaim() {
           </div>
         </div>
 
-        {/* Client ID */}
+        {/* Client ID — controlled combobox */}
         <div>
           <label className={labelClass}>Client ID</label>
-          <input
-            type="text"
-            list="client-options"
-            {...register('clientId')}
-            className={inputClass}
-            placeholder="Start typing or select…"
-            autoComplete="off"
-          />
-          <datalist id="client-options">
-            {clientOptions.map(id => <option key={id} value={id} />)}
-          </datalist>
+          <div ref={comboRef} className="relative">
+            <input
+              type="text"
+              value={comboQuery}
+              onChange={e => {
+                const val = e.target.value
+                setComboQuery(val)
+                setValue('clientId', val)
+                if (val.length > 0) setComboOpen(true)
+                else setComboOpen(false)
+              }}
+              onPaste={e => {
+                const pasted = e.clipboardData.getData('text').trim()
+                setComboQuery(pasted)
+                setValue('clientId', pasted)
+                setComboOpen(true)
+                e.preventDefault()
+              }}
+              onFocus={() => { if (comboQuery.length > 0) setComboOpen(true) }}
+              className={inputClass}
+              placeholder="Start typing or paste a client ID…"
+              autoComplete="off"
+            />
+            {comboOpen && filteredOptions.length > 0 && (
+              <ul className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md max-h-52 overflow-y-auto font-body text-sm">
+                {filteredOptions.map(id => (
+                  <li
+                    key={id}
+                    className="px-3 py-2 cursor-pointer hover:bg-teal-pale text-ink"
+                    onMouseDown={e => {
+                      e.preventDefault()
+                      setComboQuery(id)
+                      setValue('clientId', id)
+                      setComboOpen(false)
+                    }}
+                  >
+                    {id}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <p className="text-xs text-muted font-body mt-1">Hashed token — never a real name</p>
         </div>
 
@@ -237,7 +337,7 @@ export default function NewClaim() {
           </div>
         </div>
 
-        {/* Status */}
+        {/* Status + Payment Date */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Status</label>
@@ -245,6 +345,23 @@ export default function NewClaim() {
               {CLAIM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+          {showPaymentDate && (
+            <div>
+              <label className={labelClass}>
+                Payment Date Received{paymentDateRequired ? ' *' : ''}
+              </label>
+              <input
+                type="date"
+                {...register('paymentDateReceived', {
+                  required: paymentDateRequired ? 'Required for Payment Received' : false,
+                })}
+                className={inputClass}
+              />
+              {errors.paymentDateReceived && (
+                <p className={errorClass}>{errors.paymentDateReceived.message}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Row 4: Amounts */}
@@ -291,6 +408,94 @@ export default function NewClaim() {
           />
         </div>
 
+        {/* Add supplemental code button */}
+        {!showSupplemental && (
+          <button
+            type="button"
+            onClick={() => {
+              setValue('supplemental', { serviceCode: '90785', claimId: '', clientAmount: '0.00', insuranceAmount: '0.00', notes: '' })
+              setShowSupplemental(true)
+            }}
+            className="text-sm text-teal hover:text-teal-mid font-body transition-colors"
+          >
+            + Add supplemental code
+          </button>
+        )}
+
+        {/* Supplemental entry section */}
+        {showSupplemental && (
+          <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted uppercase tracking-wide font-body">Supplemental Entry</span>
+              <button
+                type="button"
+                onClick={() => {
+                  unregister('supplemental')
+                  setShowSupplemental(false)
+                }}
+                className="text-xs text-muted hover:text-ink font-body transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Service Code *</label>
+                <select {...register('supplemental.serviceCode')} className={inputClass}>
+                  {SERVICE_CODES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Claim ID (supplemental)</label>
+                <input
+                  type="text"
+                  {...register('supplemental.claimId')}
+                  className={inputClass}
+                  placeholder="SimplePractice claim ID"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Client Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('supplemental.clientAmount')}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+                {suppClientAmount > 0 && (
+                  <p className="text-xs text-muted font-body mt-1">
+                    Stripe fee: {formatCurrency(suppStripeFees)} → Net: {formatCurrency(suppClientAmount - suppStripeFees)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className={labelClass}>Insurance Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('supplemental.insuranceAmount')}
+                  className={inputClass}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Notes</label>
+              <textarea
+                {...register('supplemental.notes')}
+                rows={2}
+                className="w-full rounded border border-gray-200 px-3 py-2 text-sm font-body text-ink resize-none focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent"
+                placeholder="Optional…"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Business rule warnings */}
         {isDiscontinuedCode && (
           <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
@@ -304,11 +509,24 @@ export default function NewClaim() {
             Health Options (Medicaid) clients cannot be charged no-show fees.
           </div>
         )}
+        {is90785Alone && (
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+            <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+            90785 is an add-on code and cannot be billed alone. Use "+ Add supplemental code" to pair it with a primary service.
+          </div>
+        )}
 
         {isError && (
           <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-error font-body">
             <AlertTriangle size={15} className="shrink-0" />
             {(error as Error).message}
+          </div>
+        )}
+
+        {suppError && (
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800 font-body">
+            <AlertTriangle size={15} className="shrink-0" />
+            {suppError}
           </div>
         )}
 
@@ -321,11 +539,11 @@ export default function NewClaim() {
           </Link>
           <button
             type="submit"
-            disabled={isPending}
+            disabled={primaryPending || suppPending}
             className="inline-flex items-center gap-2 px-5 py-2 text-sm font-body bg-teal text-white rounded hover:bg-teal-mid transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isPending && <Loader2 size={14} className="animate-spin" />}
-            {isPending ? 'Saving…' : 'Save Claim'}
+            {(primaryPending || suppPending) && <Loader2 size={14} className="animate-spin" />}
+            {primaryPending || suppPending ? 'Saving…' : showSupplemental ? 'Save Both Claims' : 'Save Claim'}
           </button>
         </div>
       </form>
