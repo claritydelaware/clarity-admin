@@ -11,7 +11,7 @@ export const CLAIM_STATUSES = ['Pending', 'Payment Pending', 'Finalized', 'Deduc
 export type ClaimStatus = typeof CLAIM_STATUSES[number]
 
 export const KNOWN_PAYERS = [
-  'BCBS', 'Aetna', 'United', 'United-MA', 'United-Surest', 'Medicare',
+  'BCBS', 'Aetna', 'United', 'United-MA', 'United-Surest', 'UMR', 'Medicare',
   'Health Options', 'Delaware First', 'Amerihealth VIP', 'Mutual of Omaha',
   'Self-Pay', 'Late Cancellation', 'Meritain',
 ] as const
@@ -55,6 +55,7 @@ export interface NewClaimInput {
   status?: ClaimStatus
   clientAmount?: number
   insuranceAmount?: number
+  paymentDateReceived?: string
   notes?: string
 }
 
@@ -78,6 +79,7 @@ export interface ClaimFullEditInput {
   status?: ClaimStatus
   clientAmount?: number
   insuranceAmount?: number
+  insurancePaidHHO?: number
   paymentDateReceived?: string
   totalPayment?: number
   notes?: string
@@ -262,15 +264,19 @@ export interface EmilyPayPeriodSummary {
   pctReceivedByPayDate: number
   unreceivedPayments: number
   // multi-rate fields (Phase 5.5)
-  therapySessions: number
+  therapySessions: number        // saved override, or live Claims count
+  claimsTherapySessions: number  // always from Claims (for reconciliation)
   therapySessionRate: number
   therapyPay: number
   otherSessions: number
+  claimsOtherSessions: number
   otherSessionRate: number
   otherPay: number
   noShows: number
+  claimsNoShows: number
   noShowRate: number
   noShowPay: number
+  savedNotes: string
   consultations: number
   consultPay: number
   meetingHours: number
@@ -360,6 +366,36 @@ export interface EmilySubmission {
     totalPay: number
   }
   notes: string
+}
+
+export interface QuarterProjection {
+  quarterLabel: string
+  elapsedDays: number
+  totalQuarterDays: number
+  missingOverheadMonths: string[]
+
+  actualRevenue: number
+  actualIncome: number
+  actualOverhead: number
+  actualProfit: number
+
+  projectedRemainingRevenue: number
+  projectedRemainingIncome: number
+  projectedRemainingOverhead: number
+  projectedRemainingProfit: number
+
+  projectedTotalRevenue: number
+  projectedTotalIncome: number
+  projectedTotalOverhead: number
+  projectedTotalProfit: number
+  projectedMarginPct: number | null
+
+  qtdLabel: string
+  priorQtdLabel: string
+  priorRevenue: number
+  priorIncome: number
+  priorOverhead: number
+  priorProfit: number
 }
 
 export interface EmilyPaymentAnalysisRow {

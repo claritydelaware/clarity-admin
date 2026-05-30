@@ -24,6 +24,7 @@ export interface ActiveFilters {
   from: string
   to: string
   search: string
+  clientId: string
 }
 
 export function useClaimFilters(): ActiveFilters {
@@ -36,6 +37,7 @@ export function useClaimFilters(): ActiveFilters {
     from:        sp.get('from')        ?? '',
     to:          sp.get('to')          ?? '',
     search:      sp.get('search')      ?? '',
+    clientId:    sp.get('clientId')    ?? '',
   }
 }
 
@@ -45,8 +47,10 @@ export default function ClaimsFilters() {
   const [saving, setSaving] = useState(false)
   const [presetName, setPresetName] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
+  const [clinicianOpen, setClinicianOpen] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const statusPopoverRef = useRef<HTMLDivElement>(null)
+  const clinicianPopoverRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (saving) nameInputRef.current?.focus()
@@ -60,6 +64,15 @@ export default function ClaimsFilters() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [statusOpen])
+
+  useEffect(() => {
+    if (!clinicianOpen) return
+    function handleClick(e: MouseEvent) {
+      if (!clinicianPopoverRef.current?.contains(e.target as Node)) setClinicianOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [clinicianOpen])
 
   const set = (key: string, value: string) => {
     const next = new URLSearchParams(sp)
@@ -108,6 +121,20 @@ export default function ClaimsFilters() {
     set('status', next.join(','))
   }
 
+  const selectedClinicians = (sp.get('clinician') ?? '').split(',').filter(Boolean)
+  const clinicianLabel = selectedClinicians.length === 0
+    ? 'All Clinicians'
+    : selectedClinicians.length === 1
+      ? selectedClinicians[0]
+      : `${selectedClinicians.length} clinicians`
+
+  const toggleClinician = (c: string) => {
+    const next = selectedClinicians.includes(c)
+      ? selectedClinicians.filter(x => x !== c)
+      : [...selectedClinicians, c]
+    set('clinician', next.join(','))
+  }
+
   const selectClass =
     'h-8 rounded border border-gray-200 bg-white px-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent'
 
@@ -141,10 +168,46 @@ export default function ClaimsFilters() {
           className={`${selectClass} w-44 placeholder:text-muted`}
         />
 
-        <select value={sp.get('clinician') ?? ''} onChange={e => set('clinician', e.target.value)} className={selectClass}>
-          <option value="">All Clinicians</option>
-          {CLINICIANS.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <input
+          type="search"
+          value={sp.get('clientId') ?? ''}
+          onChange={e => set('clientId', e.target.value)}
+          placeholder="Client ID…"
+          className={`${selectClass} w-36 placeholder:text-muted`}
+        />
+
+        <div className="relative" ref={clinicianPopoverRef}>
+          <button
+            type="button"
+            onClick={() => setClinicianOpen(o => !o)}
+            className={[
+              selectClass,
+              'inline-flex items-center gap-1.5 cursor-pointer',
+              selectedClinicians.length > 0 ? 'border-teal text-teal' : '',
+            ].join(' ')}
+          >
+            {clinicianLabel}
+            <ChevronDown size={12} className="opacity-50 shrink-0" />
+          </button>
+          {clinicianOpen && (
+            <div className="absolute z-20 top-9 left-0 bg-white border border-gray-200 rounded-lg shadow-md py-1 min-w-40">
+              {CLINICIANS.map(c => (
+                <label
+                  key={c}
+                  className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm font-body text-ink"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedClinicians.includes(c)}
+                    onChange={() => toggleClinician(c)}
+                    className="rounded border-gray-300 accent-teal"
+                  />
+                  {c}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
 
         <select value={sp.get('payer') ?? ''} onChange={e => set('payer', e.target.value)} className={selectClass}>
           <option value="">All Payers</option>

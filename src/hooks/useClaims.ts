@@ -1,15 +1,18 @@
+import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type ClaimsFilter } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import type { ClaimUpdateInput, ClaimFullEditInput, NewClaimInput } from '../types'
+import type { ClaimUpdateInput, ClaimFullEditInput, NewClaimInput, ClaimStatus } from '../types'
 
 export type InlineEditField =
+  | 'claimId'
   | 'notes'
   | 'insuranceAmount'
   | 'clientAmount'
   | 'serviceCode'
   | 'submissionMethod'
   | 'paymentDateReceived'
+  | 'insurancePaidHHO'
 
 export function useClaims(filter?: ClaimsFilter) {
   return useQuery({
@@ -82,6 +85,32 @@ export function useInlineEditClaim() {
     },
     onError: () => toast.error('Save failed — please try again'),
   })
+}
+
+export function useBulkUpdateClaims() {
+  const qc = useQueryClient()
+  const toast = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const execute = useCallback(async (
+    rowIndices: number[],
+    update: { status: ClaimStatus; paymentDateReceived?: string },
+  ): Promise<boolean> => {
+    setIsSubmitting(true)
+    try {
+      await Promise.all(rowIndices.map(rowIndex => api.claims.patch(rowIndex, update)))
+      qc.invalidateQueries({ queryKey: ['claims'] })
+      toast.success(`Updated ${rowIndices.length} claim${rowIndices.length !== 1 ? 's' : ''} successfully`)
+      return true
+    } catch {
+      toast.error('Some updates failed — please refresh and check')
+      return false
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [qc, toast])
+
+  return { execute, isSubmitting }
 }
 
 export function usePayPeriods() {

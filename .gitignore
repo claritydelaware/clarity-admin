@@ -26,3 +26,4 @@ reporting/
 *.njsproj
 *.sln
 *.sw?
+.gstack/

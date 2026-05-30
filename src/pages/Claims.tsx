@@ -42,9 +42,8 @@ export default function Claims() {
   const { viewMode, setViewMode } = useViewMode()
 
   const apiFilter = {
-    clinician:   filters.clinician   || undefined,
     payer:       filters.payer       || undefined,
-    // status is client-side only
+    // clinician, status, search are client-side only
     serviceCode: filters.serviceCode || undefined,
     from:        filters.from        || undefined,
     to:          filters.to          || undefined,
@@ -53,7 +52,9 @@ export default function Claims() {
   const { data: claims, isLoading, isError, error } = useClaims(apiFilter)
 
   const search = (filters.search ?? '').toLowerCase().trim()
+  const clientIdFilter = (filters.clientId ?? '').toLowerCase().trim()
   const selectedStatuses = (filters.status ?? '').split(',').filter(Boolean)
+  const selectedClinicians = (filters.clinician ?? '').split(',').filter(Boolean)
 
   let displayed = claims ?? []
   if (viewMode === 'active') displayed = displayed.filter(c => !isArchived(c))
@@ -61,7 +62,11 @@ export default function Claims() {
     (c.claimId ?? '').toLowerCase().includes(search) ||
     (c.notes ?? '').toLowerCase().includes(search)
   )
+  if (clientIdFilter) displayed = displayed.filter(c =>
+    (c.clientId ?? '').toLowerCase().includes(clientIdFilter)
+  )
   if (selectedStatuses.length > 0) displayed = displayed.filter(c => selectedStatuses.includes(c.status))
+  if (selectedClinicians.length > 0) displayed = displayed.filter(c => selectedClinicians.includes(c.clinician))
   const displayedOrNull = claims ? displayed : null
 
   const handleExport = async () => {

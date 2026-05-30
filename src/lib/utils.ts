@@ -49,6 +49,7 @@ const PAYER_EXACT_COLORS: Record<string, string> = {
   'BCBS-MA':        '#c9daf8',
   'Aetna':          '#b4a7d6',
   'United':         '#f9cb9c',
+  'UMR':            '#f9cb9c',
   'Meritain':       '#d5a6bd',
   'Health Options': '#a2c4c9',
   'Medicare':       '#b7e1cd',

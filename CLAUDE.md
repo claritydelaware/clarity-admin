@@ -81,14 +81,11 @@ Additional palette:
 - Error red `#DC2626`
 
 ### Typography (match public site)
-- Headings: **Playfair Display** (Google Fonts)
+- Headings: **Fraunces** (Google Fonts) — `--font-heading` CSS variable in `index.css`
 - Body: **DM Sans** (Google Fonts)
 - Accent/labels: **Lora** (Google Fonts)
 
-Load via `<link>` in `index.html`:
-```html
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-```
+Load via `<link>` in `index.html` (Fraunces + DM Sans + Lora).
 
 ### UI Approach
 Light background (cream/white) content area. White sidebar with right border. Gold accent on active nav item (left border + teal-pale background). This is a utility tool — prioritize information density and clarity over decorative elements. No hero sections, no gradients on content areas.
@@ -107,334 +104,43 @@ Light background (cream/white) content area. White sidebar with right border. Go
 
 ---
 
-## Current Build State
+## Current Features
 
-### Phase 1A — Infrastructure ✅ Complete
+For full development history, see `CHANGELOG.md`. For non-obvious implementation details and gotchas, see `DECISIONS.md`.
 
-| Step | Task | Status |
+### Pages & Routes
+
+| Route | File | Description |
 |---|---|---|
-| 1 | Google Cloud project created, Sheets API enabled, service account created | ✅ Done |
-| 1 | Service account JSON key downloaded (org policy override applied: `iam.disableServiceAccountKeyCreation` → Off) | ✅ Done — key stored securely offline only |
-| 2 | Google Sheets workbook shared with service account email (Editor access) | ✅ Done |
-| 3 | GitHub repo `clarity-admin` created, cloned locally | ✅ Done |
-| 3.5 | Vite + React + TypeScript scaffolded, dependencies installed, pushed to GitHub | ✅ Done |
-| 4 | Cloudflare Pages project connected to GitHub repo | ✅ Done |
-| 5 | Cloudflare Access application configured | ✅ Done |
-| 6 | Cloudflare Worker `clarity-admin-api` deployed; `GOOGLE_SERVICE_ACCOUNT_KEY` and `SPREADSHEET_ID` secrets configured | ✅ Done |
-| 7 | DNS CNAME record: `admin` → `*.pages.dev` | ⏸ Deferred — waiting on DNS migration to Cloudflare |
+| `/dashboard` | `Dashboard.tsx` | Metric cards, clinician utilization bars, 6-month revenue trend, payer mix chart, pending claims aging table; MTD/QTD/YTD/Last Month/Last Quarter date window selector with delta badges; capacity alert banner |
+| `/claims` | `Claims.tsx` | Paginated/sortable claims table with inline cell editing, multi-select bulk update, active/all view toggle, multi-select status filter, saved filter presets (up to 8), CSV export |
+| `/claims/new` | `NewClaim.tsx` | 11-field form; client ID type-ahead combobox with auto-fill from cache; supplemental claim entry section; Stripe fee preview; business rule warnings |
+| `/claims/:rowIndex/edit` | `EditClaim.tsx` | Full claim edit form; all 11 fields; guarded against background refetch clobbering in-progress edits |
+| `/forecast` | `Forecast.tsx` | Pending claims grouped by forecast week (overdue highlighted red/amber); quarterly rollup banner; forecast accuracy collapsible panel |
+| `/analytics` | `Analytics.tsx` | Financial performance, clinician productivity, revenue per session, collection efficiency, quarterly ComposedChart, payer performance sortable table |
+| `/overhead` | `Overhead.tsx` | Reads `.xlsx` files from `reporting/` via SheetJS; import preview with confirm/discard; overhead history table; edit modal |
+| `/pay-periods` | `PayPeriodSummary.tsx` | Partner tab (Shannon + Jen salary view side-by-side); Emily tab (multi-rate hourly breakdown, submission pre-population from Payroll_Submissions IMPORTRANGE, claims reconciliation panel, payment history) |
+| `/staff` | `Staff.tsx` | Staff list with license expiry warnings; navigates to `/staff/new` |
+| `/staff/new` | `NewStaff.tsx` | Full staff creation form; UUID generated client-side; 4-rate compensation fields; CAQH ID |
+| `/staff/:id` | `StaffDetail.tsx` | Profile, compensation (4 rates), and multi-state licenses — all editable; CAQH ID; soft-delete licenses |
 
-### Phase 1B — App Scaffolding ✅ Complete
+### Key Supporting Files
 
-- Types (`src/types/index.ts`): `Claim`, `PayPeriod`, `CaseloadEntry`, `DashboardData` interfaces
-- API client (`src/lib/api.ts`): typed fetch wrappers for all Worker endpoints
-- AppShell, Sidebar (white/light theme), Topbar layout components
-- React Router v7 routes: `/` → `/dashboard`, `/dashboard`, `/claims`, `/claims/new`
-- TanStack Query provider with `staleTime: 5min`, `retry: 2`
-- Vite dev proxy: `/api/*` → `https://clarity-admin-api.bruce-5f2.workers.dev`
-
-### Phase 1C — Claims Module ✅ Complete
-
-- `ClaimsFilters` — all dropdowns + date range; filter state persisted in URL params
-- `ClaimsTable` — desktop table (sortable by date/clinician/total, paginated 50 rows) + mobile tap-to-expand card layout
-- `StatusUpdateModal` — click any status badge to update; enforces payment date + amount when marking Payment Received
-- `NewClaim` form — all 11 fields; client ID autocomplete from Caseloads sheet; live Stripe fee preview; business rule warnings (HHO no-show, discontinued codes)
-- `useClaims` / `useUpdateClaim` / `useCreateClaim` hooks (TanStack Query)
-
-### Phase 1D — Dashboard Module ✅ Complete (v1)
-
-- Metric cards: Sessions, Revenue, Pending, Received this month
-- Utilization progress bars per clinician vs weekly targets
-- Revenue trend line chart (6 months, total)
-- Payer mix bar chart (current month)
-- Pending claims aging table (0–30, 31–60, 61–90, 90+ days; 90+ highlighted red)
-- `useDashboard` hook
-
-### Phase 2 — Full Edit + Search + Forecast + Backup ✅ Complete (2026-05-24)
-
-**Worker version deployed:** `149413a6-431c-4fbf-b65e-02f5f5846879`
-
-| Feature | Details |
+| File | Purpose |
 |---|---|
-| Full Claim Edit | `EditClaim.tsx` at `/claims/:rowIndex/edit`; all 11 fields; `useClaim` + `useEffect+reset()` + `!isDirty` guard |
-| Claim Search | Search input in `ClaimsFilters`; client-side filter on `claimId` + `notes`; `search` param stripped before API call |
-| Revenue Forecast | `Forecast.tsx` at `/forecast`; pending claims grouped by `forecastWeek` ascending; overdue highlighted red/amber |
-| CSV Export | "Export CSV" button in Claims header; `api.claims.exportRaw()` → `downloadCsv()` with quote-escaping |
-| Automated Backup | Worker Cron `0 6 * * 1` (Monday 6 AM UTC); creates `Snapshot_YYYY-MM-DD` tab via `batchUpdate+addSheet` |
-
-**New Worker endpoints:**
-- `GET /api/claims/:rowIndex` — single-row fetch
-- `PUT /api/claims/:rowIndex` — extended: full field edit + date/forecast recalculation when `claimDate` or `insurance` changes
-- `GET /api/export/claims` — returns full `string[][]` including header row
-
-**Critical implementation details:**
-- `toInputDate()` uses string split/pad only — NOT `Date.toISOString()` — to avoid UTC timezone shift (M/D/YYYY → YYYY-MM-DD)
-- `useClaim` has `refetchOnWindowFocus: false`, `staleTime: Infinity` — prevents background refetch from clobbering in-progress edits
-- Snapshot cron creates a new named tab per run instead of appending to a single tab
-- Forecast `useMemo` filters empty `forecastWeek` BEFORE sort — `Invalid Date` sorts inconsistently across browsers
-- Cron config lives in `clarity-admin-api/wrangler.jsonc` (NOT wrangler.toml)
-
-### Phase 2.5 — Forecast Payment Date Rebuild ✅ Complete (2026-05-24)
-
-| Feature | Details |
-|---|---|
-| 3-tier recency-weighted forecast | Client+payer (≥3 claims) → payer-wide → 30-day fallback; recency weights: ≤90d=1.0, 91-180d=0.5, >180d=0.25 |
-| Payment-day snap | Aetna → Tuesday, BCBS → Wednesday; applied in all tiers including fallback |
-| Batch recalculate endpoint | `POST /api/maintenance/recalculate-forecasts`; rewrites columns V+W for Pending claims only |
-| Recalculate button | Forecast page header; triggers batch recalculate + auto-refreshes the week groups |
-| Vitest unit tests | `src/forecast-helpers.test.ts`; 22 test cases for pure functions; `npm test` |
-
-**Worker version deployed:** `ac26ecb4-816c-4aec-ab84-2ddd6897f2ca`
-
-**New Worker file:** `clarity-admin-api/src/forecast-helpers.ts` — pure business logic (exported for testability)
-
-**Critical implementation details:**
-- `calcForecastDate` takes `clientId` as third param; callers: `createClaim` and `updateClaim`
-- Pure functions live in `forecast-helpers.ts` (not `index.ts`) so Vitest can import them without Worker env
-- `sheetBatchUpdateValues` uses `/{id}/values:batchUpdate` (different from cron's `/{id}:batchUpdate`)
-- All test Date construction uses `new Date(year, month, day)` local time — never ISO string (UTC parse causes day-of-week mismatch)
-- `tsconfig.json` has `skipLibCheck: true` to resolve `@cloudflare/workers-types` vs `tinybench` conflict
-
-### Phase 3 — Analytics, Inline Editing, Capacity Alerts, Forecast Accuracy ✅ Complete (2026-05-24)
-
-**Worker version deployed:** `1f467e45-17bc-4096-a391-7df55469f0f3`
-
-| Feature | Details |
-|---|---|
-| Analytics page | `Analytics.tsx` at `/analytics`; 4 sections: Financial Performance, Clinician Productivity, Revenue Per Session, Collection Efficiency; powered by Caseload Trends sheet |
-| Capacity utilization alert | Dismissible banner on Dashboard; checks 2 most recent complete months from Caseload Trends; yellow ≥95%, red ≥100%; `useState` dismiss (session only) |
-| Forecast accuracy section | Collapsible panel at bottom of `/forecast`; average accuracy stat, Forecast vs Actual line chart (last 12 settled weeks), 8-row table with green/red difference coloring |
-| Inline cell editing | Click-to-edit on 6 fields in Claims table: Notes, Insurance Amount, Client Amount, Service Code, Submission Method; blur/Enter commits, Escape reverts; spinner during in-flight PATCH; mobile bottom-sheet modal variant |
-| Emily target corrected | Weekly session target updated from 20 → 10 in Worker and Dashboard subtitle |
-
-**New Worker endpoints:**
-- `GET /api/analytics/caseload-trends` — parses Caseload Trends sheet (cols A–AO); handles both Sheets serial dates and formatted strings; returns typed `CaseloadTrendMonth[]` sorted ascending
-- `GET /api/analytics/forecast-accuracy` — parses Actual vs Forecast sheet (cols A–E); returns `ForecastAccuracyWeek[]` sorted ascending
-- `PATCH /api/claims/:rowIndex` — single-field inline update; reuses `updateClaim` handler (already handles partial bodies); CORS updated to include PATCH
-
-**New files:**
-- `src/pages/Analytics.tsx` — new page
-- `src/hooks/useAnalytics.ts` — `useCaseloadTrends()` + `useForecastAccuracy()` hooks
-
-**Critical implementation details:**
-- `numNull()` helper in Worker strips `$`, `,`, `%` and returns `null` for empty/unparseable — used for all Caseload Trends fields
-- `parseSheetDate()` in Worker handles both Google Sheets serial numbers (days since 1899-12-30) and formatted date strings
-- Util percentages in Caseload Trends sheet are stored as decimals (0.85 = 85%) — multiply by 100 before display
-- Capacity alert compares `avgUtilPct >= 1.0` / `>= 0.95` against the decimal value; filters out current incomplete month before taking last 2
-- `useCaseloadTrends` staleTime is 5 min (not Infinity) — data refreshes naturally on Dashboard and Analytics page visits
-- Collection Efficiency chart uses Recharts `<Cell>` for per-bar color (not `fill` prop on `<Bar>`) — bars exceeding ±$2,000 render in error red
-
-### Phase 4 — UI Refresh, Quarterly Analytics, Overhead, Pay Periods, Staff, Payer Performance ✅ Complete (2026-05-24)
-
-**Worker version deployed:** `387d8cae-f6c5-458d-913b-f4963610cfe2`
-
-| Feature | Details |
-|---|---|
-| Heading font → Fraunces | `index.html` Google Fonts link updated; `--font-heading` CSS variable changed in `index.css` |
-| Skeleton loading states | `Skeleton.tsx` — `SkeletonMetricCards`, `SkeletonTable`, `SkeletonChart`, `SkeletonForecastGroups`; used in Dashboard, Claims, Forecast |
-| Toast notifications | `ToastContext.tsx` — `ToastProvider` + `useToast()` hook; success/error auto-dismiss (3s); wired to all mutations in `useClaims.ts` |
-| Density toggle | Normal/compact row height on Claims table; persisted in `localStorage` under `claimsTableDensity` |
-| Dashboard date windowing | `useDateWindow.ts` — MTD/QTD/YTD/Last Month/Last Quarter selector; `DateWindowSelector` component; `DeltaBadge` shows % change vs prior period; both current + prior period returned by Worker |
-| Quarterly Analytics section | `QuarterlySection` in `Analytics.tsx` — ComposedChart (revenue/income/profit bars + margin % line overlay); per-quarter summary table; warnings for months missing overhead |
-| Payer Performance section | `PayerPerformanceSection` in `Analytics.tsx` — sortable table; oldest pending ≥90d → red; collection rate <80% → amber |
-| Overhead page | `Overhead.tsx` — reads `Xero_Import` tab (no SheetJS/file upload); preview panel with confirm/discard; history table; edit modal |
-| Pay Period Summary page | `PayPeriodSummary.tsx` — Partner tab (salary view, Shannon + Jen side-by-side) + Emily tab (hourly with admin hours/bonus, sparkline of prior 4 margins, payroll record save) |
-| Staff page | `Staff.tsx` — list with license expiry warnings; `StaffDetail.tsx` — NPI/hire/license info + editable compensation rates |
-| Forecast quarterly rollup | Collapsible banner on `/forecast` showing current-quarter forecast total, pending count, overdue count |
-| Saved filter presets | Up to 8 presets persisted in `localStorage`; pill UI above filter bar; apply/delete |
-
-**New Worker endpoints:**
-- `GET /api/dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD` — accepts optional date range; returns `{ currentPeriod, priorPeriod, sixMonthTrend, aging, payerMix }`
-- `GET /api/analytics/quarterly-summary` — groups claims by calendar quarter, joins Overhead for margin; returns `QuarterlySummary[]`
-- `GET /api/analytics/payer-performance` — aggregates per payer: avg days to pay, collection rate, pending count + oldest pending; returns `PayerPerformance[]`
-- `GET /api/overhead` — reads Overhead sheet; returns `OverheadEntry[]`
-- `POST /api/overhead/import` — reads `Xero_Import` tab, returns `XeroImportPreview` (no file upload — Bruce copies Xero P&L export into the tab manually)
-- `POST /api/overhead/save` — writes confirmed import to Overhead sheet
-- `PUT /api/overhead/:month` — updates a single overhead row
-- `GET /api/staff` — reads Staff sheet; returns `StaffMember[]`
-- `GET /api/staff/:id` — single staff member
-- `POST /api/staff` — create staff row
-- `PUT /api/staff/:id` — update staff row (compensation, license dates, etc.)
-- `GET /api/pay-periods/list` — reads cols A–F from Pay Periods; returns salary + hourly arrays
-- `GET /api/pay-periods/summary?type=salary|hourly&periodStart=YYYY-MM-DD` — returns `PartnerPeriodSummary` or `EmilyPayPeriodSummary`
-- `POST /api/pay-periods/payroll-record` — writes to Payroll_Records sheet
-
-**New files (frontend):**
-- `src/components/ui/Skeleton.tsx` — skeleton loading components
-- `src/context/ToastContext.tsx` — toast notification context + container
-- `src/hooks/useDateWindow.ts` — date window state with localStorage persistence
-- `src/hooks/useQuarterlySummary.ts` — queries `/api/analytics/quarterly-summary`
-- `src/hooks/usePayerPerformance.ts` — queries `/api/analytics/payer-performance`
-- `src/hooks/useStaff.ts` — CRUD hooks for Staff with toast wiring
-- `src/hooks/useOverhead.ts` — import/save/update hooks for Overhead with toast wiring
-- `src/hooks/usePayPeriodSummary.ts` — pay period list + summary + payroll record save
-- `src/pages/Overhead.tsx` — overhead management page
-- `src/pages/PayPeriodSummary.tsx` — pay period summary with partner + Emily tabs
-- `src/pages/Staff.tsx` — staff list page
-- `src/pages/StaffDetail.tsx` — staff detail + compensation editing page
-
-**Critical implementation details:**
-- Overhead import originally read `Xero_Import` tab; rearchitected in Phase 4.5 to read `.xlsx` files from `reporting/` using SheetJS (xlsx npm package). Drop Xero monthly P&L exports as `Month_YYYY_PL.xlsx` into `reporting/`; the Overhead page auto-discovers them via `import.meta.glob`. The `reporting/` folder is gitignored (financial data, not committed).
-- `computePeriodMetrics()` extracted as a pure Worker function; called twice (current + prior) for dashboard date windowing
-- `useDashboard` queryKey includes `from` and `to` so different date windows never share stale cache
-- Badge's `onClick` prop updated to `React.MouseEventHandler<HTMLButtonElement>` so ClaimsTable can call `e.stopPropagation()` before opening the status modal
-- All Recharts `formatter` callbacks typed as `(v: unknown) => ...` with `v as number` cast internally — Recharts `ValueType` is `number | string | undefined | null`
-- `localStorage` keys in use: `dashboardDateWindow`, `claimsTableDensity`, `claimsFilterPresets`, `claimsViewMode`
-
-### Phase 4.5 — Claims Workflow Enhancements ✅ Complete (2026-05-24)
-
-**Scope:** Frontend-only. No new Worker endpoints. No new Google Sheets columns. All changes in the React SPA.
-
-| Feature | Details |
-|---|---|
-| New claim statuses | `'Deductible'` and `'Sent to Secondary'` added to `CLAIM_STATUSES`; display order: Pending → Finalized → Deductible → Sent to Secondary → Payment Received → Denied |
-| Badge colors | Deductible → `bg-violet-600` (#7C3AED); Sent to Secondary → `bg-blue-600` (#2563EB) |
-| Archive logic | `isArchived(claim)` in `utils.ts`; true for Denied, Sent to Secondary, Payment Received with date, Deductible with date |
-| Active view default | Claims page defaults to active-only view; Active / All Claims segmented toggle in header; persisted in `localStorage` under `claimsViewMode` |
-| Multi-select status filter | Status `<select>` replaced with checkbox popover; comma-separated URL param (`?status=Pending,Finalized`); stripped before API call (client-side only, same as `search`) |
-| Compound sort default | No user sort → status (A→Z) → payer (A→Z) → claim date (asc) → payment date (asc, nulls last); column header click overrides; "Reset sort" restores compound |
-| Expanded sortable columns | All meaningful columns now sortable: Clinician, Payer, Date, Code, Method, Status, Client Amount, Insurance Amount, Total Payment |
-| Profile link column | First desktop column: `ExternalLink` icon → `https://secure.simplepractice.com/clients/{clientId}`; hidden when `clientId` falsy; "View in SimplePractice" in mobile expanded card |
-
-**No new Worker endpoints. No new files — modifications to existing files only:**
-
-| File | Change |
-|---|---|
-| `src/types/index.ts` | `CLAIM_STATUSES` array expanded with new statuses and reordered |
-| `src/lib/utils.ts` | `isArchived(claim: Claim): boolean` added |
-| `src/lib/api.ts` | `status` stripped from API params in `claims.list()` alongside `search` |
-| `src/components/ui/Badge.tsx` | Two new entries in `STYLES` for Deductible and Sent to Secondary |
-| `src/components/claims/ClaimsFilters.tsx` | Status `<select>` → checkbox popover with click-outside close |
-| `src/components/claims/ClaimsTable.tsx` | `userSort` state (null = compound); `compoundSort()` + `singleKeySort()` helpers; profile link first column; expanded `SortKey` type; reset sort button |
-| `src/pages/Claims.tsx` | `useViewMode()` hook; Active/All toggle in header; archive + status filters applied client-side |
-
-**Critical implementation details:**
-- `CLAIM_STATUSES` array order is the canonical display order used in all dropdowns and the multi-select popover — StatusUpdateModal, NewClaim, EditClaim all pick up new statuses automatically via `.map()`
-- `isArchived()` lives in `utils.ts` so it can be imported wherever needed (currently only Claims.tsx)
-- `status` is stripped in `api.ts` (not `Claims.tsx`) using the same destructure pattern as `search` — `ClaimsFilter` interface retains the field for call-site compatibility
-- Compound sort priority: status (A→Z) → payer (A→Z) → claim date (oldest first) → payment date (oldest first, nulls last)
-- Multi-select URL param is comma-separated: `?status=Pending,Finalized`; empty string = no status filter
-- `localStorage` key added: `claimsViewMode` (`'active'` | `'all'`, default `'active'`)
-
-### Phase 5 — Bug Fixes & Staff CRUD ✅ Complete (2026-05-24)
-
-**Worker version deployed:** `3bad7f88-5201-48e5-acd1-7aef0ed97558`
-
-| Bug / Feature | Details |
-|---|---|
-| Bug 4: Staff tab crash | `getStaff` / `getStaffById` wrapped in try/catch → return `[]` / 404 when tab absent (mirrors `getOverhead` pattern) |
-| Bug 4: createStaff tab bootstrap | Auto-creates `Staff` tab + writes header row on first call; 409 on duplicate ID |
-| Bug 4: Pay Periods silent failure | `getPayPeriodSummary` — added `.catch(() => [])` to the `Staff!A:O` read in `Promise.all` (same pattern already applied to `Payroll_Records`) |
-| Bug 1: `Payment Pending` status | Added to Worker `ClaimStatus` union, frontend `CLAIM_STATUSES` array (position: after `Pending`); badge color `bg-[#d9ead3] text-ink` (pre-existing, committed now); `recalculateForecasts` now processes `Pending`, `Payment Pending`, and `Deductible` |
-| Bug 2: Pay Periods error state | `PartnerTab` and `EmilyTab` now show a red error banner when `usePartnerSummary` / `useEmilySummary` fails |
-| Bug 3: Forecast shows archived | `Forecast.tsx` `weeks` useMemo + `QuarterlyRollup` overdue filter both guarded with `!isArchived(c)` |
-| Staff CRUD: NewStaff page | Full-page form at `/staff/new`; generates UUID client-side; redirects to `/staff/:id` on success |
-| Staff CRUD: StaffDetail expanded | Profile panel (Name, Role, NPI, License Type/Number/State/Expiration, Hire Date, Active toggle) now editable; single Save button covers both panels |
-| Staff CRUD: navigation | `Staff.tsx` `+ Add Staff` button now navigates to `/staff/new` via `useNavigate`; `AddStaffModal` removed |
-
-**No new Worker endpoints or Google Sheets columns.**
-
-**New files (frontend):**
-- `src/pages/NewStaff.tsx` — full-page staff creation form
-
-**Modified files:**
-| File | Change |
-|---|---|
-| `clarity-admin-api/src/index.ts` | `ClaimStatus` type expanded; `getStaff`/`getStaffById`/`createStaff` resilient; `getPayPeriodSummary` catch on Staff read; `recalculateForecasts` active-status filter |
-| `src/types/index.ts` | `CLAIM_STATUSES` expanded with `'Payment Pending'` |
-| `src/components/ui/Badge.tsx` | Committed pre-existing `'Payment Pending'` badge color |
-| `src/pages/Forecast.tsx` | `isArchived` imported; applied to `weeks` filter and `QuarterlyRollup.overdue` |
-| `src/pages/PayPeriodSummary.tsx` | `isError`/`error` destructured in `PartnerTab` and `EmilyTab`; error banner added |
-| `src/pages/Staff.tsx` | `showAdd` state + `AddStaffModal` removed; `+ Add Staff` uses `useNavigate('/staff/new')` |
-| `src/pages/StaffDetail.tsx` | All profile fields editable; `active` toggle; save button moved outside panels |
-| `src/App.tsx` | `/staff/new` route added before `/staff/:id` |
-
-**Critical implementation details:**
-- Staff tab header row columns match `staffToRow()` order: `id, name, role, npi, licenseType, licenseNumber, licenseState, licenseExpiration, hireDate, compensationType, annualSalary, sessionRate, adminHourlyRate, active, notes`
-- Worker `getStaff()` filters `s.active === true` — inactive staff are hidden from the list (but `getStaffById` returns them for editing)
-- `StaffDetail.tsx` date inputs receive ISO `YYYY-MM-DD` directly from Worker's `parseSheetDate()` — no client-side conversion needed
-- After deploying, use the portal to add Shannon, Jen, and Emily — the Staff tab auto-creates on the first submission
-
-### Phase 5.5 — Multi-License Staff Profiles, Multi-Rate Payroll, Emily Pay Analysis ✅ Complete (2026-05-24)
-
-**Worker version deployed:** `0b418cfd-8839-444e-9c09-218be96ee615`
-
-| Feature | Details |
-|---|---|
-| Staff CAQH ID | `caqhId` field added to `StaffMember`; displayed + editable in StaffDetail and NewStaff |
-| Staff schema expansion | Staff sheet now A:S (19 cols); added `caqhId`, `therapySessionRate`, `otherSessionRate`, `noShowRate` |
-| Staff_Licenses tab | New Google Sheets tab; auto-bootstrapped on first license creation; supports unlimited state licenses per clinician with effective/expiration dates and active soft-delete |
-| StaffDetail Licenses section | Independent section below save button: inline add form, table with edit rows, soft-delete (two-click confirm), loading skeleton, license status badge (active/expiring-soon/expired) |
-| Multi-rate payroll | Emily pay now uses 4 rates: therapy sessions (90837/90791), other sessions (90834/90832/90847/90846), no-shows, admin/consulting |
-| Overhead formula corrected | `overheadCosts = totalPay × 9.56% + $110.80` (replaces old Overhead tab lookup) |
-| Emily Pay Analysis: pre-population | Emily tab reads `Payroll_Submissions` IMPORTRANGE tab; meeting+training hours, consultations pre-filled from submission form |
-| Emily Pay Analysis: reconciliation | Collapsible panel comparing submission counts vs Claims data for therapy sessions, other sessions, late cancellations |
-| Emily Pay Analysis: history | Collapsible table from `Emily Payment Analysis` sheet tab (read-only, formula-maintained) |
-| NewStaff: 3-rate fields | Replaced single `sessionRate` with `therapySessionRate`, `otherSessionRate`, `noShowRate`, `adminHourlyRate` inputs |
-
-**New Worker endpoints:**
-- `GET /api/staff/:id/licenses` — list licenses from `Staff_Licenses!A:H`
-- `POST /api/staff/:id/licenses` — create license row; auto-bootstraps `Staff_Licenses` tab if absent
-- `PUT /api/staff/:id/licenses/:licenseId` — update license row
-- `DELETE /api/staff/:id/licenses/:licenseId` — soft-delete (sets `active=FALSE`)
-- `GET /api/emily/submission?periodStart=YYYY-MM-DD` — reads `Payroll_Submissions!A:X`; returns `EmilySubmission` with counts, adminHours, emilySelfCalc sub-objects
-- `GET /api/emily/payment-analysis` — reads `Emily Payment Analysis!A:P`; returns `EmilyPaymentAnalysisRow[]`
-
-**New files (frontend):**
-- `src/hooks/useEmilyPayroll.ts` — `useEmilySubmission(periodStart)` + `useEmilyPaymentAnalysis()`
-
-**Modified files:**
-| File | Change |
-|---|---|
-| `clarity-admin-api/src/index.ts` | CORS +DELETE; payroll constants; Staff A:S + 4 new fields; StaffLicense CRUD handlers; Emily endpoints; multi-rate Emily pay calculation; expanded savePayrollRecord |
-| `src/types/index.ts` | `StaffMember` +caqhId/therapySessionRate/otherSessionRate/noShowRate; `EmilyPayPeriodSummary` expanded; new `StaffLicense`, `EmilySubmission`, `EmilyPaymentAnalysisRow` interfaces |
-| `src/lib/api.ts` | `api.staff.licenses` sub-object (list/create/update/remove); `api.emily` group (submission/paymentAnalysis); `saveRecord` accepts session breakdown fields |
-| `src/hooks/useStaff.ts` | `useStaffLicenses`, `useCreateLicense`, `useUpdateLicense`, `useDeleteLicense` hooks |
-| `src/pages/StaffDetail.tsx` | CAQH ID field; 3-rate compensation inputs with CPT code labels; independent Licenses section |
-| `src/pages/PayPeriodSummary.tsx` | Emily tab: multi-rate pay breakdown, pre-population from submission, reconciliation panel, history table |
-| `src/pages/NewStaff.tsx` | CAQH ID field; therapy/other/no-show/admin rate fields replace single sessionRate |
-
-**Critical implementation details:**
-- `"Late Cancellation"` is an insurance/payer value (not a ClaimStatus) — no-show filter is `c.insurance === 'Late Cancellation'`
-- Staff sheet header row now 19 cols: `id, name, role, npi, licenseType, licenseNumber, licenseState, licenseExpiration, hireDate, compensationType, annualSalary, sessionRate, adminHourlyRate, active, notes, caqhId, therapySessionRate, otherSessionRate, noShowRate`
-- `Staff_Licenses` tab columns: `id, staffId, licenseType, licenseNumber, licenseState, effectiveDate, expirationDate, active`
-- `Payroll_Submissions` tab must be created manually by Bruce via IMPORTRANGE from Emily's form responses sheet
-- Old `Payroll_Records` adminHours at index 9 maps to new `trainingHours` column — backward compat preserved since `(meetingHours + trainingHours) * adminHourlyRate` still equals old `adminHours * adminHourlyRate`
-- `useEmilySubmission` staleTime 5 min; `useEmilyPaymentAnalysis` staleTime 10 min
-- License routes registered BEFORE generic `/api/staff/:id` match to prevent routing conflict
-
-**Post-deploy manual steps for Bruce:**
-1. Open StaffDetail for Emily → set therapySessionRate: 50, otherSessionRate: 40, noShowRate: 40, adminHourlyRate: 25
-2. Add Shannon's FL and PA licenses via Licenses section in her StaffDetail
-3. Create `Payroll_Submissions` IMPORTRANGE tab in Claim Tracking workbook (pointing to Emily's Google Form responses sheet)
-
-### Phase 6 — Claims Page QoL Enhancements ✅ Complete (2026-05-25)
-
-**Worker version deployed:** `43049172-b3aa-496f-b2b4-aaab9b2357ac`
-
-**No new Worker endpoints. No new Google Sheets columns. No new frontend files.**
-
-| Feature | Details |
-|---|---|
-| Profile link auto-population | `claimToRow()` in Worker now writes `https://secure.simplepractice.com/clients/{clientId}` into column A on every row write; empty string when `clientId` is blank |
-| New Claim form defaults | `claimDate` defaults to today (local date, string-split — no UTC shift); `submissionMethod` defaults to `'Manual'` |
-| Client ID auto-fill | `watch('clientId')` + `useEffect` in `NewClaim.tsx`; Source 1: clinician from Caseloads; Source 2: insurance/serviceCode/submissionMethod/clientAmount from most recent matching claim in TanStack Query cache; auto-filled fields render with `bg-blue-50` + "Auto-filled" label |
-| Claim ID column | Second desktop column (after profile link icon, before Clinician); monospace ID text + `Copy` icon → swaps to `Check` for 1500ms; blank rows show `—`; included in mobile expanded card with same copy behavior |
-| Color-coded payer badges | `getPayerStyle(payer)` in `utils.ts` (exact match before prefix); `PayerBadge` component exported from `Badge.tsx`; inline styles (not Tailwind arbitrary values) per Tailwind v4 CSS-first setup; wired into desktop and mobile card |
-
-**Modified files:**
-| File | Change |
-|---|---|
-| `clarity-admin-api/src/index.ts` | `claimToRow()` index 0: profile link URL derived from `clientId` |
-| `src/pages/NewClaim.tsx` | `todayInputDate()` helper; `useClaims` import; `setValue` from `useForm`; `clientIdValue` watch; auto-fill `useEffect`; `autoFilledFields` state; `inputAutoClass()` + `autoLabel()` helpers applied to 5 fields |
-| `src/components/claims/ClaimsTable.tsx` | `Copy`/`Check` lucide imports; `PayerBadge` import; `copiedRowIndex` state; `handleCopyClaimId()`; Claim ID column header + cell; `colSpan` 12→13; payer column uses `<PayerBadge>`; mobile card: local `copiedId` state, Claim ID row, payer uses `<PayerBadge>` |
-| `src/lib/utils.ts` | `PAYER_EXACT_COLORS` map + `getPayerStyle()` exported |
-| `src/components/ui/Badge.tsx` | `getPayerStyle` import; `PayerBadge` named export |
-
-**Critical implementation details:**
-- `getPayerStyle` evaluates exact matches before prefix matches — prevents `"United"` color from accidentally applying to `"United-MA"`
-- Copy feedback uses `copiedRowIndex` (desktop table) vs local `copiedId` bool (mobile card) — mobile card is a separate component instance
-- Auto-fill `clientAmount` uses `String(recent.clientAmount)` — `FormValues.clientAmount` is a string type for number input
-- `useClaims()` in `NewClaim.tsx` with no filter fetches all claims; already warm in cache when navigating from Claims page
+| `src/components/claims/ClaimsTable.tsx` | Inline edit cells, checkbox multi-select, compound sort, color-coded payer badges, Notes tooltip, Claim ID + Client ID columns |
+| `src/components/claims/ClaimsFilters.tsx` | Multi-select status popover, date range pickers, saved filter presets |
+| `src/components/claims/BulkUpdateModal.tsx` | Bulk status + payment date update via `Promise.all` of PATCH calls |
+| `src/components/claims/StatusUpdateModal.tsx` | Per-claim status update; enforces payment date + amount on Payment Received |
+| `src/components/ui/Skeleton.tsx` | `SkeletonMetricCards`, `SkeletonTable`, `SkeletonChart`, `SkeletonForecastGroups` |
+| `src/components/ui/Tooltip.tsx` | Hover tooltip; 300ms delay; `disabled` prop suppresses on empty values |
+| `src/components/ui/Badge.tsx` | Status badges + `PayerBadge` with color-coded payer styles |
+| `src/context/ToastContext.tsx` | Success/error toast; 3s auto-dismiss; wired to all mutations |
+| `src/lib/utils.ts` | `isArchived()`, `getPayerStyle()`, `PAYER_EXACT_COLORS` |
+| `src/lib/api.ts` | All typed fetch wrappers; `status` + `search` stripped from `claims.list()` params (client-side filters) |
+| `src/types/index.ts` | All shared TypeScript interfaces; `CLAIM_STATUSES` canonical display order |
+| `clarity-admin-api/src/index.ts` | Worker entry; all route handlers |
+| `clarity-admin-api/src/forecast-helpers.ts` | Pure forecast logic (exported for Vitest testability) |
 
 ### Pending Infrastructure
 
@@ -443,7 +149,7 @@ Light background (cream/white) content area. White sidebar with right border. Go
 
 ---
 
-## Actual File Structure
+## File Structure
 
 ```
 clarity-admin/
@@ -451,54 +157,59 @@ clarity-admin/
 │   └── new-clarity-logo-transparent.png
 ├── assets/
 │   └── new-clarity-logo-transparent.png   (source copy — do not reference directly in code)
+├── reporting/                              (gitignored — Xero .xlsx exports dropped here)
 ├── src/
 │   ├── components/
 │   │   ├── layout/
-│   │   │   ├── AppShell.tsx            (Phase 4: wraps children with ToastProvider)
-│   │   │   ├── Sidebar.tsx             (Phase 4: +Pay Periods, Overhead, Staff nav items)
+│   │   │   ├── AppShell.tsx
+│   │   │   ├── Sidebar.tsx
 │   │   │   └── Topbar.tsx
 │   │   ├── ui/
-│   │   │   ├── Badge.tsx               (Phase 4: onClick typed as MouseEventHandler; Phase 4.5: Deductible + Sent to Secondary; Phase 5: Payment Pending color committed)
-│   │   │   └── Skeleton.tsx            (Phase 4: new — SkeletonMetricCards, SkeletonTable, SkeletonChart, SkeletonForecastGroups)
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Skeleton.tsx
+│   │   │   └── Tooltip.tsx
 │   │   └── claims/
-│   │       ├── ClaimsTable.tsx         (Phase 3: InlineEditCell + MobileEditModal; Phase 4: compact prop; Phase 4.5: compound sort, profile link column, expanded sortable cols)
-│   │       ├── ClaimsFilters.tsx       (Phase 4: saved filter presets via localStorage; Phase 4.5: multi-select status popover)
-│   │       └── StatusUpdateModal.tsx
+│   │       ├── ClaimsTable.tsx
+│   │       ├── ClaimsFilters.tsx
+│   │       ├── StatusUpdateModal.tsx
+│   │       └── BulkUpdateModal.tsx
 │   ├── context/
-│   │   └── ToastContext.tsx            (Phase 4: new — toast provider + useToast hook)
+│   │   └── ToastContext.tsx
 │   ├── hooks/
-│   │   ├── useClaims.ts                (Phase 4: toast wired to all mutations)
-│   │   ├── useAnalytics.ts             (Phase 3: useCaseloadTrends, useForecastAccuracy)
-│   │   ├── useDashboard.ts             (Phase 4: accepts from/to params)
-│   │   ├── useDateWindow.ts            (Phase 4: new — MTD/QTD/YTD/Last Month/Last Quarter)
-│   │   ├── useEmilyPayroll.ts          (Phase 5.5: new — useEmilySubmission + useEmilyPaymentAnalysis)
-│   │   ├── useOverhead.ts              (Phase 4: new — import/save/update overhead)
-│   │   ├── usePayPeriodSummary.ts      (Phase 4: new — list, partner/emily summary, payroll record save)
-│   │   ├── usePayerPerformance.ts      (Phase 4: new — payer performance analytics)
-│   │   ├── useQuarterlySummary.ts      (Phase 4: new — quarterly revenue/margin summary)
-│   │   └── useStaff.ts                 (Phase 4: new — staff CRUD; Phase 5.5: +license CRUD hooks)
+│   │   ├── useClaims.ts
+│   │   ├── useAnalytics.ts
+│   │   ├── useDashboard.ts
+│   │   ├── useDateWindow.ts
+│   │   ├── useEmilyPayroll.ts
+│   │   ├── useOverhead.ts
+│   │   ├── usePayPeriodSummary.ts
+│   │   ├── usePayerPerformance.ts
+│   │   ├── useQuarterlySummary.ts
+│   │   └── useStaff.ts
 │   ├── lib/
-│   │   ├── api.ts                      (Phase 4: +api.staff.*, api.overhead.*, api.payPeriodsFull.*, api.analytics.quarterlySummary/payerPerformance; dashboard accepts date range; Phase 4.5: status stripped from claims.list() params; Phase 5.5: +api.staff.licenses, +api.emily)
-│   │   └── utils.ts                    (Phase 4.5: +isArchived())
+│   │   ├── api.ts
+│   │   └── utils.ts
 │   ├── pages/
-│   │   ├── Dashboard.tsx               (Phase 4: date window selector + delta badges + skeleton loading)
-│   │   ├── Analytics.tsx               (Phase 4: +QuarterlySection, +PayerPerformanceSection)
-│   │   ├── Claims.tsx                  (Phase 4: density toggle + skeleton loading; Phase 4.5: Active/All toggle, archive filter, client-side status filter)
+│   │   ├── Dashboard.tsx
+│   │   ├── Analytics.tsx
+│   │   ├── Claims.tsx
 │   │   ├── NewClaim.tsx
 │   │   ├── EditClaim.tsx
-│   │   ├── Forecast.tsx                (Phase 4: quarterly rollup banner + toast on recalculate; Phase 5: isArchived filter on weeks + QuarterlyRollup overdue)
-│   │   ├── Overhead.tsx                (Phase 4: new)
-│   │   ├── PayPeriodSummary.tsx        (Phase 4: new; Phase 5: error banners; Phase 5.5: Emily multi-rate breakdown, submission pre-population, reconciliation panel, history table)
-│   │   ├── Staff.tsx                   (Phase 4: new; Phase 5: AddStaffModal removed, navigates to /staff/new)
-│   │   ├── StaffDetail.tsx             (Phase 4: new; Phase 5: profile panel fully editable, active toggle; Phase 5.5: CAQH ID, 3-rate comp inputs, Licenses section)
-│   │   └── NewStaff.tsx               (Phase 5: new; Phase 5.5: CAQH ID + 3-rate session fields)
+│   │   ├── Forecast.tsx
+│   │   ├── Overhead.tsx
+│   │   ├── PayPeriodSummary.tsx
+│   │   ├── Staff.tsx
+│   │   ├── StaffDetail.tsx
+│   │   └── NewStaff.tsx
 │   ├── types/
-│   │   └── index.ts                    (Phase 4: +DateWindow, +DashboardPeriodMetrics, +QuarterlySummary, +OverheadEntry, +XeroImportPreview, +SalaryPayPeriod, +HourlyPayPeriod, +PartnerPeriodSummary, +EmilyPayPeriodSummary, +PayerPerformance, +StaffMember; Phase 4.5: CLAIM_STATUSES expanded with Deductible + Sent to Secondary; Phase 5: +Payment Pending; Phase 5.5: StaffMember expanded, +StaffLicense, +EmilySubmission, +EmilyPaymentAnalysisRow)
-│   ├── App.tsx                         (Phase 4: +overhead, pay-periods, staff, staff/:id routes; Phase 5: +staff/new route)
+│   │   └── index.ts
+│   ├── App.tsx
 │   ├── main.tsx
-│   └── index.css                       (Phase 4: --font-heading changed to Fraunces)
+│   └── index.css
+├── CHANGELOG.md
 ├── CLAUDE.md
-├── index.html                          (Phase 4: Fraunces added to Google Fonts link)
+├── DECISIONS.md
+├── index.html
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
