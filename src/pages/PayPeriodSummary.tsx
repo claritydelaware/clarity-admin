@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Loader2, AlertCircle, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react'
-import {
-  LineChart, Line, ResponsiveContainer, Tooltip,
-} from 'recharts'
+import ReactApexChart from 'react-apexcharts'
+import type { ApexOptions } from 'apexcharts'
 import { usePayPeriodList, usePartnerSummary, useEmilySummary, useSavePayrollRecord } from '../hooks/usePayPeriodSummary'
 import { useEmilySubmission, useEmilyPaymentAnalysis } from '../hooks/useEmilyPayroll'
 import { formatCurrency } from '../lib/utils'
@@ -233,6 +232,17 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
   const { mutate: saveRecord, isPending: isSaving } = useSavePayrollRecord()
   const { copied, copy } = useCopied()
 
+  // Reset all manual overrides when the selected period changes
+  useEffect(() => {
+    setTherapySessions('')
+    setOtherSessions('')
+    setNoShows('')
+    setMeetingHours('')
+    setConsultations('')
+    setBonusPay('')
+    setNotes('')
+  }, [selectedPeriod])
+
   const period = periods.find(p => p.periodStart === selectedPeriod)
 
   // Derive display values: override inputs > submission > saved summary
@@ -297,7 +307,18 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
       meetingHours: effMeetingH,
       trainingHours: 0,
       bonusPay: effBonusP,
-      notes,
+      notes: notes || summary.savedNotes || '',
+    }, {
+      onSuccess: () => {
+        // Reset manual overrides so inputs reflect the freshly-saved server values
+        setTherapySessions('')
+        setOtherSessions('')
+        setNoShows('')
+        setMeetingHours('')
+        setConsultations('')
+        setBonusPay('')
+        setNotes('')
+      },
     })
   }
 
@@ -324,9 +345,9 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
 
   // For the reconciliation we compare total therapy vs total therapy, total other vs total other
   const reconcRows = submission && summary ? [
-    { label: 'Therapy sessions (90837 + 90791)', reported: submission.counts['90837'] + submission.counts['90791'], claims: summary.therapySessions },
-    { label: 'Other sessions (90834/90832/90847/90846)', reported: submission.counts['90834'] + submission.counts['90832'] + submission.counts['90847'] + submission.counts['90846'], claims: summary.otherSessions },
-    { label: 'Late Cancel / No-Show', reported: submission.counts.lateCancel, claims: summary.noShows },
+    { label: 'Therapy sessions (90837 + 90791)', reported: submission.counts['90837'] + submission.counts['90791'], claims: summary.claimsTherapySessions },
+    { label: 'Other sessions (90834/90832/90847/90846)', reported: submission.counts['90834'] + submission.counts['90832'] + submission.counts['90847'] + submission.counts['90846'], claims: summary.claimsOtherSessions },
+    { label: 'Late Cancel / No-Show', reported: submission.counts.lateCancel, claims: summary.claimsNoShows },
   ] : []
   void reconcCodes; void emilyReported; void inClaims
 
@@ -388,12 +409,22 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
             {sparklineData.length > 1 && (
               <div>
                 <p className="text-xs font-body text-muted text-right mb-1">Prior period margins</p>
-                <ResponsiveContainer width={120} height={32}>
-                  <LineChart data={sparklineData}>
-                    <Line type="monotone" dataKey="margin" stroke="#254D54" strokeWidth={1.5} dot={false} />
-                    <Tooltip formatter={(v: unknown) => `${v}%`} contentStyle={{ fontSize: 11, fontFamily: 'DM Sans' }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <ReactApexChart
+                  options={{
+                    chart: {
+                      type: 'line',
+                      sparkline: { enabled: true },
+                      animations: { enabled: false },
+                    },
+                    stroke: { curve: 'smooth', width: 1.5 },
+                    colors: ['#254D54'],
+                    tooltip: { enabled: false },
+                  } as ApexOptions}
+                  series={[{ data: sparklineData.map(d => d.margin) }]}
+                  type="line"
+                  width={120}
+                  height={32}
+                />
               </div>
             )}
           </div>
@@ -402,7 +433,7 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="text-xs font-body text-muted">Sessions</p>
-              <p className="font-heading text-xl font-semibold text-ink">{summary.sessions}</p>
+              <p className="font-heading text-xl font-semibold text-ink">{effTherapySessions + effOtherSessions + effNoShows}</p>
             </div>
             <div>
               <p className="text-xs font-body text-muted">Revenue</p>
@@ -591,7 +622,7 @@ function EmilyTab({ periods }: { periods: HourlyPayPeriod[] }) {
               type="text"
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Optional period notes…"
+              placeholder={summary.savedNotes || 'Optional period notes…'}
               className="mt-1 w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
             />
           </label>

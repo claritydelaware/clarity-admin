@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Loader2, AlertCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react'
-import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
-  ReferenceLine, Cell, ComposedChart,
-} from 'recharts'
+import ReactApexChart from 'react-apexcharts'
+import type { ApexOptions } from 'apexcharts'
 import { useCaseloadTrends } from '../hooks/useAnalytics'
 import { useQuarterlySummary } from '../hooks/useQuarterlySummary'
+import { useQuarterProjection } from '../hooks/useQuarterProjection'
 import { usePayerPerformance } from '../hooks/usePayerPerformance'
 import { formatCurrency } from '../lib/utils'
 import type { CaseloadTrendMonth, PayerPerformance } from '../types'
@@ -22,6 +20,37 @@ const COLORS = {
   highlight: '#DC2626',
 }
 
+const baseOptions: ApexOptions = {
+  chart: {
+    toolbar: { show: false },
+    zoom: { enabled: false },
+    fontFamily: 'DM Sans, sans-serif',
+    background: 'transparent',
+    animations: { enabled: true, speed: 400 },
+  },
+  grid: {
+    borderColor: '#E8F1F2',
+    strokeDashArray: 4,
+  },
+  xaxis: {
+    labels: { style: { fontSize: '11px', fontFamily: 'DM Sans, sans-serif' } },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: {
+    labels: { style: { fontSize: '11px', fontFamily: 'DM Sans, sans-serif' } },
+  },
+  tooltip: {
+    style: { fontSize: '12px', fontFamily: 'DM Sans, sans-serif' },
+  },
+  legend: {
+    fontFamily: 'DM Sans, sans-serif',
+    fontSize: '12px',
+    markers: { size: 6 },
+    itemMargin: { horizontal: 12, vertical: 8 },
+  },
+}
+
 function monthLabel(iso: string): string {
   const d = new Date(iso + 'T00:00:00')
   return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
@@ -29,7 +58,6 @@ function monthLabel(iso: string): string {
 
 function pct(val: number | null): string {
   if (val === null) return '—'
-  // Sheet stores util % as whole numbers (e.g. 94.6 = 94.6%)
   return `${val.toFixed(1)}%`
 }
 
@@ -53,37 +81,42 @@ function FinancialSection({ months }: { months: CaseloadTrendMonth[] }) {
 
   const latest = months[months.length - 1]
 
+  const series = [
+    { name: 'Revenue',      data: chartData.map(d => d.revenue  ?? null), type: 'area' as const },
+    { name: 'Income',       data: chartData.map(d => d.income   ?? null), type: 'area' as const },
+    { name: 'Overhead',     data: chartData.map(d => d.overhead ?? null), type: 'line' as const },
+    { name: 'Gross Margin', data: chartData.map(d => d.margin   ?? null), type: 'line' as const },
+  ]
+
+  const options: ApexOptions = {
+    ...baseOptions,
+    chart: { ...baseOptions.chart, type: 'line' },
+    stroke: { curve: 'smooth', width: [2, 2, 1.5, 2], dashArray: [0, 0, 4, 0] },
+    fill: {
+      type: ['gradient', 'gradient', 'solid', 'solid'],
+      gradient: { shadeIntensity: 1, opacityFrom: 0.12, opacityTo: 0.01 },
+    },
+    colors: [COLORS.revenue, COLORS.income, COLORS.overhead, COLORS.margin],
+    xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.month) },
+    yaxis: {
+      ...baseOptions.yaxis,
+      labels: { ...baseOptions.yaxis?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
+    },
+    dataLabels: { enabled: false },
+    tooltip: { ...baseOptions.tooltip, shared: true, y: { formatter: (v: number) => formatCurrency(v) } },
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="font-heading text-base font-semibold text-ink">Financial Performance</h2>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.revenue} stopOpacity={0.15} />
-                <stop offset="95%" stopColor={COLORS.revenue} stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gradIncome" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.income} stopOpacity={0.12} />
-                <stop offset="95%" stopColor={COLORS.income} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'DM Sans' }} />
-            <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fontFamily: 'DM Sans' }} width={52} />
-            <Tooltip
-              formatter={(v: unknown, name: unknown) => [formatCurrency(v as number), name as string]}
-              contentStyle={{ fontSize: 12, fontFamily: 'DM Sans' }}
-            />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, fontFamily: 'DM Sans' }} />
-            <Area type="monotone" dataKey="revenue"  name="Revenue"  stroke={COLORS.revenue}  fill="url(#gradRevenue)" strokeWidth={2} dot={false} connectNulls />
-            <Area type="monotone" dataKey="income"   name="Income"   stroke={COLORS.income}   fill="url(#gradIncome)"  strokeWidth={2} dot={false} connectNulls />
-            <Line type="monotone" dataKey="overhead" name="Overhead" stroke={COLORS.overhead} strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
-            <Line type="monotone" dataKey="margin"   name="Gross Margin" stroke={COLORS.margin} strokeWidth={2} dot={false} connectNulls />
-          </AreaChart>
-        </ResponsiveContainer>
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3">
+          <p className="font-heading text-sm font-semibold text-ink">Revenue, Income, Overhead &amp; Margin</p>
+        </div>
+        <div className="px-5 pb-5">
+          <ReactApexChart options={options} series={series} type="line" height={260} />
+        </div>
       </div>
 
       {latest && (
@@ -146,24 +179,34 @@ function ProductivitySection({ months }: { months: CaseloadTrendMonth[] }) {
     },
   ]
 
+  const series = [
+    { name: 'Shannon', data: chartData.map(d => d.Shannon ?? null) },
+    { name: 'Jen',     data: chartData.map(d => d.Jen     ?? null) },
+    { name: 'Emily',   data: chartData.map(d => d.Emily   ?? null) },
+  ]
+
+  const options: ApexOptions = {
+    ...baseOptions,
+    chart: { ...baseOptions.chart, type: 'bar' },
+    plotOptions: { bar: { borderRadius: 3, columnWidth: '65%' } },
+    colors: [COLORS.shannon, COLORS.jen, COLORS.emily],
+    xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.month) },
+    dataLabels: { enabled: false },
+    tooltip: { ...baseOptions.tooltip, shared: true, intersect: false },
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="font-heading text-base font-semibold text-ink">Clinician Productivity</h2>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <p className="text-xs text-muted font-body mb-3">Sessions by clinician — last 6 months</p>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'DM Sans' }} />
-            <YAxis tick={{ fontSize: 11, fontFamily: 'DM Sans' }} width={32} />
-            <Tooltip contentStyle={{ fontSize: 12, fontFamily: 'DM Sans' }} />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, fontFamily: 'DM Sans' }} />
-            <Bar dataKey="Shannon" fill={COLORS.shannon} radius={[3, 3, 0, 0]} />
-            <Bar dataKey="Jen"     fill={COLORS.jen}     radius={[3, 3, 0, 0]} />
-            <Bar dataKey="Emily"   fill={COLORS.emily}   radius={[3, 3, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3">
+          <p className="font-heading text-sm font-semibold text-ink">Sessions by Clinician</p>
+          <span className="text-xs text-muted font-body">Last 6 months</span>
+        </div>
+        <div className="px-5 pb-5">
+          <ReactApexChart options={options} series={series} type="bar" height={220} />
+        </div>
       </div>
 
       {latest && (
@@ -211,22 +254,33 @@ function RevenuePerSessionSection({ months }: { months: CaseloadTrendMonth[] }) 
     .filter(m => m.revenuePerSession !== null)
     .map(m => ({ month: monthLabel(m.month), rps: m.revenuePerSession }))
 
+  const series = [{ name: 'Revenue/Session', data: chartData.map(d => d.rps ?? null) }]
+
+  const options: ApexOptions = {
+    ...baseOptions,
+    chart: { ...baseOptions.chart, type: 'line' },
+    stroke: { curve: 'smooth', width: 2 },
+    markers: { size: 3 },
+    colors: [COLORS.revenue],
+    xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.month) },
+    yaxis: {
+      ...baseOptions.yaxis,
+      labels: { ...baseOptions.yaxis?.labels, formatter: (v: number) => `$${v}` },
+    },
+    dataLabels: { enabled: false },
+    tooltip: { ...baseOptions.tooltip, y: { formatter: (v: number) => `$${v}` } },
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="font-heading text-base font-semibold text-ink">Revenue Per Session</h2>
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <ResponsiveContainer width="100%" height={180}>
-          <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'DM Sans' }} />
-            <YAxis tickFormatter={v => `$${v}`} tick={{ fontSize: 11, fontFamily: 'DM Sans' }} width={52} />
-            <Tooltip
-              formatter={(v: unknown) => [formatCurrency(v as number), 'Revenue/Session']}
-              contentStyle={{ fontSize: 12, fontFamily: 'DM Sans' }}
-            />
-            <Line type="monotone" dataKey="rps" name="Revenue/Session" stroke={COLORS.revenue} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-          </LineChart>
-        </ResponsiveContainer>
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3">
+          <p className="font-heading text-sm font-semibold text-ink">Revenue / Session</p>
+        </div>
+        <div className="px-5 pb-5">
+          <ReactApexChart options={options} series={series} type="line" height={180} />
+        </div>
       </div>
     </div>
   )
@@ -243,31 +297,37 @@ function CollectionSection({ months }: { months: CaseloadTrendMonth[] }) {
       fill:     Math.abs(m.collectionVariance ?? 0) > 2000 ? COLORS.highlight : COLORS.revenue,
     }))
 
+  const colors = chartData.map(d => d.fill)
+  const series = [{ name: 'Variance', data: chartData.map(d => d.variance ?? null) }]
+
+  const options: ApexOptions = {
+    ...baseOptions,
+    chart: { ...baseOptions.chart, type: 'bar' },
+    plotOptions: { bar: { distributed: true, borderRadius: 3, columnWidth: '60%' } },
+    colors,
+    legend: { show: false },
+    xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.month) },
+    yaxis: {
+      ...baseOptions.yaxis,
+      labels: { ...baseOptions.yaxis?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
+    },
+    dataLabels: { enabled: false },
+    tooltip: { ...baseOptions.tooltip, y: { formatter: (v: number) => formatCurrency(v) } },
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="font-heading text-base font-semibold text-ink">Collection Efficiency</h2>
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <p className="text-xs text-muted font-body mb-3">
-          Collection variance by month (positive = under-collected vs billed; negative = over-collected).
-          Red bars exceed ±$2,000.
-        </p>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'DM Sans' }} />
-            <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fontFamily: 'DM Sans' }} width={52} />
-            <Tooltip
-              formatter={(v: unknown) => [formatCurrency(v as number), 'Variance']}
-              contentStyle={{ fontSize: 12, fontFamily: 'DM Sans' }}
-            />
-            <ReferenceLine y={0} stroke="#9CA3AF" strokeWidth={1} />
-            <Bar dataKey="variance" name="Variance" radius={[3, 3, 0, 0]}>
-              {chartData.map((entry, i) => (
-                <Cell key={i} fill={entry.fill} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3">
+          <p className="font-heading text-sm font-semibold text-ink">Collection Variance by Month</p>
+        </div>
+        <div className="px-5 pb-5">
+          <p className="text-xs text-muted font-body mb-3">
+            Positive = under-collected vs billed; negative = over-collected. Red bars exceed ±$2,000.
+          </p>
+          <ReactApexChart options={options} series={series} type="bar" height={200} />
+        </div>
       </div>
     </div>
   )
@@ -331,6 +391,7 @@ export default function Analytics() {
       <RevenuePerSessionSection months={months} />
       <CollectionSection months={months} />
       <QuarterlySection />
+      <QuarterProjectionSection />
       <PayerPerformanceSection />
     </div>
   )
@@ -351,6 +412,40 @@ function QuarterlySection() {
       marginPct: q.marginPct != null ? Math.round(q.marginPct * 100) : null,
     }))
   }, [quarters])
+
+  const series = [
+    { name: 'Revenue',  data: chartData.map(d => d.Revenue),   type: 'bar'  as const },
+    { name: 'Income',   data: chartData.map(d => d.Income),    type: 'bar'  as const },
+    { name: 'Profit',   data: chartData.map(d => d.Profit),    type: 'bar'  as const },
+    { name: 'Margin %', data: chartData.map(d => d.marginPct), type: 'line' as const },
+  ]
+
+  const options: ApexOptions = {
+    ...baseOptions,
+    chart: { ...baseOptions.chart, type: 'bar' },
+    stroke: { width: [0, 0, 0, 2], curve: 'smooth' },
+    plotOptions: { bar: { borderRadius: 3, columnWidth: '65%' } },
+    colors: ['#E8F1F2', '#3A7078', '#254D54', '#F6C54D'],
+    fill: { opacity: [1, 1, 1, 1] },
+    xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.label) },
+    yaxis: [
+      {
+        labels: {
+          style: { fontSize: '11px', fontFamily: 'DM Sans, sans-serif' },
+          formatter: (v: number) => `$${(v / 1000).toFixed(0)}k`,
+        },
+      },
+      {
+        opposite: true,
+        labels: {
+          style: { fontSize: '11px', fontFamily: 'DM Sans, sans-serif' },
+          formatter: (v: number) => `${v}%`,
+        },
+      },
+    ],
+    dataLabels: { enabled: false },
+    tooltip: { ...baseOptions.tooltip, shared: true, intersect: false },
+  }
 
   return (
     <div>
@@ -379,24 +474,13 @@ function QuarterlySection() {
             </div>
           )))}
 
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <ResponsiveContainer width="100%" height={260}>
-              <ComposedChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fontFamily: 'DM Sans' }} />
-                <YAxis yAxisId="left" tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fontFamily: 'DM Sans' }} width={52} />
-                <YAxis yAxisId="right" orientation="right" unit="%" tickFormatter={v => `${v}%`} tick={{ fontSize: 11, fontFamily: 'DM Sans' }} width={40} />
-                <Tooltip
-                  formatter={(v: unknown, name: unknown) => name === 'Margin %' ? `${v}%` : formatCurrency(v as number)}
-                  contentStyle={{ fontSize: 12, fontFamily: 'DM Sans' }}
-                />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, fontFamily: 'DM Sans' }} />
-                <Bar yAxisId="left" dataKey="Revenue" fill="#E8F1F2" radius={[3, 3, 0, 0]} />
-                <Bar yAxisId="left" dataKey="Income"  fill="#3A7078" radius={[3, 3, 0, 0]} />
-                <Bar yAxisId="left" dataKey="Profit"  fill="#254D54" radius={[3, 3, 0, 0]} />
-                <Line yAxisId="right" type="monotone" dataKey="marginPct" name="Margin %" stroke="#F6C54D" strokeWidth={2} dot={false} />
-              </ComposedChart>
-            </ResponsiveContainer>
+          <div className="bg-white rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 pt-4 pb-3">
+              <p className="font-heading text-sm font-semibold text-ink">Revenue, Income &amp; Profit</p>
+            </div>
+            <div className="px-5 pb-5">
+              <ReactApexChart options={options} series={series} type="bar" height={260} />
+            </div>
           </div>
 
           {/* Quarterly summary table */}
@@ -434,6 +518,149 @@ function QuarterlySection() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── SECTION: Quarter Projection ─────────────────────────────────────────────
+
+function pctChange(current: number, prior: number): string {
+  if (prior === 0) return '—'
+  const p = ((current - prior) / Math.abs(prior)) * 100
+  return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`
+}
+
+function pctChangeColor(current: number, prior: number, positiveIsGood: boolean): string {
+  if (prior === 0) return 'text-muted'
+  const up = current >= prior
+  const favorable = positiveIsGood ? up : !up
+  return favorable ? 'text-success font-medium' : 'text-error font-medium'
+}
+
+function QuarterProjectionSection() {
+  const { data: proj, isLoading } = useQuarterProjection()
+
+  if (isLoading) {
+    return (
+      <div>
+        <h2 className="font-heading text-base font-semibold text-ink mb-4">Quarter Projection</h2>
+        <div className="flex items-center justify-center bg-white rounded-xl border border-gray-200 py-10">
+          <Loader2 size={18} className="animate-spin text-muted mr-2" />
+          <span className="text-sm font-body text-muted">Loading…</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!proj) return null
+
+  const progressPct = Math.round((proj.elapsedDays / proj.totalQuarterDays) * 100)
+
+  return (
+    <div>
+      <h2 className="font-heading text-base font-semibold text-ink mb-4">Quarter Projection</h2>
+
+      {/* Missing overhead warnings */}
+      {proj.missingOverheadMonths.map(m => (
+        <div key={m} className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm font-body text-amber-800 mb-3">
+          <AlertTriangle size={15} className="shrink-0" />
+          Overhead data missing for {m} — projection accounts for this using available month averages
+        </div>
+      ))}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Left panel — full quarter projection table */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+            <p className="font-heading text-sm font-semibold text-ink">{proj.quarterLabel} Full Quarter Projection</p>
+            <span className="text-xs font-body text-muted">{progressPct}% through quarter</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-body">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted uppercase tracking-wide"></th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Revenue</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Income</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Overhead</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Profit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                <tr className="hover:bg-cream transition-colors">
+                  <td className="px-4 py-2.5 text-muted">Actuals to date</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{formatCurrency(proj.actualRevenue)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{formatCurrency(proj.actualIncome)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-muted">{formatCurrency(proj.actualOverhead)}</td>
+                  <td className={`px-4 py-2.5 text-right tabular-nums font-medium ${proj.actualProfit >= 0 ? 'text-success' : 'text-error'}`}>
+                    {formatCurrency(proj.actualProfit)}
+                  </td>
+                </tr>
+                <tr className="hover:bg-cream transition-colors">
+                  <td className="px-4 py-2.5 text-muted">Projected remaining</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-muted">{formatCurrency(proj.projectedRemainingRevenue)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-muted">{formatCurrency(proj.projectedRemainingIncome)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-muted">{formatCurrency(proj.projectedRemainingOverhead)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-muted">
+                    {formatCurrency(proj.projectedRemainingProfit)}
+                  </td>
+                </tr>
+                <tr className="bg-teal-pale/30 font-semibold">
+                  <td className="px-4 py-3 text-ink">Total projection</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-ink">{formatCurrency(proj.projectedTotalRevenue)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-ink">{formatCurrency(proj.projectedTotalIncome)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-muted">{formatCurrency(proj.projectedTotalOverhead)}</td>
+                  <td className={`px-4 py-3 text-right tabular-nums ${proj.projectedTotalProfit >= 0 ? 'text-success' : 'text-error'}`}>
+                    {formatCurrency(proj.projectedTotalProfit)}
+                    {proj.projectedMarginPct != null && (
+                      <span className="text-xs font-body font-normal text-muted ml-1">
+                        ({Math.round(proj.projectedMarginPct * 100)}% margin)
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Right panel — QTD vs prior QTD */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+            <p className="font-heading text-sm font-semibold text-ink">QTD Comparison</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-body">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted uppercase tracking-wide">Metric</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">{proj.qtdLabel}</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">{proj.priorQtdLabel}</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Change</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {([
+                  { label: 'Revenue',  cur: proj.actualRevenue,  prior: proj.priorRevenue,  good: true  },
+                  { label: 'Income',   cur: proj.actualIncome,   prior: proj.priorIncome,   good: true  },
+                  { label: 'Overhead', cur: proj.actualOverhead, prior: proj.priorOverhead, good: false },
+                  { label: 'Profit',   cur: proj.actualProfit,   prior: proj.priorProfit,   good: true  },
+                ] as const).map(({ label, cur, prior, good }) => (
+                  <tr key={label} className="hover:bg-cream transition-colors">
+                    <td className="px-4 py-2.5 font-medium text-ink">{label}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">{formatCurrency(cur)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-muted">{formatCurrency(prior)}</td>
+                    <td className={`px-4 py-2.5 text-right tabular-nums ${pctChangeColor(cur, prior, good)}`}>
+                      {pctChange(cur, prior)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
