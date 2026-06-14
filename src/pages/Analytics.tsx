@@ -100,7 +100,7 @@ function FinancialSection({ months }: { months: CaseloadTrendMonth[] }) {
     xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.month) },
     yaxis: {
       ...baseOptions.yaxis,
-      labels: { ...baseOptions.yaxis?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
+      labels: { ...(baseOptions.yaxis as any)?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
     },
     dataLabels: { enabled: false },
     tooltip: { ...baseOptions.tooltip, shared: true, y: { formatter: (v: number) => formatCurrency(v) } },
@@ -265,7 +265,7 @@ function RevenuePerSessionSection({ months }: { months: CaseloadTrendMonth[] }) 
     xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.month) },
     yaxis: {
       ...baseOptions.yaxis,
-      labels: { ...baseOptions.yaxis?.labels, formatter: (v: number) => `$${v}` },
+      labels: { ...(baseOptions.yaxis as any)?.labels, formatter: (v: number) => `$${v}` },
     },
     dataLabels: { enabled: false },
     tooltip: { ...baseOptions.tooltip, y: { formatter: (v: number) => `$${v}` } },
@@ -309,7 +309,7 @@ function CollectionSection({ months }: { months: CaseloadTrendMonth[] }) {
     xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.month) },
     yaxis: {
       ...baseOptions.yaxis,
-      labels: { ...baseOptions.yaxis?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
+      labels: { ...(baseOptions.yaxis as any)?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
     },
     dataLabels: { enabled: false },
     tooltip: { ...baseOptions.tooltip, y: { formatter: (v: number) => formatCurrency(v) } },
@@ -430,13 +430,25 @@ function QuarterlySection() {
     xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.label) },
     yaxis: [
       {
+        seriesName: 'Revenue',
         labels: {
           style: { fontSize: '11px', fontFamily: 'DM Sans, sans-serif' },
           formatter: (v: number) => `$${(v / 1000).toFixed(0)}k`,
         },
       },
       {
+        seriesName: 'Income',
+        show: false,
+      },
+      {
+        seriesName: 'Profit',
+        show: false,
+      },
+      {
+        seriesName: 'Margin %',
         opposite: true,
+        min: 0,
+        max: 100,
         labels: {
           style: { fontSize: '11px', fontFamily: 'DM Sans, sans-serif' },
           formatter: (v: number) => `${v}%`,
@@ -444,7 +456,18 @@ function QuarterlySection() {
       },
     ],
     dataLabels: { enabled: false },
-    tooltip: { ...baseOptions.tooltip, shared: true, intersect: false },
+    tooltip: {
+      ...baseOptions.tooltip,
+      shared: true,
+      intersect: false,
+      y: {
+        formatter: (v: number, opts?: { seriesIndex?: number }) => {
+          if (v == null) return '—'
+          if (opts?.seriesIndex === 3) return `${v}%`
+          return formatCurrency(v)
+        },
+      },
+    },
   }
 
   return (

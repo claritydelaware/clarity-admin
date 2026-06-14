@@ -305,7 +305,7 @@ export default function Dashboard() {
     xaxis: { ...baseOptions.xaxis, categories: sixMonthTrend.map(d => d.month) },
     yaxis: {
       ...baseOptions.yaxis,
-      labels: { ...baseOptions.yaxis?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
+      labels: { ...(baseOptions.yaxis as any)?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
     },
     dataLabels: { enabled: false },
     tooltip: { ...baseOptions.tooltip, y: { formatter: (v: number) => formatCurrency(v) } },
@@ -327,7 +327,7 @@ export default function Dashboard() {
     },
     yaxis: {
       ...baseOptions.yaxis,
-      labels: { ...baseOptions.yaxis?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
+      labels: { ...(baseOptions.yaxis as any)?.labels, formatter: (v: number) => `$${(v / 1000).toFixed(0)}k` },
     },
     dataLabels: { enabled: false },
     tooltip: { ...baseOptions.tooltip, y: { formatter: (v: number) => formatCurrency(v) } },
