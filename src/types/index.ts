@@ -1,4 +1,4 @@
-export const CLINICIANS = ['Shannon', 'Jen', 'Emily'] as const
+export const CLINICIANS = ['Shannon', 'Jen', 'Emily', 'Shana'] as const
 export type Clinician = typeof CLINICIANS[number]
 
 export const SERVICE_CODES = ['90837', '90832', '90834', '90847', '90791', '90785', '96127', '96136'] as const
@@ -117,22 +117,27 @@ export interface CaseloadTrendMonth {
   emilySessions: number | null
   shannonSessions: number | null
   jenSessions: number | null
+  shanaSessions: number | null
   totalSessions: number | null
   emilyClients: number | null
   shannonClients: number | null
   jenClients: number | null
+  shanaClients: number | null
   totalClients: number | null
   emilyAvgPerWeek: number | null
   shannonAvgPerWeek: number | null
   jenAvgPerWeek: number | null
+  shanaAvgPerWeek: number | null
   totalAvgPerWeek: number | null
   emilyUtilPct: number | null
   shannonUtilPct: number | null
   jenUtilPct: number | null
+  shanaUtilPct: number | null
   totalUtilPct: number | null
   emilyRevenue: number | null
   shannonRevenue: number | null
   jenRevenue: number | null
+  shanaRevenue: number | null
   totalRevenue: number | null
   revenuePerSession: number | null
   payrollCosts: number | null

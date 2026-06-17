@@ -17,6 +17,7 @@ const COLORS = {
   shannon:   '#254D54',
   jen:       '#F6C54D',
   emily:     '#3A7078',
+  shana:     '#C9922A',
   highlight: '#DC2626',
 }
 
@@ -148,6 +149,7 @@ function ProductivitySection({ months }: { months: CaseloadTrendMonth[] }) {
     Shannon: m.shannonSessions,
     Jen:     m.jenSessions,
     Emily:   m.emilySessions,
+    Shana:   m.shanaSessions,
   }))
 
   const latest = months[months.length - 1]
@@ -177,19 +179,28 @@ function ProductivitySection({ months }: { months: CaseloadTrendMonth[] }) {
       utilPct:  latest?.emilyUtilPct,
       revenue:  latest?.emilyRevenue,
     },
+    {
+      name:     'Shana',
+      sessions: latest?.shanaSessions,
+      clients:  latest?.shanaClients,
+      avgPerWk: latest?.shanaAvgPerWeek,
+      utilPct:  latest?.shanaUtilPct,
+      revenue:  latest?.shanaRevenue,
+    },
   ]
 
   const series = [
     { name: 'Shannon', data: chartData.map(d => d.Shannon ?? null) },
     { name: 'Jen',     data: chartData.map(d => d.Jen     ?? null) },
     { name: 'Emily',   data: chartData.map(d => d.Emily   ?? null) },
+    { name: 'Shana',   data: chartData.map(d => d.Shana   ?? null) },
   ]
 
   const options: ApexOptions = {
     ...baseOptions,
     chart: { ...baseOptions.chart, type: 'bar' },
     plotOptions: { bar: { borderRadius: 3, columnWidth: '65%' } },
-    colors: [COLORS.shannon, COLORS.jen, COLORS.emily],
+    colors: [COLORS.shannon, COLORS.jen, COLORS.emily, COLORS.shana],
     xaxis: { ...baseOptions.xaxis, categories: chartData.map(d => d.month) },
     dataLabels: { enabled: false },
     tooltip: { ...baseOptions.tooltip, shared: true, intersect: false },

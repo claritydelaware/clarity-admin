@@ -14,6 +14,7 @@ const CLINICIAN_COLORS: Record<Clinician, string> = {
   Shannon: '#254D54',
   Jen:     '#F6C54D',
   Emily:   '#3A7078',
+  Shana:   '#C9922A',
 }
 
 const DATE_WINDOW_LABELS: Record<DateWindow, string> = {
@@ -75,6 +76,7 @@ function useCapacityAlerts() {
       { name: 'Shannon', getter: m => m.shannonUtilPct },
       { name: 'Jen',     getter: m => m.jenUtilPct     },
       { name: 'Emily',   getter: m => m.emilyUtilPct   },
+      { name: 'Shana',   getter: m => m.shanaUtilPct   },
     ]
     for (const { name, getter } of checks) {
       const a = avg(last2.map(getter))
@@ -101,7 +103,7 @@ function TooltipRow({ label, current, prior, highlight }: {
 function SessionsTooltipContent({ cm, pp, priorLabel }: {
   cm: DashboardPeriodMetrics; pp: DashboardPeriodMetrics; priorLabel: string
 }) {
-  const clinicians: Clinician[] = ['Shannon', 'Jen', 'Emily']
+  const clinicians: Clinician[] = ['Shannon', 'Jen', 'Emily', 'Shana']
   return (
     <div className="text-xs font-body">
       <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-muted font-medium">{priorLabel}</div>
@@ -129,7 +131,7 @@ function SessionsTooltipContent({ cm, pp, priorLabel }: {
 function RevenueTooltipContent({ cm, pp, priorLabel }: {
   cm: DashboardPeriodMetrics; pp: DashboardPeriodMetrics; priorLabel: string
 }) {
-  const clinicians: Clinician[] = ['Shannon', 'Jen', 'Emily']
+  const clinicians: Clinician[] = ['Shannon', 'Jen', 'Emily', 'Shana']
   const rps      = cm.sessions > 0 ? cm.revenue / cm.sessions : 0
   const priorRps = pp.sessions > 0 ? pp.revenue / pp.sessions : 0
   return (
@@ -282,7 +284,7 @@ export default function Dashboard() {
   if (!data) return null
 
   const { currentMonth: cm, priorPeriod: pp, sixMonthTrend, aging, payerMix } = data
-  const clinicians: Clinician[] = ['Shannon', 'Jen', 'Emily']
+  const clinicians: Clinician[] = ['Shannon', 'Jen', 'Emily', 'Shana']
 
   const agingRows = [
     { label: '0–30 days',  ...aging.bucket0_30,  danger: false },
@@ -419,9 +421,9 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 mb-4">
           <Users size={15} className="text-muted" />
           <h2 className="font-heading text-sm font-semibold text-ink">Utilization vs Target</h2>
-          <span className="text-xs text-muted font-body">(Shannon/Jen: 25 sessions/wk · Emily: 10 sessions/wk)</span>
+          <span className="text-xs text-muted font-body">(Shannon/Jen: 25 sessions/wk · Emily: 10 sessions/wk · Shana: 20 sessions/wk)</span>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {clinicians.map(c => {
             const pct = Math.min(100, cm.utilizationByClinician[c])
             return (
