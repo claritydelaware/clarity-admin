@@ -57,13 +57,13 @@ function monthLabel(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
 }
 
-function pct(val: number | null): string {
-  if (val === null) return '—'
+function pct(val: number | null | undefined): string {
+  if (val == null) return '—'
   return `${val.toFixed(1)}%`
 }
 
-function utilColor(val: number | null): string {
-  if (val === null) return 'text-muted'
+function utilColor(val: number | null | undefined): string {
+  if (val == null) return 'text-muted'
   if (val >= 100) return 'text-error font-semibold'
   if (val >= 95)  return 'text-amber-600 font-semibold'
   return 'text-ink'
