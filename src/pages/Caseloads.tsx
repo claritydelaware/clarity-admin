@@ -182,7 +182,7 @@ export default function Caseloads() {
     `px-4 py-3 text-xs font-ui uppercase tracking-wide cursor-pointer select-none hover:text-teal transition-colors text-${align} ${sortKey === key ? 'text-teal' : 'text-muted'}`
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -200,55 +200,62 @@ export default function Caseloads() {
         </button>
       </div>
 
-      {/* Clinician counts — active clients only */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-        {CLINICIANS.map(name => (
-          <div key={name} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-muted font-ui uppercase tracking-wide">{name}</p>
-            <p className="text-2xl font-heading text-teal mt-1">
-              {isLoading ? '—' : activeCounts[name]}
-            </p>
-            <p className="text-xs text-muted">active clients</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Aggregate analytics panel */}
-      {loadingAnalysis ? (
+      {/* Stats row: clinician active counts + aggregate analytics */}
+      {isLoading ? (
         <div className="mb-6"><SkeletonMetricCards /></div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Activity size={14} className="text-green-600" />
-              <p className="text-xs text-muted font-ui uppercase tracking-wide">Active (30d)</p>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
+          {/* Left panel: clinician active counts */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-xs text-muted font-ui uppercase tracking-wide mb-4">Active Clients by Clinician</p>
+            <div className="grid grid-cols-4 gap-4">
+              {CLINICIANS.map(name => (
+                <div key={name}>
+                  <p className="text-xs text-muted font-ui uppercase tracking-wide">{name}</p>
+                  <p className="text-2xl font-heading text-teal mt-1">{activeCounts[name]}</p>
+                  <p className="text-xs text-muted">active</p>
+                </div>
+              ))}
             </div>
-            <p className="text-2xl font-heading text-teal">{activeCount}</p>
-            <p className="text-xs text-muted">{caseloads.length > 0 ? Math.round(activeCount / caseloads.length * 100) : 0}% of caseload</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Users size={14} className="text-muted" />
-              <p className="text-xs text-muted font-ui uppercase tracking-wide">Dormant</p>
+
+          {/* Right panel: aggregate stats */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-xs text-muted font-ui uppercase tracking-wide mb-4">Practice Overview</p>
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Activity size={13} className="text-green-600" />
+                  <p className="text-xs text-muted font-ui uppercase tracking-wide">Active (30d)</p>
+                </div>
+                <p className="text-2xl font-heading text-teal">{activeCount}</p>
+                <p className="text-xs text-muted">{caseloads.length > 0 ? Math.round(activeCount / caseloads.length * 100) : 0}% of caseload</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Users size={13} className="text-muted" />
+                  <p className="text-xs text-muted font-ui uppercase tracking-wide">Dormant</p>
+                </div>
+                <p className="text-2xl font-heading text-teal">{dormantCount}</p>
+                <p className="text-xs text-muted">no visit in 30d</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingUp size={13} className="text-teal-mid" />
+                  <p className="text-xs text-muted font-ui uppercase tracking-wide">Avg Sessions</p>
+                </div>
+                <p className="text-2xl font-heading text-teal">{avgSessions.toFixed(1)}</p>
+                <p className="text-xs text-muted">per client lifetime</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <DollarSign size={13} className="text-gold-dark" />
+                  <p className="text-xs text-muted font-ui uppercase tracking-wide">Avg Revenue</p>
+                </div>
+                <p className="text-2xl font-heading text-teal">{fmtCurrency(avgRevenue)}</p>
+                <p className="text-xs text-muted">per client lifetime</p>
+              </div>
             </div>
-            <p className="text-2xl font-heading text-teal">{dormantCount}</p>
-            <p className="text-xs text-muted">no visit in 30d</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp size={14} className="text-teal-mid" />
-              <p className="text-xs text-muted font-ui uppercase tracking-wide">Avg Sessions</p>
-            </div>
-            <p className="text-2xl font-heading text-teal">{avgSessions.toFixed(1)}</p>
-            <p className="text-xs text-muted">per client lifetime</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign size={14} className="text-gold-dark" />
-              <p className="text-xs text-muted font-ui uppercase tracking-wide">Avg Revenue</p>
-            </div>
-            <p className="text-2xl font-heading text-teal">{fmtCurrency(avgRevenue)}</p>
-            <p className="text-xs text-muted">per client lifetime</p>
           </div>
         </div>
       )}
@@ -388,7 +395,7 @@ export default function Caseloads() {
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted">No clients match the current filters.</div>
           ) : (
-            <table className="w-full min-w-160">
+            <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
                   <th
