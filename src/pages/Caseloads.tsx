@@ -9,7 +9,7 @@ import { SkeletonTable, SkeletonMetricCards } from '../components/ui/Skeleton'
 import { PayerBadge } from '../components/ui/Badge'
 
 type Tab          = 'All' | Clinician
-type SortKey      = 'index' | 'clinician' | 'status' | 'lastVisit' | 'sessions' | 'payer' | 'revenue'
+type SortKey      = 'index' | 'clinician' | 'status' | 'lastVisit' | 'sessions' | 'payer' | 'revenue' | 'avgDays'
 type SortDir      = 'asc' | 'desc'
 type StatusFilter = 'all' | 'active' | 'dormant'
 
@@ -57,10 +57,17 @@ export default function Caseloads() {
     [analysis],
   )
 
+  // Total per clinician — used for tab badges
   const counts = useMemo(() => CLINICIANS.reduce((acc, name) => {
     acc[name] = caseloads.filter(c => c.clinician === name).length
     return acc
   }, {} as Record<Clinician, number>), [caseloads])
+
+  // Active-only per clinician — used for the summary cards
+  const activeCounts = useMemo(() => CLINICIANS.reduce((acc, name) => {
+    acc[name] = caseloads.filter(c => c.clinician === name && statMap.get(c.clientId)?.isActive).length
+    return acc
+  }, {} as Record<Clinician, number>), [caseloads, statMap])
 
   const uniquePayers = useMemo(
     () => [...new Set(analysis.map(s => s.primaryPayer).filter(Boolean))].sort(),
@@ -133,6 +140,9 @@ export default function Caseloads() {
         case 'revenue':
           cmp = (sa?.totalRevenue ?? 0) - (sb?.totalRevenue ?? 0)
           break
+        case 'avgDays':
+          cmp = (sa?.avgDaysToPayment ?? Infinity) - (sb?.avgDaysToPayment ?? Infinity)
+          break
       }
 
       return sortDir === 'asc' ? cmp : -cmp
@@ -190,15 +200,15 @@ export default function Caseloads() {
         </button>
       </div>
 
-      {/* Clinician counts */}
+      {/* Clinician counts — active clients only */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         {CLINICIANS.map(name => (
           <div key={name} className="bg-white rounded-xl border border-gray-200 p-4">
             <p className="text-xs text-muted font-ui uppercase tracking-wide">{name}</p>
             <p className="text-2xl font-heading text-teal mt-1">
-              {loadingRoster ? '—' : counts[name]}
+              {isLoading ? '—' : activeCounts[name]}
             </p>
-            <p className="text-xs text-muted">clients</p>
+            <p className="text-xs text-muted">active clients</p>
           </div>
         ))}
       </div>
@@ -440,6 +450,14 @@ export default function Caseloads() {
                       Revenue<SortIcon col="revenue" sortKey={sortKey} sortDir={sortDir} />
                     </span>
                   </th>
+                  <th
+                    className={thClass('avgDays', 'right')}
+                    onClick={() => toggleSort('avgDays')}
+                  >
+                    <span className="inline-flex items-center justify-end w-full">
+                      Avg Days to Pay<SortIcon col="avgDays" sortKey={sortKey} sortDir={sortDir} />
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -489,6 +507,9 @@ export default function Caseloads() {
                       </td>
                       <td className="px-4 py-3 text-sm text-primary text-right tabular-nums">
                         {stat ? fmtCurrency(stat.totalRevenue) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right tabular-nums text-muted">
+                        {stat?.avgDaysToPayment != null ? `${stat.avgDaysToPayment}d` : '—'}
                       </td>
                     </tr>
                   )

@@ -104,6 +104,7 @@ export interface CaseloadClientStat {
   primaryPayer: string
   totalRevenue: number
   isActive: boolean
+  avgDaysToPayment: number | null
 }
 
 export interface AgingBucket {
