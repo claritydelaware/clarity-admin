@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const NAV = [
   { to: '/dashboard',   label: 'Dashboard',       icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const NAV = [
   { to: '/forecast',    label: 'Revenue Forecast', icon: TrendingUp },
   { to: '/overhead',    label: 'Overhead',         icon: Receipt },
   { to: '/staff',       label: 'Staff',            icon: Users },
+  { to: '/caseloads',   label: 'Caseloads',        icon: ClipboardList },
 ]
 
 interface Props {

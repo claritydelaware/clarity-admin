@@ -96,6 +96,16 @@ export interface CaseloadEntry {
   clinician: Clinician
 }
 
+export interface CaseloadClientStat {
+  clientId: string
+  clinician: string
+  sessionCount: number
+  lastSessionDate: string
+  primaryPayer: string
+  totalRevenue: number
+  isActive: boolean
+}
+
 export interface AgingBucket {
   count: number
   total: number

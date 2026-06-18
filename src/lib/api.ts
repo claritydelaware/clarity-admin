@@ -1,5 +1,5 @@
 import type {
-  Claim, NewClaimInput, ClaimUpdateInput, ClaimFullEditInput, PayPeriod, CaseloadEntry,
+  Claim, NewClaimInput, ClaimUpdateInput, ClaimFullEditInput, PayPeriod, CaseloadEntry, CaseloadClientStat,
   DashboardData, CaseloadTrendMonth, ForecastAccuracyWeek,
   StaffMember, StaffLicense, OverheadEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
@@ -95,6 +95,13 @@ export const api = {
   },
   caseloads: {
     list: (): Promise<CaseloadEntry[]> => apiFetch<CaseloadEntry[]>('/caseloads'),
+    create: (data: { clientId: string; clinician: string }): Promise<CaseloadEntry> =>
+      apiFetch<CaseloadEntry>('/caseloads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }),
+    analysis: (): Promise<CaseloadClientStat[]> => apiFetch<CaseloadClientStat[]>('/caseloads/analysis'),
   },
   analytics: {
     caseloadTrends: (): Promise<CaseloadTrendMonth[]> => apiFetch<CaseloadTrendMonth[]>('/analytics/caseload-trends'),

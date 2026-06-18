@@ -128,3 +128,23 @@ export function useCaseloads() {
     staleTime: Infinity,
   })
 }
+
+export function useCaseloadAnalysis() {
+  return useQuery({
+    queryKey: ['caseloads-analysis'],
+    queryFn: () => api.caseloads.analysis(),
+  })
+}
+
+export function useCreateCaseload() {
+  const qc = useQueryClient()
+  const toast = useToast()
+  return useMutation({
+    mutationFn: (data: { clientId: string; clinician: string }) => api.caseloads.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['caseloads'] })
+      toast.success('Client added to caseload')
+    },
+    onError: () => toast.error('Save failed — please try again'),
+  })
+}
