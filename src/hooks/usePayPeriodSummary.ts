@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useToast } from '../context/ToastContext'
+import type { Clinician } from '../types'
 
 export function usePayPeriodList() {
   return useQuery({
@@ -23,6 +24,15 @@ export function useEmilySummary(periodStart: string) {
   return useQuery({
     queryKey: ['pay-period-summary', 'hourly', periodStart],
     queryFn: () => api.payPeriodsFull.summary('hourly', periodStart),
+    enabled: Boolean(periodStart),
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+export function useHourlySummary(clinician: Clinician, periodStart: string) {
+  return useQuery({
+    queryKey: ['pay-period-summary', 'hourly', clinician, periodStart],
+    queryFn: () => api.payPeriodsFull.summary('hourly', periodStart, clinician),
     enabled: Boolean(periodStart),
     staleTime: 2 * 60 * 1000,
   })

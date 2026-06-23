@@ -7,6 +7,12 @@ import { useCaseloads, useCaseloadAnalysis, useCreateCaseload } from '../hooks/u
 import { CLINICIANS, type Clinician, type CaseloadClientStat } from '../types'
 import { SkeletonTable, SkeletonMetricCards } from '../components/ui/Skeleton'
 import { PayerBadge } from '../components/ui/Badge'
+import PageHeader from '../components/layout/PageHeader'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Select from '../components/ui/Select'
+import Tabs from '../components/ui/Tabs'
 
 type Tab          = 'All' | Clinician
 type SortKey      = 'index' | 'clinician' | 'status' | 'lastVisit' | 'sessions' | 'payer' | 'revenue' | 'avgDays'
@@ -36,34 +42,28 @@ export default function Caseloads() {
   const { data: analysis = [], isLoading: loadingAnalysis } = useCaseloadAnalysis()
   const createMutation = useCreateCaseload()
 
-  // ── filters ─────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab]       = useState<Tab>('All')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search, setSearch]             = useState('')
   const [payerFilter, setPayerFilter]   = useState('')
 
-  // ── sort ────────────────────────────────────────────────────────────────────
   const [sortKey, setSortKey] = useState<SortKey>('lastVisit')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
-  // ── add-client form ─────────────────────────────────────────────────────────
   const [showForm, setShowForm]   = useState(false)
   const [newClientId, setNewClientId] = useState('')
   const [newClinician, setNewClinician] = useState<Clinician>('Shannon')
 
-  // ── derived data ─────────────────────────────────────────────────────────────
   const statMap = useMemo(
     () => new Map<string, CaseloadClientStat>(analysis.map(s => [s.clientId, s])),
     [analysis],
   )
 
-  // Total per clinician — used for tab badges
   const counts = useMemo(() => CLINICIANS.reduce((acc, name) => {
     acc[name] = caseloads.filter(c => c.clinician === name).length
     return acc
   }, {} as Record<Clinician, number>), [caseloads])
 
-  // Active-only per clinician — used for the summary cards
   const activeCounts = useMemo(() => CLINICIANS.reduce((acc, name) => {
     acc[name] = caseloads.filter(c => c.clinician === name && statMap.get(c.clientId)?.isActive).length
     return acc
@@ -84,7 +84,6 @@ export default function Caseloads() {
   const totalRevenue  = rosterStats.reduce((sum, s) => sum + s.totalRevenue, 0)
   const avgRevenue    = rosterStats.length > 0 ? totalRevenue / rosterStats.length : 0
 
-  // Annotate with original roster index before filtering/sorting
   const indexed = useMemo(() => caseloads.map((c, i) => ({ ...c, rosterIndex: i })), [caseloads])
 
   const filtered = useMemo(() => {
@@ -181,33 +180,32 @@ export default function Caseloads() {
   const thClass = (key: SortKey, align: 'left' | 'right' = 'left') =>
     `px-4 py-3 text-xs font-ui uppercase tracking-wide cursor-pointer select-none hover:text-teal transition-colors text-${align} ${sortKey === key ? 'text-teal' : 'text-muted'}`
 
-  return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-heading text-2xl text-teal">Caseloads</h1>
-          <p className="text-sm text-muted mt-0.5">
-            {loadingRoster ? '—' : `${caseloads.length} registered clients`}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 bg-teal text-white text-sm rounded-lg hover:bg-teal-mid transition-colors"
-        >
-          {showForm ? <X size={15} /> : <Plus size={15} />}
-          {showForm ? 'Cancel' : 'Add Client'}
-        </button>
-      </div>
+  const tabItems = [
+    { value: 'All', label: 'All', count: caseloads.length },
+    ...CLINICIANS.map(name => ({ value: name, label: name, count: counts[name] })),
+  ]
 
-      {/* Stats row: clinician active counts + aggregate analytics */}
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        title="Caseloads"
+        subtitle={loadingRoster ? undefined : `${caseloads.length} registered clients`}
+        actions={
+          <Button
+            icon={showForm ? <X size={15} /> : <Plus size={15} />}
+            onClick={() => setShowForm(v => !v)}
+          >
+            {showForm ? 'Cancel' : 'Add Client'}
+          </Button>
+        }
+      />
+
+      {/* Stats row */}
       {isLoading ? (
-        <div className="mb-6"><SkeletonMetricCards /></div>
+        <SkeletonMetricCards />
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
-          {/* Left panel: clinician active counts */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-xs text-muted font-ui uppercase tracking-wide mb-4">Active Clients by Clinician</p>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <Card title="Active Clients by Clinician">
             <div className="grid grid-cols-4 gap-4">
               {CLINICIANS.map(name => (
                 <div key={name}>
@@ -217,11 +215,9 @@ export default function Caseloads() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
-          {/* Right panel: aggregate stats */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-xs text-muted font-ui uppercase tracking-wide mb-4">Practice Overview</p>
+          <Card title="Practice Overview">
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
@@ -256,76 +252,46 @@ export default function Caseloads() {
                 <p className="text-xs text-muted">per client lifetime</p>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Add form */}
       {showForm && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
-          <p className="text-sm font-medium text-primary mb-3">Add client to caseload</p>
+        <Card>
+          <p className="text-sm font-medium text-ink mb-3">Add client to caseload</p>
           <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-48">
-              <label className="block text-xs text-muted mb-1">Client ID</label>
-              <input
-                type="text"
-                value={newClientId}
-                onChange={e => setNewClientId(e.target.value)}
-                placeholder="e.g. fdcdd28fa306771e"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
-                required
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-muted mb-1">Clinician</label>
-              <select
-                value={newClinician}
-                onChange={e => setNewClinician(e.target.value as Clinician)}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
-              >
-                {CLINICIANS.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              disabled={createMutation.isPending || !newClientId.trim()}
-              className="px-4 py-2 bg-teal text-white text-sm rounded-lg hover:bg-teal-mid transition-colors disabled:opacity-50"
-            >
-              {createMutation.isPending ? 'Adding…' : 'Add'}
-            </button>
+            <Input
+              label="Client ID"
+              value={newClientId}
+              onChange={e => setNewClientId(e.target.value)}
+              placeholder="e.g. fdcdd28fa306771e"
+              required
+              className="flex-1 min-w-48"
+            />
+            <Select
+              label="Clinician"
+              value={newClinician}
+              onChange={e => setNewClinician(e.target.value as Clinician)}
+              options={CLINICIANS.map(c => ({ value: c, label: c }))}
+            />
+            <Button type="submit" loading={createMutation.isPending} disabled={!newClientId.trim()}>
+              Add
+            </Button>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* Clinician tabs + filter bar */}
-      <div className="flex flex-col gap-3 mb-4">
-        {/* Clinician tabs */}
-        <div className="flex flex-wrap gap-1">
-          {(['All', ...CLINICIANS] as Tab[]).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={[
-                'px-3 py-1.5 text-sm rounded-lg transition-colors',
-                activeTab === tab
-                  ? 'bg-teal text-white font-medium'
-                  : 'text-muted hover:bg-gray-100',
-              ].join(' ')}
-            >
-              {tab}
-              <span className="ml-1.5 text-xs opacity-70">
-                {tab === 'All' ? caseloads.length : counts[tab as Clinician]}
-              </span>
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-col gap-3">
+        <Tabs
+          tabs={tabItems}
+          value={activeTab}
+          onChange={v => setActiveTab(v as Tab)}
+          size="sm"
+        />
 
-        {/* Filter controls */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Search */}
           <div className="relative">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
@@ -333,21 +299,20 @@ export default function Caseloads() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search client ID…"
-              className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal w-48"
+              className="pl-8 pr-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal w-48 hover:border-border-strong transition-colors"
             />
           </div>
 
-          {/* Status filter */}
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          <div className="flex rounded-lg border border-border overflow-hidden">
             {(['all', 'active', 'dormant'] as StatusFilter[]).map(f => (
               <button
                 key={f}
                 onClick={() => setStatusFilter(f)}
                 className={[
-                  'px-3 py-1.5 text-sm transition-colors capitalize',
+                  'px-3 py-1.5 text-sm transition-colors capitalize font-ui',
                   statusFilter === f
                     ? 'bg-teal text-white font-medium'
-                    : 'bg-white text-muted hover:bg-gray-50',
+                    : 'bg-white text-muted hover:bg-surface-sunken',
                 ].join(' ')}
               >
                 {f === 'all' ? 'All statuses' : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -355,11 +320,10 @@ export default function Caseloads() {
             ))}
           </div>
 
-          {/* Payer filter */}
           <select
             value={payerFilter}
             onChange={e => setPayerFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal text-muted"
+            className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal text-muted hover:border-border-strong transition-colors"
           >
             <option value="">All payers</option>
             {uniquePayers.map(p => (
@@ -367,18 +331,12 @@ export default function Caseloads() {
             ))}
           </select>
 
-          {/* Clear filters */}
           {filtersActive && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted hover:text-teal border border-gray-200 rounded-lg hover:border-teal/30 transition-colors"
-            >
-              <X size={11} />
+            <Button variant="ghost" size="sm" icon={<X size={11} />} onClick={clearFilters}>
               Clear
-            </button>
+            </Button>
           )}
 
-          {/* Result count when filtered */}
           {filtersActive && (
             <span className="text-xs text-muted ml-1">
               {filtered.length} of {caseloads.length}
@@ -391,17 +349,14 @@ export default function Caseloads() {
       {isLoading ? (
         <SkeletonTable rows={10} />
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+        <Card padding="none">
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted">No clients match the current filters.</div>
           ) : (
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th
-                    className={thClass('index')}
-                    onClick={() => toggleSort('index')}
-                  >
+                <tr className="border-b border-border bg-surface-sunken">
+                  <th className={thClass('index')} onClick={() => toggleSort('index')}>
                     <span className="inline-flex items-center">
                       #<SortIcon col="index" sortKey={sortKey} sortDir={sortDir} />
                     </span>
@@ -409,58 +364,37 @@ export default function Caseloads() {
                   <th className="px-4 py-3 text-xs text-muted font-ui uppercase tracking-wide text-left">
                     Client ID
                   </th>
-                  <th
-                    className={thClass('clinician')}
-                    onClick={() => toggleSort('clinician')}
-                  >
+                  <th className={thClass('clinician')} onClick={() => toggleSort('clinician')}>
                     <span className="inline-flex items-center">
                       Clinician<SortIcon col="clinician" sortKey={sortKey} sortDir={sortDir} />
                     </span>
                   </th>
-                  <th
-                    className={thClass('status')}
-                    onClick={() => toggleSort('status')}
-                  >
+                  <th className={thClass('status')} onClick={() => toggleSort('status')}>
                     <span className="inline-flex items-center">
                       Status<SortIcon col="status" sortKey={sortKey} sortDir={sortDir} />
                     </span>
                   </th>
-                  <th
-                    className={thClass('lastVisit')}
-                    onClick={() => toggleSort('lastVisit')}
-                  >
+                  <th className={thClass('lastVisit')} onClick={() => toggleSort('lastVisit')}>
                     <span className="inline-flex items-center">
                       Last Visit<SortIcon col="lastVisit" sortKey={sortKey} sortDir={sortDir} />
                     </span>
                   </th>
-                  <th
-                    className={thClass('sessions', 'right')}
-                    onClick={() => toggleSort('sessions')}
-                  >
+                  <th className={thClass('sessions', 'right')} onClick={() => toggleSort('sessions')}>
                     <span className="inline-flex items-center justify-end w-full">
                       Sessions<SortIcon col="sessions" sortKey={sortKey} sortDir={sortDir} />
                     </span>
                   </th>
-                  <th
-                    className={thClass('payer')}
-                    onClick={() => toggleSort('payer')}
-                  >
+                  <th className={thClass('payer')} onClick={() => toggleSort('payer')}>
                     <span className="inline-flex items-center">
                       Primary Payer<SortIcon col="payer" sortKey={sortKey} sortDir={sortDir} />
                     </span>
                   </th>
-                  <th
-                    className={thClass('revenue', 'right')}
-                    onClick={() => toggleSort('revenue')}
-                  >
+                  <th className={thClass('revenue', 'right')} onClick={() => toggleSort('revenue')}>
                     <span className="inline-flex items-center justify-end w-full">
                       Revenue<SortIcon col="revenue" sortKey={sortKey} sortDir={sortDir} />
                     </span>
                   </th>
-                  <th
-                    className={thClass('avgDays', 'right')}
-                    onClick={() => toggleSort('avgDays')}
-                  >
+                  <th className={thClass('avgDays', 'right')} onClick={() => toggleSort('avgDays')}>
                     <span className="inline-flex items-center justify-end w-full">
                       Avg Days to Pay<SortIcon col="avgDays" sortKey={sortKey} sortDir={sortDir} />
                     </span>
@@ -473,7 +407,7 @@ export default function Caseloads() {
                   return (
                     <tr
                       key={`${entry.clientId}-${i}`}
-                      className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors"
+                      className="border-b border-gray-50 last:border-0 hover:bg-surface-sunken transition-colors"
                     >
                       <td className="px-4 py-3 text-sm text-muted">{i + 1}</td>
                       <td className="px-4 py-3">
@@ -487,24 +421,24 @@ export default function Caseloads() {
                           <ExternalLink size={10} className="shrink-0 opacity-60" />
                         </a>
                       </td>
-                      <td className="px-4 py-3 text-sm text-primary">{entry.clinician}</td>
+                      <td className="px-4 py-3 text-sm text-ink">{entry.clinician}</td>
                       <td className="px-4 py-3">
                         {stat ? (
                           <span className={[
                             'inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium',
                             stat.isActive
                               ? 'bg-green-50 border border-green-200 text-green-700'
-                              : 'bg-gray-100 border border-gray-200 text-muted',
+                              : 'bg-gray-100 border border-border text-muted',
                           ].join(' ')}>
                             <span className={`w-1.5 h-1.5 rounded-full ${stat.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
                             {stat.isActive ? 'Active' : 'Dormant'}
                           </span>
                         ) : <span className="text-sm text-muted">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-sm text-primary">
+                      <td className="px-4 py-3 text-sm text-ink">
                         {stat ? fmt(stat.lastSessionDate) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-primary text-right tabular-nums">
+                      <td className="px-4 py-3 text-sm text-ink text-right tabular-nums">
                         {stat ? stat.sessionCount : '—'}
                       </td>
                       <td className="px-4 py-3">
@@ -512,7 +446,7 @@ export default function Caseloads() {
                           ? <PayerBadge payer={stat.primaryPayer} />
                           : <span className="text-sm text-muted">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-sm text-primary text-right tabular-nums">
+                      <td className="px-4 py-3 text-sm text-ink text-right tabular-nums">
                         {stat ? fmtCurrency(stat.totalRevenue) : '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-right tabular-nums text-muted">
@@ -524,7 +458,7 @@ export default function Caseloads() {
               </tbody>
             </table>
           )}
-        </div>
+        </Card>
       )}
     </div>
   )

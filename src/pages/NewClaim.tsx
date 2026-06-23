@@ -1,11 +1,15 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react'
+import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, SERVICE_CODES, SUBMISSION_METHODS, CLAIM_STATUSES } from '../types'
 import type { NewClaimInput, Clinician } from '../types'
 import { useCreateClaim, useCaseloads, useClaims } from '../hooks/useClaims'
 import { formatCurrency } from '../lib/utils'
+import PageHeader from '../components/layout/PageHeader'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import ErrorBanner from '../components/ui/ErrorBanner'
 
 interface FormValues {
   claimDate: string
@@ -103,13 +107,11 @@ export default function NewClaim() {
   const suppClientAmount = parseFloat(supplemental?.clientAmount ?? '0') || 0
   const suppStripeFees = suppClientAmount > 0 ? Math.round((suppClientAmount * 0.029 + 0.3) * 100) / 100 : 0
 
-  // Sync comboQuery on mount if clientId was pre-filled
   useEffect(() => {
     const initial = watch('clientId')
     if (initial) setComboQuery(initial)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Click-outside to close combobox dropdown
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
       if (comboRef.current && !comboRef.current.contains(e.target as Node)) {
@@ -120,7 +122,6 @@ export default function NewClaim() {
     return () => document.removeEventListener('mousedown', handleMouseDown)
   }, [])
 
-  // Auto-fill from caseloads + most recent claim when clientId changes
   useEffect(() => {
     if (!clientIdValue) {
       setAutoFilledFields(new Set())
@@ -204,14 +205,14 @@ export default function NewClaim() {
     }
   }
 
-  const labelClass = 'block text-xs font-medium text-muted font-body mb-1'
-  const inputClass = 'w-full h-9 rounded border border-gray-200 px-3 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-colors'
+  const labelClass = 'block text-xs font-medium text-muted font-ui mb-1.5'
+  const inputClass = 'w-full h-9 rounded-lg border border-border bg-white px-3 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal transition-colors hover:border-border-strong'
   const inputAutoClass = (field: string) =>
     autoFilledFields.has(field) ? `${inputClass} bg-blue-50` : inputClass
-  const errorClass = 'text-xs text-error mt-1 font-body'
+  const errorClass = 'text-xs text-error mt-1 font-ui'
   const autoLabel = (field: string) =>
     autoFilledFields.has(field)
-      ? <p className="text-xs text-blue-500 font-body mt-0.5">Auto-filled</p>
+      ? <p className="text-xs text-blue-500 font-ui mt-0.5">Auto-filled</p>
       : null
 
   return (
@@ -224,328 +225,267 @@ export default function NewClaim() {
         Back to Claims
       </Link>
 
-      <h1 className="font-heading text-xl font-semibold text-ink mb-6">New Claim</h1>
+      <PageHeader title="New Claim" />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Card>
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Claim Date *</label>
+                <input type="date" {...register('claimDate', { required: 'Required' })} className={inputClass} />
+                {errors.claimDate && <p className={errorClass}>{errors.claimDate.message}</p>}
+              </div>
+              <div>
+                <label className={labelClass}>Clinician *</label>
+                <select {...register('clinician', { required: 'Required' })} className={inputAutoClass('clinician')}>
+                  {CLINICIANS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {autoLabel('clinician')}
+              </div>
+            </div>
 
-        {/* Row 1: Date + Clinician */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Claim Date *</label>
-            <input
-              type="date"
-              {...register('claimDate', { required: 'Required' })}
-              className={inputClass}
-            />
-            {errors.claimDate && <p className={errorClass}>{errors.claimDate.message}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>Clinician *</label>
-            <select {...register('clinician', { required: 'Required' })} className={inputAutoClass('clinician')}>
-              {CLINICIANS.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            {autoLabel('clinician')}
-          </div>
-        </div>
-
-        {/* Client ID — controlled combobox */}
-        <div>
-          <label className={labelClass}>Client ID</label>
-          <div ref={comboRef} className="relative">
-            <input
-              type="text"
-              value={comboQuery}
-              onChange={e => {
-                const val = e.target.value
-                setComboQuery(val)
-                setValue('clientId', val)
-                if (val.length > 0) setComboOpen(true)
-                else setComboOpen(false)
-              }}
-              onPaste={e => {
-                const pasted = e.clipboardData.getData('text').trim()
-                setComboQuery(pasted)
-                setValue('clientId', pasted)
-                setComboOpen(true)
-                e.preventDefault()
-              }}
-              onFocus={() => { if (comboQuery.length > 0) setComboOpen(true) }}
-              className={inputClass}
-              placeholder="Start typing or paste a client ID…"
-              autoComplete="off"
-            />
-            {comboOpen && filteredOptions.length > 0 && (
-              <ul className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md max-h-52 overflow-y-auto font-body text-sm">
-                {filteredOptions.map(id => (
-                  <li
-                    key={id}
-                    className="px-3 py-2 cursor-pointer hover:bg-teal-pale text-ink"
-                    onMouseDown={e => {
-                      e.preventDefault()
-                      setComboQuery(id)
-                      setValue('clientId', id)
-                      setComboOpen(false)
-                    }}
-                  >
-                    {id}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <p className="text-xs text-muted font-body mt-1">Hashed token — never a real name</p>
-        </div>
-
-        {/* Row 2: Insurance + Claim ID */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Insurance / Payer *</label>
-            <select {...register('insurance', { required: 'Required' })} className={inputAutoClass('insurance')}>
-              <option value="">Select payer…</option>
-              {KNOWN_PAYERS.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-            {errors.insurance && <p className={errorClass}>{errors.insurance.message}</p>}
-            {autoLabel('insurance')}
-          </div>
-          <div>
-            <label className={labelClass}>Claim ID</label>
-            <input
-              type="text"
-              {...register('claimId')}
-              className={inputClass}
-              placeholder="SimplePractice claim ID"
-            />
-          </div>
-        </div>
-
-        {/* Row 3: Service Code + Submission Method */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Service Code *</label>
-            <select {...register('serviceCode', { required: 'Required' })} className={inputAutoClass('serviceCode')}>
-              {SERVICE_CODES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            {errors.serviceCode && <p className={errorClass}>{errors.serviceCode.message}</p>}
-            {autoLabel('serviceCode')}
-          </div>
-          <div>
-            <label className={labelClass}>Submission Method *</label>
-            <select {...register('submissionMethod', { required: 'Required' })} className={inputAutoClass('submissionMethod')}>
-              {SUBMISSION_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-            {autoLabel('submissionMethod')}
-          </div>
-        </div>
-
-        {/* Status + Payment Date */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Status</label>
-            <select {...register('status')} className={inputClass}>
-              {CLAIM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          {showPaymentDate && (
             <div>
-              <label className={labelClass}>
-                Payment Date Received{paymentDateRequired ? ' *' : ''}
-              </label>
-              <input
-                type="date"
-                {...register('paymentDateReceived', {
-                  required: paymentDateRequired ? 'Required for Payment Received' : false,
-                })}
-                className={inputClass}
-              />
-              {errors.paymentDateReceived && (
-                <p className={errorClass}>{errors.paymentDateReceived.message}</p>
-              )}
+              <label className={labelClass}>Client ID</label>
+              <div ref={comboRef} className="relative">
+                <input
+                  type="text"
+                  value={comboQuery}
+                  onChange={e => {
+                    const val = e.target.value
+                    setComboQuery(val)
+                    setValue('clientId', val)
+                    if (val.length > 0) setComboOpen(true)
+                    else setComboOpen(false)
+                  }}
+                  onPaste={e => {
+                    const pasted = e.clipboardData.getData('text').trim()
+                    setComboQuery(pasted)
+                    setValue('clientId', pasted)
+                    setComboOpen(true)
+                    e.preventDefault()
+                  }}
+                  onFocus={() => { if (comboQuery.length > 0) setComboOpen(true) }}
+                  className={inputClass}
+                  placeholder="Start typing or paste a client ID…"
+                  autoComplete="off"
+                />
+                {comboOpen && filteredOptions.length > 0 && (
+                  <ul className="absolute z-20 mt-1 w-full bg-white border border-border rounded-lg shadow-md max-h-52 overflow-y-auto font-body text-sm">
+                    {filteredOptions.map(id => (
+                      <li
+                        key={id}
+                        className="px-3 py-2 cursor-pointer hover:bg-teal-pale text-ink"
+                        onMouseDown={e => {
+                          e.preventDefault()
+                          setComboQuery(id)
+                          setValue('clientId', id)
+                          setComboOpen(false)
+                        }}
+                      >
+                        {id}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <p className="text-xs text-muted font-ui mt-1">Hashed token — never a real name</p>
             </div>
-          )}
-        </div>
 
-        {/* Row 4: Amounts */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Client Amount</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              {...register('clientAmount')}
-              className={inputAutoClass('clientAmount')}
-              placeholder="0.00"
-            />
-            {autoLabel('clientAmount')}
-            {clientAmount > 0 && (
-              <p className="text-xs text-muted font-body mt-1">
-                Stripe fee: {formatCurrency(stripeFees)} → Net: {formatCurrency(clientAmount - stripeFees)}
-              </p>
-            )}
-          </div>
-          <div>
-            <label className={labelClass}>Insurance Amount</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              {...register('insuranceAmount')}
-              className={inputAutoClass('insuranceAmount')}
-              placeholder="0.00"
-            />
-            {autoLabel('insuranceAmount')}
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div>
-          <label className={labelClass}>Notes</label>
-          <textarea
-            {...register('notes')}
-            rows={3}
-            className="w-full rounded border border-gray-200 px-3 py-2 text-sm font-body text-ink resize-none focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent"
-            placeholder="Optional…"
-          />
-        </div>
-
-        {/* Add supplemental code button */}
-        {!showSupplemental && (
-          <button
-            type="button"
-            onClick={() => {
-              setValue('supplemental', { serviceCode: '90785', claimId: '', clientAmount: '0.00', insuranceAmount: '0.00', notes: '' })
-              setShowSupplemental(true)
-            }}
-            className="text-sm text-teal hover:text-teal-mid font-body transition-colors"
-          >
-            + Add supplemental code
-          </button>
-        )}
-
-        {/* Supplemental entry section */}
-        {showSupplemental && (
-          <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted uppercase tracking-wide font-body">Supplemental Entry</span>
-              <button
-                type="button"
-                onClick={() => {
-                  unregister('supplemental')
-                  setShowSupplemental(false)
-                }}
-                className="text-xs text-muted hover:text-ink font-body transition-colors"
-              >
-                Remove
-              </button>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Insurance / Payer *</label>
+                <select {...register('insurance', { required: 'Required' })} className={inputAutoClass('insurance')}>
+                  <option value="">Select payer…</option>
+                  {KNOWN_PAYERS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                {errors.insurance && <p className={errorClass}>{errors.insurance.message}</p>}
+                {autoLabel('insurance')}
+              </div>
+              <div>
+                <label className={labelClass}>Claim ID</label>
+                <input type="text" {...register('claimId')} className={inputClass} placeholder="SimplePractice claim ID" />
+              </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Service Code *</label>
-                <select {...register('supplemental.serviceCode')} className={inputClass}>
+                <select {...register('serviceCode', { required: 'Required' })} className={inputAutoClass('serviceCode')}>
                   {SERVICE_CODES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+                {errors.serviceCode && <p className={errorClass}>{errors.serviceCode.message}</p>}
+                {autoLabel('serviceCode')}
               </div>
               <div>
-                <label className={labelClass}>Claim ID (supplemental)</label>
-                <input
-                  type="text"
-                  {...register('supplemental.claimId')}
-                  className={inputClass}
-                  placeholder="SimplePractice claim ID"
-                />
+                <label className={labelClass}>Submission Method *</label>
+                <select {...register('submissionMethod', { required: 'Required' })} className={inputAutoClass('submissionMethod')}>
+                  {SUBMISSION_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                {autoLabel('submissionMethod')}
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Status</label>
+                <select {...register('status')} className={inputClass}>
+                  {CLAIM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              {showPaymentDate && (
+                <div>
+                  <label className={labelClass}>
+                    Payment Date Received{paymentDateRequired ? ' *' : ''}
+                  </label>
+                  <input
+                    type="date"
+                    {...register('paymentDateReceived', {
+                      required: paymentDateRequired ? 'Required for Payment Received' : false,
+                    })}
+                    className={inputClass}
+                  />
+                  {errors.paymentDateReceived && (
+                    <p className={errorClass}>{errors.paymentDateReceived.message}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Client Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('supplemental.clientAmount')}
-                  className={inputClass}
-                  placeholder="0.00"
-                />
-                {suppClientAmount > 0 && (
-                  <p className="text-xs text-muted font-body mt-1">
-                    Stripe fee: {formatCurrency(suppStripeFees)} → Net: {formatCurrency(suppClientAmount - suppStripeFees)}
+                <input type="number" step="0.01" min="0" {...register('clientAmount')} className={inputAutoClass('clientAmount')} placeholder="0.00" />
+                {autoLabel('clientAmount')}
+                {clientAmount > 0 && (
+                  <p className="text-xs text-muted font-ui mt-1">
+                    Stripe fee: {formatCurrency(stripeFees)} → Net: {formatCurrency(clientAmount - stripeFees)}
                   </p>
                 )}
               </div>
               <div>
                 <label className={labelClass}>Insurance Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('supplemental.insuranceAmount')}
-                  className={inputClass}
-                  placeholder="0.00"
-                />
+                <input type="number" step="0.01" min="0" {...register('insuranceAmount')} className={inputAutoClass('insuranceAmount')} placeholder="0.00" />
+                {autoLabel('insuranceAmount')}
               </div>
             </div>
+
             <div>
               <label className={labelClass}>Notes</label>
               <textarea
-                {...register('supplemental.notes')}
-                rows={2}
-                className="w-full rounded border border-gray-200 px-3 py-2 text-sm font-body text-ink resize-none focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent"
+                {...register('notes')}
+                rows={3}
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-body text-ink resize-none focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal transition-colors hover:border-border-strong"
                 placeholder="Optional…"
               />
             </div>
-          </div>
-        )}
 
-        {/* Business rule warnings */}
-        {isDiscontinuedCode && (
-          <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
-            <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-            {serviceCode} was discontinued after 1/15/2026. Verify this is intentional.
-          </div>
-        )}
-        {isHHOCash && (
-          <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
-            <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-            Health Options (Medicaid) clients cannot be charged no-show fees.
-          </div>
-        )}
-        {is90785Alone && (
-          <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
-            <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-            90785 is an add-on code and cannot be billed alone. Use "+ Add supplemental code" to pair it with a primary service.
-          </div>
-        )}
+            {!showSupplemental && (
+              <button
+                type="button"
+                onClick={() => {
+                  setValue('supplemental', { serviceCode: '90785', claimId: '', clientAmount: '0.00', insuranceAmount: '0.00', notes: '' })
+                  setShowSupplemental(true)
+                }}
+                className="text-sm text-teal hover:text-teal-mid font-ui transition-colors"
+              >
+                + Add supplemental code
+              </button>
+            )}
 
-        {isError && (
-          <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-error font-body">
-            <AlertTriangle size={15} className="shrink-0" />
-            {(error as Error).message}
-          </div>
-        )}
+            {showSupplemental && (
+              <Card className="border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-medium text-muted uppercase tracking-wide font-ui">Supplemental Entry</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      unregister('supplemental')
+                      setShowSupplemental(false)
+                    }}
+                    className="text-xs text-muted hover:text-ink font-ui transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Service Code *</label>
+                      <select {...register('supplemental.serviceCode')} className={inputClass}>
+                        {SERVICE_CODES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Claim ID (supplemental)</label>
+                      <input type="text" {...register('supplemental.claimId')} className={inputClass} placeholder="SimplePractice claim ID" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Client Amount</label>
+                      <input type="number" step="0.01" min="0" {...register('supplemental.clientAmount')} className={inputClass} placeholder="0.00" />
+                      {suppClientAmount > 0 && (
+                        <p className="text-xs text-muted font-ui mt-1">
+                          Stripe fee: {formatCurrency(suppStripeFees)} → Net: {formatCurrency(suppClientAmount - suppStripeFees)}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className={labelClass}>Insurance Amount</label>
+                      <input type="number" step="0.01" min="0" {...register('supplemental.insuranceAmount')} className={inputClass} placeholder="0.00" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Notes</label>
+                    <textarea
+                      {...register('supplemental.notes')}
+                      rows={2}
+                      className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-body text-ink resize-none focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal transition-colors hover:border-border-strong"
+                      placeholder="Optional…"
+                    />
+                  </div>
+                </div>
+              </Card>
+            )}
 
-        {suppError && (
-          <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800 font-body">
-            <AlertTriangle size={15} className="shrink-0" />
-            {suppError}
-          </div>
-        )}
+            {isDiscontinuedCode && (
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                {serviceCode} was discontinued after 1/15/2026. Verify this is intentional.
+              </div>
+            )}
+            {isHHOCash && (
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                Health Options (Medicaid) clients cannot be charged no-show fees.
+              </div>
+            )}
+            {is90785Alone && (
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                90785 is an add-on code and cannot be billed alone. Use "+ Add supplemental code" to pair it with a primary service.
+              </div>
+            )}
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Link
-            to="/claims"
-            className="px-4 py-2 text-sm font-body text-muted hover:text-ink rounded border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={primaryPending || suppPending}
-            className="inline-flex items-center gap-2 px-5 py-2 text-sm font-body bg-teal text-white rounded hover:bg-teal-mid transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {(primaryPending || suppPending) && <Loader2 size={14} className="animate-spin" />}
-            {primaryPending || suppPending ? 'Saving…' : showSupplemental ? 'Save Both Claims' : 'Save Claim'}
-          </button>
-        </div>
+            {isError && <ErrorBanner message={(error as Error).message} />}
+            {suppError && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800 font-body">
+                <AlertTriangle size={15} className="shrink-0" />
+                {suppError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Link to="/claims">
+                <Button variant="secondary" type="button">Cancel</Button>
+              </Link>
+              <Button type="submit" loading={primaryPending || suppPending}>
+                {primaryPending || suppPending ? 'Saving…' : showSupplemental ? 'Save Both Claims' : 'Save Claim'}
+              </Button>
+            </div>
+          </div>
+        </Card>
       </form>
     </div>
   )

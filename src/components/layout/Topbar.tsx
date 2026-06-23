@@ -1,10 +1,18 @@
 import { useLocation } from 'react-router-dom'
-import { Menu } from 'lucide-react'
+import { Menu, ChevronRight } from 'lucide-react'
+import Avatar from '../ui/Avatar'
 
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':  'Dashboard',
-  '/claims':     'Claims',
-  '/claims/new': 'New Claim',
+const BREADCRUMBS: Record<string, { parent?: string; label: string }> = {
+  '/dashboard':   { label: 'Dashboard' },
+  '/analytics':   { label: 'Analytics' },
+  '/claims':      { label: 'Claims' },
+  '/claims/new':  { parent: 'Claims', label: 'New Claim' },
+  '/forecast':    { label: 'Revenue Forecast' },
+  '/overhead':    { label: 'Overhead' },
+  '/pay-periods': { label: 'Pay Periods' },
+  '/staff':       { label: 'Staff' },
+  '/staff/new':   { parent: 'Staff', label: 'New Staff' },
+  '/caseloads':   { label: 'Caseloads' },
 }
 
 interface Props {
@@ -13,24 +21,42 @@ interface Props {
 
 export default function Topbar({ onMenuClick }: Props) {
   const { pathname } = useLocation()
-  const title = PAGE_TITLES[pathname] ?? 'Clarity Admin'
+
+  let crumb = BREADCRUMBS[pathname]
+  if (!crumb) {
+    if (pathname.startsWith('/claims/') && pathname.endsWith('/edit')) {
+      crumb = { parent: 'Claims', label: 'Edit Claim' }
+    } else if (pathname.startsWith('/staff/')) {
+      crumb = { parent: 'Staff', label: 'Staff Detail' }
+    } else {
+      crumb = { label: 'Clarity Admin' }
+    }
+  }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-4 h-14 px-6 bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-30 flex items-center gap-4 h-12 px-6 bg-white border-b border-border">
       <button
         type="button"
         onClick={onMenuClick}
-        className="md:hidden text-gray-400 hover:text-teal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
+        className="md:hidden text-muted hover:text-teal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
         aria-label="Open navigation"
       >
-        <Menu size={20} />
+        <Menu size={18} />
       </button>
 
-      <h1 className="font-heading text-teal text-xl font-semibold">{title}</h1>
+      <nav className="flex items-center gap-1.5 text-sm font-ui">
+        {crumb.parent && (
+          <>
+            <span className="text-muted">{crumb.parent}</span>
+            <ChevronRight size={14} className="text-muted/50" />
+          </>
+        )}
+        <span className="font-medium text-ink">{crumb.label}</span>
+      </nav>
 
-      <span className="ml-auto text-sm text-muted font-body">
-        bruce@claritydelaware.com
-      </span>
+      <div className="ml-auto">
+        <Avatar name="Bruce Spadaccini" size="sm" />
+      </div>
     </header>
   )
 }

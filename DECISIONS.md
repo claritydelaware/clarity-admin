@@ -92,6 +92,13 @@ Six UI patterns adopted from a Landingfolio dashboard template (`templates/tailw
 
 **Overhead import reads `.xlsx` files from `reporting/`** using SheetJS (`xlsx` npm package). Drop Xero monthly P&L exports as `Month_YYYY_PL.xlsx` into `reporting/`. The folder is gitignored — financial data is not committed.
 
+**Overhead xlsx import is a local-only workflow.** `Overhead.tsx` uses `import.meta.glob('../../reporting/*.xlsx', { eager: true })` to discover files at Vite build/dev-server start time — not at runtime. Consequences: (1) files added to `reporting/` after the dev server starts won't appear until the server is restarted; (2) the production site (`admin.claritydelaware.com`) can never access xlsx files because `reporting/` is gitignored and is not included in the Cloudflare Pages build. The correct workflow: drop the Xero export into `reporting/` locally → restart the dev server → import and confirm in the UI → data is saved to the `Overhead` Google Sheet tab → confirmed data is then readable from the live site via the Worker.
+
+**There are three separate overhead data sources — do not conflate them:**
+1. **`Overhead` sheet tab** — Xero-imported entries saved via the Overhead page. This is the source for Analytics quarterly summary (`getQuarterlySummary`) and quarter projection (`getQuarterProjection`). Missing months trigger amber warning banners in Analytics.
+2. **`Caseload Trends` sheet columns AK–AL** (indices 36–37) — formula-driven overhead figures read by `getCaseloadTrends`. These populate `CaseloadTrendMonth.operationalOverhead` and `.totalOverhead`, which drive the Overhead line in the Analytics Financial Performance chart. This data is managed entirely in the spreadsheet; the portal doesn't write to it.
+3. **Formula constants in the Worker** (`EMILY_PAYROLL_TAX_RATE = 0.0956`, `EMILY_FIXED_OVERHEAD_PER_PERIOD = 110.80`) — used to estimate overhead per pay period on the Emily payroll tab and in Emily's `PayPeriodSummary` entries stored in `Payroll_Records`. These have no relationship to Xero imports. The source of truth for these constants is `Config!I1:J2` in the spreadsheet.
+
 ---
 
 ## Routing & Registration Order

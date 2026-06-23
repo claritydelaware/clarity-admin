@@ -1,12 +1,20 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2, AlertCircle, TrendingUp, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { AlertCircle, TrendingUp, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { useClaims } from '../hooks/useClaims'
 import { useForecastAccuracy } from '../hooks/useAnalytics'
 import { usePayerPerformance } from '../hooks/usePayerPerformance'
 import { useToast } from '../context/ToastContext'
 import { api } from '../lib/api'
 import { formatCurrency, isArchived } from '../lib/utils'
+import PageHeader from '../components/layout/PageHeader'
+import MetricCard from '../components/ui/MetricCard'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import ErrorBanner from '../components/ui/ErrorBanner'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
+import EmptyState from '../components/ui/EmptyState'
+import ProgressBar from '../components/ui/ProgressBar'
 import type { Claim, ForecastAccuracyWeek, PayerPerformance } from '../types'
 
 interface WeekGroup {
@@ -43,7 +51,7 @@ function ForecastWeekGroup({ forecastWeek, items, isOverdue }: WeekGroup & { isO
   })()
 
   return (
-    <div className={`rounded-xl border overflow-hidden ${isOverdue ? 'border-red-200' : 'border-gray-200'}`}>
+    <Card padding="none" className={isOverdue ? 'border-red-200' : ''}>
       <button
         onClick={() => setOpen(o => !o)}
         className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${
@@ -51,7 +59,7 @@ function ForecastWeekGroup({ forecastWeek, items, isOverdue }: WeekGroup & { isO
         }`}
       >
         <div className="flex items-center gap-2">
-          {isOverdue && <span className="text-xs font-body font-medium text-error uppercase tracking-wide">Overdue</span>}
+          {isOverdue && <span className="text-xs font-ui font-medium text-error uppercase tracking-wide">Overdue</span>}
           <span className={`font-heading text-sm font-semibold ${isOverdue ? 'text-error' : 'text-teal'}`}>
             Week of {weekLabel}
           </span>
@@ -72,18 +80,18 @@ function ForecastWeekGroup({ forecastWeek, items, isOverdue }: WeekGroup & { isO
         <div className="bg-white">
           <table className="w-full text-sm font-body">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-5 py-2 text-xs font-medium text-muted uppercase tracking-wide">Clinician</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-muted uppercase tracking-wide">Payer</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-muted uppercase tracking-wide">Code</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-muted uppercase tracking-wide">Claim date</th>
-                <th className="text-left px-4 py-2 text-xs font-medium text-muted uppercase tracking-wide">Pending</th>
-                <th className="text-right px-5 py-2 text-xs font-medium text-muted uppercase tracking-wide">Expected</th>
+              <tr className="border-b border-border">
+                <th className="text-left px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Clinician</th>
+                <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Payer</th>
+                <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Code</th>
+                <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Claim date</th>
+                <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Pending</th>
+                <th className="text-right px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Expected</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {items.map(c => (
-                <tr key={c.rowIndex} className="hover:bg-gray-50 transition-colors">
+                <tr key={c.rowIndex} className="hover:bg-surface-sunken transition-colors">
                   <td className="px-5 py-2.5 text-ink">{c.clinician}</td>
                   <td className="px-4 py-2.5 text-muted">{c.insurance}</td>
                   <td className="px-4 py-2.5 text-muted tabular-nums">{c.serviceCode}</td>
@@ -102,7 +110,7 @@ function ForecastWeekGroup({ forecastWeek, items, isOverdue }: WeekGroup & { isO
           </table>
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 
@@ -112,11 +120,11 @@ function OverdueSection({ weeks }: { weeks: WeekGroup[] }) {
   const totalOverdueAmount = allOverdue.reduce((s, c) => s + c.insuranceAmount, 0)
 
   return (
-    <div className="rounded-xl border border-red-200 overflow-hidden">
+    <Card padding="none" className="border-red-200">
       <div className="flex items-center justify-between px-5 py-3 bg-red-50">
         <div className="flex items-center gap-2">
           <AlertCircle size={13} className="text-error shrink-0" />
-          <span className="text-xs font-body font-medium text-error uppercase tracking-wide">
+          <span className="text-xs font-ui font-medium text-error uppercase tracking-wide">
             Overdue — forecast date passed
           </span>
           <span className="text-xs text-error/70 font-body">
@@ -132,12 +140,12 @@ function OverdueSection({ weeks }: { weeks: WeekGroup[] }) {
         <table className="w-full text-sm font-body">
           <thead>
             <tr className="border-b border-red-100">
-              <th className="text-left px-5 py-2 text-xs font-medium text-muted uppercase tracking-wide">Clinician</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-muted uppercase tracking-wide">Payer</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-muted uppercase tracking-wide">Code</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-muted uppercase tracking-wide">Claim date</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-muted uppercase tracking-wide">Overdue</th>
-              <th className="text-right px-5 py-2 text-xs font-medium text-muted uppercase tracking-wide">Expected</th>
+              <th className="text-left px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Clinician</th>
+              <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Payer</th>
+              <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Code</th>
+              <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Claim date</th>
+              <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Overdue</th>
+              <th className="text-right px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Expected</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-red-50">
@@ -160,66 +168,7 @@ function OverdueSection({ weeks }: { weeks: WeekGroup[] }) {
           </tbody>
         </table>
       </div>
-    </div>
-  )
-}
-
-function ForecastKpiStrip({
-  totalExpected, totalCount,
-  overdueAmount, overdueCount,
-  next30Amount, next30Count,
-  avgAccuracy,
-}: {
-  totalExpected: number
-  totalCount: number
-  overdueAmount: number
-  overdueCount: number
-  next30Amount: number
-  next30Count: number
-  avgAccuracy: number | null
-}) {
-  return (
-    <div className="grid grid-cols-4 gap-3">
-      <div className="bg-white rounded-xl border border-gray-200 px-4 py-3.5">
-        <p className="text-xs font-body uppercase tracking-wide text-muted mb-1">Total pipeline</p>
-        <p className="font-heading text-xl font-semibold text-ink tabular-nums">{formatCurrency(totalExpected)}</p>
-        <p className="text-xs text-muted font-body mt-1">{totalCount} pending claim{totalCount !== 1 ? 's' : ''}</p>
-      </div>
-
-      <div className="bg-white rounded-xl border border-red-200 px-4 py-3.5">
-        <p className="text-xs font-body uppercase tracking-wide text-error mb-1 flex items-center gap-1">
-          <AlertCircle size={11} /> Overdue
-        </p>
-        <p className="font-heading text-xl font-semibold text-error tabular-nums">{formatCurrency(overdueAmount)}</p>
-        <p className="text-xs text-error/70 font-body mt-1">{overdueCount} claim{overdueCount !== 1 ? 's' : ''} past forecast date</p>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 px-4 py-3.5">
-        <p className="text-xs font-body uppercase tracking-wide text-muted mb-1">Due next 30 days</p>
-        <p className="font-heading text-xl font-semibold text-ink tabular-nums">{formatCurrency(next30Amount)}</p>
-        <p className="text-xs text-muted font-body mt-1">{next30Count} claim{next30Count !== 1 ? 's' : ''}</p>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 px-4 py-3.5">
-        <p className="text-xs font-body uppercase tracking-wide text-muted mb-1">Forecast accuracy</p>
-        {avgAccuracy !== null ? (
-          <>
-            <p className="font-heading text-xl font-semibold text-teal tabular-nums">
-              {(avgAccuracy * 100).toFixed(1)}%
-            </p>
-            <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-teal rounded-full"
-                style={{ width: `${Math.min(avgAccuracy * 100, 100).toFixed(1)}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted font-body mt-1.5">12-week avg · improving over time</p>
-          </>
-        ) : (
-          <p className="font-heading text-xl font-semibold text-muted">—</p>
-        )}
-      </div>
-    </div>
+    </Card>
   )
 }
 
@@ -231,7 +180,7 @@ function QuarterBanner({ label, collected, remaining, pendingCount }: {
 }) {
   return (
     <div className="rounded-xl border border-teal/20 bg-teal-pale/30 px-5 py-3 flex items-center gap-6">
-      <p className="text-xs font-body text-teal font-medium uppercase tracking-wide shrink-0">{label}</p>
+      <p className="text-xs font-ui text-teal font-medium uppercase tracking-wide shrink-0">{label}</p>
       <div className="h-7 w-px bg-teal/15 shrink-0" />
       <div className="shrink-0">
         <p className="text-xs font-body text-muted">Collected</p>
@@ -280,8 +229,7 @@ function PayerPipelinePanel({ claims, payerPerf }: {
   const otherCount = otherRows.reduce((s, r) => s + r.count, 0)
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <h2 className="font-heading text-sm font-semibold text-ink mb-3">Pipeline by payer</h2>
+    <Card title="Pipeline by payer">
       <div className="space-y-3">
         {topRows.map(row => (
           <div key={row.payer}>
@@ -297,12 +245,12 @@ function PayerPipelinePanel({ claims, payerPerf }: {
                 <p className="text-xs text-muted font-body">{row.count} claim{row.count !== 1 ? 's' : ''}</p>
               </div>
             </div>
-            <div className="mt-1.5 h-1 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-teal rounded-full"
-                style={{ width: grandTotal > 0 ? `${(row.amount / grandTotal * 100).toFixed(1)}%` : '0%' }}
-              />
-            </div>
+            <ProgressBar
+              value={grandTotal > 0 ? row.amount / grandTotal * 100 : 0}
+              color="var(--color-teal)"
+              size="sm"
+              className="mt-1.5"
+            />
           </div>
         ))}
         {otherRows.length > 0 && (
@@ -318,16 +266,16 @@ function PayerPipelinePanel({ claims, payerPerf }: {
                 <p className="text-xs text-muted font-body">{otherCount} claims</p>
               </div>
             </div>
-            <div className="mt-1.5 h-1 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gray-300 rounded-full"
-                style={{ width: grandTotal > 0 ? `${(otherTotal / grandTotal * 100).toFixed(1)}%` : '0%' }}
-              />
-            </div>
+            <ProgressBar
+              value={grandTotal > 0 ? otherTotal / grandTotal * 100 : 0}
+              color="#C4C4C4"
+              size="sm"
+              className="mt-1.5"
+            />
           </div>
         )}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -341,16 +289,14 @@ function AccuracySidebarPanel({
   if (settledWeeks.length === 0) return null
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-baseline justify-between mb-3">
-        <h2 className="font-heading text-sm font-semibold text-ink">Recent accuracy</h2>
-        {avgAccuracy !== null && (
-          <span className="text-xs font-body text-teal font-medium tabular-nums">
-            {(avgAccuracy * 100).toFixed(1)}% avg
-          </span>
-        )}
-      </div>
-
+    <Card
+      title="Recent accuracy"
+      actions={avgAccuracy !== null ? (
+        <span className="text-xs font-body text-teal font-medium tabular-nums">
+          {(avgAccuracy * 100).toFixed(1)}% avg
+        </span>
+      ) : undefined}
+    >
       <div className="space-y-1.5">
         {settledWeeks.map((w, i) => {
           const diff = w.difference ?? (w.actual - w.forecast)
@@ -370,7 +316,7 @@ function AccuracySidebarPanel({
       <p className="text-xs text-muted font-body mt-3 leading-relaxed">
         Historical forecasts may predate the current algorithm. Accuracy improves as more claims settle under the current logic.
       </p>
-    </div>
+    </Card>
   )
 }
 
@@ -461,7 +407,6 @@ export default function Forecast() {
   const qEnd   = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0)
   const qLabel = `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`
 
-  // Collected: Payment Received or Payment Pending claims with paymentDateReceived in the quarter
   const qCollected = (claims ?? []).reduce((sum, c) => {
     if (c.status !== 'Payment Received' && c.status !== 'Payment Pending') return sum
     if (!c.paymentDateReceived) return sum
@@ -471,7 +416,6 @@ export default function Forecast() {
     return (d >= qStart && d <= qEnd) ? sum + c.totalPayment : sum
   }, 0)
 
-  // Remaining: non-archived (pending) claims with forecastWeek in the quarter
   const qRemainingClaims = (claims ?? []).filter(c => {
     if (!c.forecastWeek || isArchived(c)) return false
     const fw = new Date(c.forecastWeek)
@@ -480,68 +424,50 @@ export default function Forecast() {
   const qForecastRemaining = qRemainingClaims.reduce((s, c) => s + c.insuranceAmount, 0)
   const qPendingCount      = qRemainingClaims.length
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24 text-muted">
-        <Loader2 size={20} className="animate-spin mr-2" />
-        <span className="text-sm font-body">Loading forecast…</span>
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
-        <AlertCircle size={16} className="shrink-0" />
-        {(error as Error).message}
-      </div>
-    )
-  }
+  if (isLoading) return <LoadingSpinner label="Loading forecast…" />
+  if (isError) return <ErrorBanner message={(error as Error).message} />
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="font-heading text-xl font-semibold text-ink">Revenue Forecast</h1>
-          <p className="text-xs text-muted font-body mt-1">Pending claims by expected payment week</p>
-        </div>
-        <div className="flex items-start gap-3">
-          <button
-            onClick={handleRecalculate}
-            disabled={recalcState === 'loading'}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui font-medium rounded-lg border border-teal text-teal hover:bg-teal-pale transition-colors disabled:opacity-50"
-          >
-            {recalcState === 'loading' ? (
-              <><Loader2 size={12} className="animate-spin" />Recalculating…</>
-            ) : recalcState === 'done' ? (
-              <>Updated {recalcCount} claims</>
-            ) : (
-              <><RefreshCw size={12} />Recalculate Forecasts</>
+      <PageHeader
+        title="Revenue Forecast"
+        subtitle="Pending claims by expected payment week"
+        actions={
+          <div className="flex items-start gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={recalcState === 'loading'}
+              icon={recalcState === 'done' ? undefined : <RefreshCw size={13} />}
+              onClick={handleRecalculate}
+            >
+              {recalcState === 'loading' ? 'Recalculating…' : recalcState === 'done' ? `Updated ${recalcCount} claims` : 'Recalculate Forecasts'}
+            </Button>
+            {weeks.length > 0 && (
+              <div className="text-right">
+                <p className="font-heading text-xl font-semibold text-ink">{formatCurrency(totalExpected)}</p>
+                <p className="text-xs text-muted font-body mt-0.5">total expected</p>
+                {overdueAmount > 0 && (
+                  <p className="text-xs text-error font-body mt-0.5">{formatCurrency(overdueAmount)} overdue</p>
+                )}
+              </div>
             )}
-          </button>
-          {weeks.length > 0 && (
-            <div className="text-right">
-              <p className="font-heading text-xl font-semibold text-ink">{formatCurrency(totalExpected)}</p>
-              <p className="text-xs text-muted font-body mt-0.5">total expected</p>
-              {overdueAmount > 0 && (
-                <p className="text-xs text-error font-body mt-0.5">{formatCurrency(overdueAmount)} overdue</p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* KPI strip */}
-      <ForecastKpiStrip
-        totalExpected={totalExpected}
-        totalCount={totalCount}
-        overdueAmount={overdueAmount}
-        overdueCount={overdueCount}
-        next30Amount={next30Amount}
-        next30Count={next30Count}
-        avgAccuracy={avgAccuracy}
-      />
+      <div className="grid grid-cols-4 gap-3">
+        <MetricCard label="Total pipeline" value={formatCurrency(totalExpected)} sub={`${totalCount} pending claim${totalCount !== 1 ? 's' : ''}`} />
+        <MetricCard label="Overdue" value={formatCurrency(overdueAmount)} sub={`${overdueCount} claim${overdueCount !== 1 ? 's' : ''} past forecast date`} accentColor="var(--color-status-red)" icon={<AlertCircle size={12} />} />
+        <MetricCard label="Due next 30 days" value={formatCurrency(next30Amount)} sub={`${next30Count} claim${next30Count !== 1 ? 's' : ''}`} />
+        <MetricCard
+          label="Forecast accuracy"
+          value={avgAccuracy !== null ? `${(avgAccuracy * 100).toFixed(1)}%` : '—'}
+          sub={avgAccuracy !== null ? '12-week avg · improving over time' : undefined}
+          accentColor="var(--color-teal)"
+        />
+      </div>
 
       {/* Quarter banner */}
       {(claims?.length ?? 0) > 0 && (
@@ -550,12 +476,11 @@ export default function Forecast() {
 
       {/* Two-column layout */}
       <div className="grid grid-cols-[1fr_288px] gap-4 items-start">
-        {/* LEFT — main timeline column */}
         <div className="space-y-4">
           {overdueWeeks.length > 0 && <OverdueSection weeks={overdueWeeks} />}
 
           {upcomingWeeks.length > 0 && (
-            <p className="text-xs font-body uppercase tracking-wide text-muted pt-2">Upcoming weeks</p>
+            <p className="text-xs font-ui uppercase tracking-wide text-muted pt-2">Upcoming weeks</p>
           )}
 
           {upcomingWeeks.map(w => (
@@ -563,14 +488,16 @@ export default function Forecast() {
           ))}
 
           {weeks.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-gray-200">
-              <TrendingUp size={32} className="text-muted mb-3 opacity-40" />
-              <p className="text-sm font-body text-muted">No pending claims with forecast dates.</p>
-            </div>
+            <Card>
+              <EmptyState
+                icon={<TrendingUp size={32} />}
+                title="No pending claims"
+                description="No pending claims with forecast dates."
+              />
+            </Card>
           )}
         </div>
 
-        {/* RIGHT — sidebar */}
         <div className="space-y-4">
           <PayerPipelinePanel claims={claims ?? []} payerPerf={payerPerf} />
           <AccuracySidebarPanel settledWeeks={settledWeeks} avgAccuracy={avgAccuracy} />

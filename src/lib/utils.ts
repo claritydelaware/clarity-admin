@@ -1,4 +1,11 @@
-import type { Claim } from '../types'
+import type { Claim, Clinician } from '../types'
+
+export const CLINICIAN_COLORS: Record<Clinician, string> = {
+  Shannon: '#254D54',
+  Jen:     '#F6C54D',
+  Emily:   '#3A7078',
+  Shana:   '#C9922A',
+}
 
 export function isArchived(claim: Claim): boolean {
   if (claim.status === 'Denied') return true

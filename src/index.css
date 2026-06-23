@@ -6,19 +6,57 @@
   --color-teal-mid:   #3A7078;
   --color-teal-pale:  #E8F1F2;
   --color-gold:       #F6C54D;
-  --color-gold-hover: #f9d26e;
   --color-gold-dark:  #C9922A;
   --color-gold-tint:  #FDF3D6;
-  --color-cream:      #F9F7F4;
+  --color-gold-pale:  #FFF8E7;
   --color-ink:        #1A1A1A;
   --color-muted:      #6B7280;
   --color-success:    #16A34A;
   --color-error:      #DC2626;
 
+  /* Surface */
+  --color-surface:        #FFFFFF;
+  --color-surface-sunken: #F4F5F8;
+
+  /* Border */
+  --color-border:        #E6E9EF;
+  --color-border-strong: #C5CDD8;
+
+  /* Status (monday.com palette) */
+  --color-status-green:  #00C875;
+  --color-status-orange: #FDAB3D;
+  --color-status-red:    #E2445C;
+  --color-status-blue:   #0086C9;
+  --color-status-purple: #A25DDC;
+  --color-status-gray:   #C4C4C4;
+
+  /* Clinician */
+  --color-clinician-shannon: #254D54;
+  --color-clinician-jen:     #F6C54D;
+  --color-clinician-emily:   #3A7078;
+  --color-clinician-shana:   #C9922A;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Board */
+  --board-row-height: 36px;
+  --board-header-height: 40px;
+  --board-group-gap: 24px;
+
+  /* Shadows */
+  --shadow-xs:   0 1px 2px rgba(37, 77, 84, 0.04);
+  --shadow-sm:   0 1px 3px rgba(37, 77, 84, 0.06), 0 1px 2px rgba(37, 77, 84, 0.04);
+  --shadow-md:   0 4px 6px -1px rgba(37, 77, 84, 0.07), 0 2px 4px -2px rgba(37, 77, 84, 0.05);
+  --shadow-lg:   0 10px 15px -3px rgba(37, 77, 84, 0.08), 0 4px 6px -4px rgba(37, 77, 84, 0.04);
+  --shadow-card: 0 1px 3px rgba(37, 77, 84, 0.05), 0 1px 2px rgba(37, 77, 84, 0.03);
+
   /* Typography — must use --font-* for Tailwind v4 font-{name} utilities */
   --font-heading: 'Plus Jakarta Sans', sans-serif;
   --font-body:    'Plus Jakarta Sans', sans-serif;
-  --font-accent:  'Plus Jakarta Sans', sans-serif;
   --font-ui:      'Plus Jakarta Sans', sans-serif;
 }
 
@@ -37,14 +75,81 @@
   }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .animate-slide-up-fade {
   animation: slideUpFade 0.4s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out both;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.2s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.15s ease-out both;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 body {
   margin: 0;
   font-family: var(--font-body);
-  background-color: var(--color-cream);
+  background-color: var(--color-surface-sunken);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+a, button, [role="button"], [role="tab"], [role="menuitem"] {
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
 }

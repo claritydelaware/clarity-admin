@@ -4,6 +4,7 @@ import type {
   StaffMember, StaffLicense, OverheadEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
+  Clinician,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -134,6 +135,12 @@ export const api = {
     paymentAnalysis: (): Promise<EmilyPaymentAnalysisRow[]> =>
       apiFetch<EmilyPaymentAnalysisRow[]>('/emily/payment-analysis'),
   },
+  hourly: {
+    submission: (clinician: Clinician, periodStart: string): Promise<EmilySubmission | null> =>
+      apiFetch<EmilySubmission | null>(`/hourly/submission?clinician=${encodeURIComponent(clinician)}&periodStart=${encodeURIComponent(periodStart)}`),
+    paymentAnalysis: (clinician: Clinician): Promise<EmilyPaymentAnalysisRow[]> =>
+      apiFetch<EmilyPaymentAnalysisRow[]>(`/hourly/payment-analysis?clinician=${encodeURIComponent(clinician)}`),
+  },
   overhead: {
     list: (): Promise<OverheadEntry[]> => apiFetch<OverheadEntry[]>('/overhead'),
     save: (data: OverheadEntry): Promise<OverheadEntry> =>
@@ -144,8 +151,11 @@ export const api = {
   payPeriodsFull: {
     list: (): Promise<{ salaryPeriods: SalaryPayPeriod[]; hourlyPeriods: HourlyPayPeriod[] }> =>
       apiFetch('/pay-periods/list'),
-    summary: (type: 'salary' | 'hourly', periodStart: string): Promise<PartnerPeriodSummary[] | EmilyPayPeriodSummary> =>
-      apiFetch(`/pay-periods/summary?type=${type}&periodStart=${encodeURIComponent(periodStart)}`),
+    summary: (type: 'salary' | 'hourly', periodStart: string, clinician?: Clinician): Promise<PartnerPeriodSummary[] | EmilyPayPeriodSummary> => {
+      const p = new URLSearchParams({ type, periodStart })
+      if (clinician) p.set('clinician', clinician)
+      return apiFetch(`/pay-periods/summary?${p}`)
+    },
     saveRecord: (data: {
       periodStart: string; periodEnd?: string; payDate?: string; clinician: string
       therapySessions?: number; otherSessions?: number; noShows?: number; consultations?: number
