@@ -4,7 +4,6 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getPaginationRowModel,
-  flexRender,
   type ColumnDef,
   type SortingState,
   type VisibilityState,
@@ -12,11 +11,14 @@ import {
   type OnChangeFn,
   type Row,
 } from '@tanstack/react-table'
-import { ChevronUp, ChevronDown, RotateCcw, SlidersHorizontal, GripVertical } from 'lucide-react'
+import { RotateCcw, SlidersHorizontal, GripVertical } from 'lucide-react'
+import BoardHeader from './BoardHeader'
+import BoardRow from './BoardRow'
 import BoardGroup from './BoardGroup'
 import BoardAddRow from './BoardAddRow'
 import { formatCurrency } from '../../lib/utils'
 import Button from '../ui/Button'
+import useLocalStorage from '../../hooks/useLocalStorage'
 
 interface GroupConfig {
   color: string
@@ -43,20 +45,8 @@ interface BoardProps<T> {
   emptyMessage?: string
 }
 
-const COL_STORAGE_SUFFIX = '-board-cols'
-
-function loadColumnState(key: string): { visibility: VisibilityState; order: string[] } | null {
-  try {
-    const raw = localStorage.getItem(key + COL_STORAGE_SUFFIX)
-    return raw ? JSON.parse(raw) : null
-  } catch { return null }
-}
-
-function saveColumnState(key: string, visibility: VisibilityState, order: string[]) {
-  try {
-    localStorage.setItem(key + COL_STORAGE_SUFFIX, JSON.stringify({ visibility, order }))
-  } catch {}
-}
+interface ColumnState { visibility: VisibilityState; order: string[] }
+const EMPTY_COL_STATE: ColumnState = { visibility: {}, order: [] }
 
 export default function Board<T>({
   data,
@@ -76,10 +66,13 @@ export default function Board<T>({
   compact = false,
   emptyMessage = 'No data to display.',
 }: BoardProps<T>) {
-  const saved = storageKey ? loadColumnState(storageKey) : null
+  const [colState, setColState] = useLocalStorage<ColumnState>(
+    storageKey ? storageKey + '-board-cols' : '_unused-board-cols',
+    EMPTY_COL_STATE,
+  )
   const [sorting, setSorting] = useState<SortingState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(saved?.visibility ?? {})
-  const [columnOrder, setColumnOrder] = useState<string[]>(saved?.order ?? [])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(colState.visibility)
+  const [columnOrder, setColumnOrder] = useState<string[]>(colState.order)
   const [colMenuOpen, setColMenuOpen] = useState(false)
   const colMenuRef = useRef<HTMLDivElement>(null)
   const selectAllRef = useRef<HTMLInputElement>(null)
@@ -101,14 +94,14 @@ export default function Board<T>({
     onColumnVisibilityChange: (updater) => {
       setColumnVisibility(prev => {
         const next = typeof updater === 'function' ? updater(prev) : updater
-        if (storageKey) saveColumnState(storageKey, next, columnOrder)
+        if (storageKey) setColState({ visibility: next, order: columnOrder })
         return next
       })
     },
     onColumnOrderChange: (updater) => {
       setColumnOrder(prev => {
         const next = typeof updater === 'function' ? updater(prev) : updater
-        if (storageKey) saveColumnState(storageKey, columnVisibility, next)
+        if (storageKey) setColState({ visibility: columnVisibility, order: next })
         return next
       })
     },
@@ -139,14 +132,20 @@ export default function Board<T>({
     selectAllRef.current.indeterminate = !allSelected && someSelected
   })
 
-  // Close column menu on outside click
   useEffect(() => {
     if (!colMenuOpen) return
-    const handle = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent) => {
       if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node)) setColMenuOpen(false)
     }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setColMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [colMenuOpen])
 
   // Group rows
@@ -165,7 +164,6 @@ export default function Board<T>({
   }
 
   const allColumns = table.getAllLeafColumns()
-  const rowPy = compact ? 'py-1.5' : 'py-2.5'
 
   function handleDragStart(idx: number) { dragItem.current = idx }
   function handleDragOver(e: React.DragEvent, idx: number) { e.preventDefault(); dragOverItem.current = idx }
@@ -177,27 +175,8 @@ export default function Board<T>({
     const [moved] = ids.splice(dragItem.current, 1)
     ids.splice(dragOverItem.current, 0, moved)
     setColumnOrder(ids)
-    if (storageKey) saveColumnState(storageKey, columnVisibility, ids)
+    if (storageKey) setColState({ visibility: columnVisibility, order: ids })
     dragItem.current = null; dragOverItem.current = null
-  }
-
-  function renderRow(row: Row<T>) {
-    const selected = row.getIsSelected()
-    return (
-      <tr
-        key={row.id}
-        className={[
-          'transition-colors border-b border-border/50',
-          selected ? 'bg-teal-pale/40' : 'hover:bg-surface-sunken/50',
-        ].join(' ')}
-      >
-        {row.getVisibleCells().map(cell => (
-          <td key={cell.id} className={`px-4 ${rowPy} text-sm`}>
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </td>
-        ))}
-      </tr>
-    )
   }
 
   return (
@@ -208,7 +187,7 @@ export default function Board<T>({
           <button
             type="button"
             onClick={() => setSorting([])}
-            className="inline-flex items-center gap-1 text-xs text-muted hover:text-teal font-ui transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-muted hover:text-teal font-ui transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
           >
             <RotateCcw size={11} /> Reset sort
           </button>
@@ -218,14 +197,16 @@ export default function Board<T>({
           <button
             type="button"
             onClick={() => setColMenuOpen(o => !o)}
-            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-teal font-ui transition-colors border border-border rounded-lg px-2.5 py-1.5 bg-white hover:border-teal/40"
+            aria-haspopup="menu"
+            aria-expanded={colMenuOpen}
+            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-teal font-ui transition-colors border border-border rounded-lg px-2.5 py-1.5 bg-white hover:border-teal/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
           >
             <SlidersHorizontal size={11} />
             Columns
           </button>
 
           {colMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-30 w-56 bg-white border border-border rounded-lg shadow-lg py-2 animate-slide-down">
+            <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-56 bg-white border border-border rounded-lg shadow-lg py-2 animate-slide-down">
               <p className="px-3 pb-1.5 text-[10px] font-medium text-muted uppercase tracking-wide border-b border-border mb-1">
                 Columns · drag to reorder
               </p>
@@ -257,9 +238,9 @@ export default function Board<T>({
                   onClick={() => {
                     setColumnVisibility({})
                     setColumnOrder([])
-                    if (storageKey) saveColumnState(storageKey, {}, [])
+                    if (storageKey) setColState(EMPTY_COL_STATE)
                   }}
-                  className="text-xs text-muted hover:text-teal font-ui transition-colors"
+                  className="text-xs text-muted hover:text-teal font-ui transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
                 >
                   Reset to defaults
                 </button>
@@ -274,33 +255,8 @@ export default function Board<T>({
 
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border border-border bg-white">
-        <table className="w-full text-sm font-body">
-          <thead className="bg-surface-sunken border-b border-border">
-            {headerGroups.map(hg => (
-              <tr key={hg.id}>
-                {hg.headers.map(header => (
-                  <th
-                    key={header.id}
-                    className={[
-                      'px-4 py-2.5 text-left text-[11px] font-ui font-medium text-muted uppercase tracking-wider whitespace-nowrap',
-                      header.column.getCanSort() ? 'cursor-pointer select-none hover:text-ink' : '',
-                    ].join(' ')}
-                    onClick={header.column.getToggleSortingHandler()}
-                    style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
-                  >
-                    <span className="inline-flex items-center gap-0.5">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getIsSorted() === 'asc' && <ChevronUp size={13} />}
-                      {header.column.getIsSorted() === 'desc' && <ChevronDown size={13} />}
-                      {header.column.getCanSort() && !header.column.getIsSorted() && (
-                        <ChevronDown size={13} className="opacity-20" />
-                      )}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
+        <table className="w-full text-sm font-body" role="grid" aria-label="Data board">
+          <BoardHeader headerGroups={headerGroups} />
           <tbody>
             {rows.length === 0 && (
               <tr>
@@ -331,12 +287,16 @@ export default function Board<T>({
                     colSpan={totalColCount}
                     summary={summary}
                   >
-                    {group.rows.map(renderRow)}
+                    {group.rows.map(row => (
+                      <BoardRow key={row.id} row={row} compact={compact} />
+                    ))}
                   </BoardGroup>
                 )
               })
             ) : (
-              rows.map(renderRow)
+              rows.map(row => (
+                <BoardRow key={row.id} row={row} compact={compact} />
+              ))
             )}
 
             {addRowPath && addRowLabel && (

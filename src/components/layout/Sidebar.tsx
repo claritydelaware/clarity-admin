@@ -103,7 +103,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             type="button"
             onClick={onToggleCollapse}
             className={[
-              'w-full flex items-center py-3 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border-t border-white/10',
+              'w-full flex items-center py-3 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border-t border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-inset',
               isCollapsed ? 'justify-center px-0' : 'gap-2 px-5',
             ].join(' ')}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}

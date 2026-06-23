@@ -1,6 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Loader2, AlertCircle, User } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useStaff } from '../hooks/useStaff'
+import PageHeader from '../components/layout/PageHeader'
+import Card from '../components/ui/Card'
+import Avatar from '../components/ui/Avatar'
+import Button from '../components/ui/Button'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
+import ErrorBanner from '../components/ui/ErrorBanner'
+import EmptyState from '../components/ui/EmptyState'
 import type { StaffMember } from '../types'
 
 function licenseStatus(member: StaffMember): 'ok' | 'warning' | 'expired' | null {
@@ -16,7 +23,7 @@ function licenseStatus(member: StaffMember): 'ok' | 'warning' | 'expired' | null
 function RoleBadge({ role }: { role: 'partner' | 'w2' }) {
   return (
     <span className={[
-      'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-body',
+      'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-ui',
       role === 'partner' ? 'bg-teal-pale text-teal' : 'bg-gold-tint text-gold-dark',
     ].join(' ')}>
       {role === 'partner' ? 'Partner' : 'W-2'}
@@ -30,63 +37,48 @@ export default function Staff() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl font-semibold text-ink">Staff</h1>
-        <button
-          onClick={() => navigate('/staff/new')}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
-        >
-          <Plus size={15} strokeWidth={2.5} />
-          Add Staff
-        </button>
-      </div>
+      <PageHeader
+        title="Staff"
+        actions={
+          <Button icon={<Plus size={15} strokeWidth={2.5} />} onClick={() => navigate('/staff/new')}>
+            Add Staff
+          </Button>
+        }
+      />
 
-      {isLoading && (
-        <div className="flex items-center justify-center py-16 text-muted">
-          <Loader2 size={20} className="animate-spin mr-2" />
-          <span className="text-sm font-body">Loading staff…</span>
-        </div>
-      )}
-
-      {isError && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
-          <AlertCircle size={16} className="shrink-0" />
-          {(error as Error).message}
-        </div>
-      )}
+      {isLoading && <LoadingSpinner label="Loading staff…" />}
+      {isError && <ErrorBanner message={(error as Error).message} />}
 
       {staff && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <Card padding="none">
           <table className="w-full text-sm font-body">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-surface-sunken border-b border-border">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">License</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Expiration</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Compensation</th>
+                <th className="px-5 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">License</th>
+                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Expiration</th>
+                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Compensation</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {staff.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-muted text-sm">
-                    No staff records. Add the first one above.
+                  <td colSpan={5}>
+                    <EmptyState title="No staff records" description="Add the first one above." />
                   </td>
                 </tr>
               )}
               {staff.map(member => {
                 const lStatus = licenseStatus(member)
                 return (
-                  <tr key={member.id} className="hover:bg-cream transition-colors">
+                  <tr key={member.id} className="hover:bg-surface-sunken transition-colors">
                     <td className="px-5 py-3">
                       <Link
                         to={`/staff/${member.id}`}
                         className="flex items-center gap-2 font-medium text-ink hover:text-teal transition-colors"
                       >
-                        <div className="w-7 h-7 rounded-full bg-teal-pale flex items-center justify-center shrink-0">
-                          <User size={13} className="text-teal" />
-                        </div>
+                        <Avatar name={member.name} size="sm" />
                         {member.name}
                       </Link>
                     </td>
@@ -115,7 +107,7 @@ export default function Staff() {
               })}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
     </div>
   )

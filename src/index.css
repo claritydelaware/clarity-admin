@@ -6,10 +6,9 @@
   --color-teal-mid:   #3A7078;
   --color-teal-pale:  #E8F1F2;
   --color-gold:       #F6C54D;
-  --color-gold-hover: #f9d26e;
   --color-gold-dark:  #C9922A;
   --color-gold-tint:  #FDF3D6;
-  --color-cream:      #F9F7F4;
+  --color-gold-pale:  #FFF8E7;
   --color-ink:        #1A1A1A;
   --color-muted:      #6B7280;
   --color-success:    #16A34A;
@@ -17,7 +16,6 @@
 
   /* Surface */
   --color-surface:        #FFFFFF;
-  --color-surface-raised: #FFFFFF;
   --color-surface-sunken: #F4F5F8;
 
   /* Border */
@@ -38,13 +36,6 @@
   --color-clinician-emily:   #3A7078;
   --color-clinician-shana:   #C9922A;
 
-  /* Shadows */
-  --shadow-xs:   0 1px 2px rgba(37, 77, 84, 0.04);
-  --shadow-sm:   0 1px 3px rgba(37, 77, 84, 0.06), 0 1px 2px rgba(37, 77, 84, 0.04);
-  --shadow-md:   0 4px 6px -1px rgba(37, 77, 84, 0.07), 0 2px 4px -2px rgba(37, 77, 84, 0.05);
-  --shadow-lg:   0 10px 15px -3px rgba(37, 77, 84, 0.08), 0 4px 6px -4px rgba(37, 77, 84, 0.04);
-  --shadow-card: 0 1px 3px rgba(37, 77, 84, 0.05), 0 1px 2px rgba(37, 77, 84, 0.03);
-
   /* Radius */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -52,14 +43,20 @@
   --radius-xl: 16px;
 
   /* Board */
-  --board-row-height:    36px;
+  --board-row-height: 36px;
   --board-header-height: 40px;
-  --board-group-gap:     24px;
+  --board-group-gap: 24px;
+
+  /* Shadows */
+  --shadow-xs:   0 1px 2px rgba(37, 77, 84, 0.04);
+  --shadow-sm:   0 1px 3px rgba(37, 77, 84, 0.06), 0 1px 2px rgba(37, 77, 84, 0.04);
+  --shadow-md:   0 4px 6px -1px rgba(37, 77, 84, 0.07), 0 2px 4px -2px rgba(37, 77, 84, 0.05);
+  --shadow-lg:   0 10px 15px -3px rgba(37, 77, 84, 0.08), 0 4px 6px -4px rgba(37, 77, 84, 0.04);
+  --shadow-card: 0 1px 3px rgba(37, 77, 84, 0.05), 0 1px 2px rgba(37, 77, 84, 0.03);
 
   /* Typography — must use --font-* for Tailwind v4 font-{name} utilities */
   --font-heading: 'Plus Jakarta Sans', sans-serif;
   --font-body:    'Plus Jakarta Sans', sans-serif;
-  --font-accent:  'Plus Jakarta Sans', sans-serif;
   --font-ui:      'Plus Jakarta Sans', sans-serif;
 }
 
@@ -138,4 +135,21 @@ body {
   background-color: var(--color-surface-sunken);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+a, button, [role="button"], [role="tab"], [role="menuitem"] {
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
 }

@@ -17,8 +17,12 @@ export default function BoardGroup({ label, count, color, colSpan, summary, defa
   return (
     <>
       <tr
+        role="row"
         className="cursor-pointer select-none hover:bg-surface-sunken/50 transition-colors"
         onClick={() => setCollapsed(c => !c)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollapsed(c => !c) } }}
+        tabIndex={0}
+        aria-expanded={!collapsed}
       >
         <td
           colSpan={colSpan}

@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Loader2, AlertCircle, Save, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react'
 import { useStaffMember, useUpdateStaff, useStaffLicenses, useCreateLicense, useUpdateLicense, useDeleteLicense } from '../hooks/useStaff'
+import Card from '../components/ui/Card'
+import Input from '../components/ui/Input'
+import Select from '../components/ui/Select'
+import Button from '../components/ui/Button'
+import Avatar from '../components/ui/Avatar'
+import ErrorBanner from '../components/ui/ErrorBanner'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 import type { StaffMember, StaffLicense } from '../types'
 
 function licenseStatus(exp: string | null): 'ok' | 'warning' | 'expired' | null {
@@ -12,46 +19,6 @@ function licenseStatus(exp: string | null): 'ok' | 'warning' | 'expired' | null 
   return 'ok'
 }
 
-function Input({ label, value, onChange, type = 'text', disabled = false }: {
-  label: string; value: string | number; onChange: (v: string) => void
-  type?: string; disabled?: boolean
-}) {
-  return (
-    <label className="block">
-      <span className="text-xs font-body font-medium text-muted uppercase tracking-wide">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        disabled={disabled}
-        className="mt-1 block w-full rounded border border-gray-200 px-3 py-2 text-sm font-body text-ink bg-white focus:outline-none focus:ring-2 focus:ring-teal disabled:bg-gray-50 disabled:text-muted"
-      />
-    </label>
-  )
-}
-
-function SelectField({ label, value, onChange, options }: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  options: { value: string; label: string }[]
-}) {
-  return (
-    <label className="block">
-      <span className="text-xs font-body font-medium text-muted uppercase tracking-wide">{label}</span>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="mt-1 block w-full rounded border border-gray-200 px-3 py-2 text-sm font-body text-ink bg-white focus:outline-none focus:ring-2 focus:ring-teal"
-      >
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </label>
-  )
-}
-
-// ─── LICENSE STATUS BADGE ─────────────────────────────────────────────────────
-
 function LicenseStatusBadge({ exp }: { exp: string | null }) {
   const status = licenseStatus(exp)
   if (!status) return <span className="text-xs text-muted font-body">—</span>
@@ -61,10 +28,8 @@ function LicenseStatusBadge({ exp }: { exp: string | null }) {
     ? 'bg-amber-50 text-amber-700 border-amber-200'
     : 'bg-green-50 text-success border-green-200'
   const label = status === 'expired' ? 'Expired' : status === 'warning' ? 'Expiring soon' : 'Active'
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-body border ${cls}`}>{label}</span>
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-ui border ${cls}`}>{label}</span>
 }
-
-// ─── LICENSE ROW ──────────────────────────────────────────────────────────────
 
 interface LicenseFormState {
   licenseType: string
@@ -85,7 +50,7 @@ function LicenseRow({
 }) {
   const [confirming, setConfirming] = useState(false)
   return (
-    <tr className="border-t border-gray-100">
+    <tr className="border-t border-border">
       <td className="py-2 pr-3 text-sm font-body text-ink">{license.licenseState}</td>
       <td className="py-2 pr-3 text-sm font-body text-ink">{license.licenseType}</td>
       <td className="py-2 pr-3 text-xs text-ink">{license.licenseNumber}</td>
@@ -95,11 +60,11 @@ function LicenseRow({
       <td className="py-2 text-right whitespace-nowrap">
         {confirming ? (
           <span className="inline-flex items-center gap-1">
-            <span className="text-xs text-error font-body mr-1">Remove?</span>
+            <span className="text-xs text-error font-ui mr-1">Remove?</span>
             <button onClick={() => { onDelete(); setConfirming(false) }} className="p-1 text-error hover:bg-red-50 rounded">
               <Check size={12} />
             </button>
-            <button onClick={() => setConfirming(false)} className="p-1 text-muted hover:bg-gray-50 rounded">
+            <button onClick={() => setConfirming(false)} className="p-1 text-muted hover:bg-surface-sunken rounded">
               <X size={12} />
             </button>
           </span>
@@ -117,8 +82,6 @@ function LicenseRow({
     </tr>
   )
 }
-
-// ─── LICENSES SECTION ─────────────────────────────────────────────────────────
 
 function LicensesSection({ staffId }: { staffId: string }) {
   const { data: licenses, isLoading } = useStaffLicenses(staffId)
@@ -174,52 +137,47 @@ function LicensesSection({ staffId }: { staffId: string }) {
         placeholder="Type (e.g. LPCMH)"
         value={form.licenseType}
         onChange={e => setForm({ ...form, licenseType: e.target.value })}
-        className="rounded border border-gray-200 px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
+        className="rounded-lg border border-border px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
       />
       <input
         placeholder="License #"
         value={form.licenseNumber}
         onChange={e => setForm({ ...form, licenseNumber: e.target.value })}
-        className="rounded border border-gray-200 px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
+        className="rounded-lg border border-border px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
       />
       <input
         placeholder="State"
         maxLength={2}
         value={form.licenseState}
         onChange={e => setForm({ ...form, licenseState: e.target.value.toUpperCase() })}
-        className="rounded border border-gray-200 px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
+        className="rounded-lg border border-border px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
       />
       <input
         type="date"
         title="Effective date"
         value={form.effectiveDate}
         onChange={e => setForm({ ...form, effectiveDate: e.target.value })}
-        className="rounded border border-gray-200 px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
+        className="rounded-lg border border-border px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
       />
       <input
         type="date"
         title="Expiration date"
         value={form.expirationDate}
         onChange={e => setForm({ ...form, expirationDate: e.target.value })}
-        className="rounded border border-gray-200 px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
+        className="rounded-lg border border-border px-2 py-1.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal"
       />
     </div>
   )
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading text-base font-semibold text-ink">Licenses</h2>
-        {!showAdd && (
-          <button
-            onClick={() => setShowAdd(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-body text-teal hover:text-teal-mid transition-colors"
-          >
-            <Plus size={13} /> Add License
-          </button>
-        )}
-      </div>
-
+    <Card
+      title="Licenses"
+      actions={!showAdd ? (
+        <Button variant="ghost" size="sm" icon={<Plus size={13} />} onClick={() => setShowAdd(true)}>
+          Add License
+        </Button>
+      ) : undefined}
+    >
       {isLoading && (
         <div className="flex items-center gap-2 text-muted text-sm font-body">
           <Loader2 size={14} className="animate-spin" /> Loading…
@@ -227,24 +185,16 @@ function LicensesSection({ staffId }: { staffId: string }) {
       )}
 
       {showAdd && (
-        <div className="space-y-2 p-3 bg-teal-pale/40 rounded-lg border border-teal/20">
-          <p className="text-xs font-body text-muted uppercase tracking-wide">New License</p>
+        <div className="space-y-2 p-3 bg-teal-pale/40 rounded-lg border border-teal/20 mb-4">
+          <p className="text-xs font-ui text-muted uppercase tracking-wide">New License</p>
           {licenseFormFields(addForm, setAddForm)}
           <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={handleAdd}
-              disabled={isCreating || !addForm.licenseType || !addForm.licenseNumber}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal text-white text-xs font-body rounded hover:bg-teal-mid transition-colors disabled:opacity-60"
-            >
-              {isCreating ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+            <Button size="sm" loading={isCreating} disabled={!addForm.licenseType || !addForm.licenseNumber} onClick={handleAdd}>
               Save
-            </button>
-            <button
-              onClick={() => { setShowAdd(false); setAddForm(emptyLicenseForm()) }}
-              className="px-3 py-1.5 text-xs font-body text-muted hover:text-ink border border-gray-200 rounded hover:bg-gray-50 transition-colors"
-            >
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => { setShowAdd(false); setAddForm(emptyLicenseForm()) }}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -259,13 +209,13 @@ function LicensesSection({ staffId }: { staffId: string }) {
             <thead>
               <tr>
                 {['State', 'Type', 'Number', 'Effective', 'Expires', 'Status', ''].map(h => (
-                  <th key={h} className="text-left text-xs font-body font-medium text-muted uppercase tracking-wide pb-2 pr-3">{h}</th>
+                  <th key={h} className="text-left text-xs font-ui font-medium text-muted uppercase tracking-wide pb-2 pr-3">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {licenses.map(l => editingId === l.id ? (
-                <tr key={l.id} className="border-t border-gray-100">
+                <tr key={l.id} className="border-t border-border">
                   <td colSpan={6} className="py-2 pr-3">
                     {licenseFormFields(editForm, setEditForm)}
                   </td>
@@ -278,7 +228,7 @@ function LicensesSection({ staffId }: { staffId: string }) {
                       >
                         {isUpdating ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                       </button>
-                      <button onClick={() => setEditingId(null)} className="p-1 text-muted hover:bg-gray-50 rounded">
+                      <button onClick={() => setEditingId(null)} className="p-1 text-muted hover:bg-surface-sunken rounded">
                         <X size={12} />
                       </button>
                     </span>
@@ -296,18 +246,15 @@ function LicensesSection({ staffId }: { staffId: string }) {
           </table>
         </div>
       )}
-    </div>
+    </Card>
   )
 }
-
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 export default function StaffDetail() {
   const { id } = useParams<{ id: string }>()
   const { data: member, isLoading, isError, error } = useStaffMember(id ?? '')
   const { mutate: updateStaff, isPending: isSaving } = useUpdateStaff()
 
-  // Profile fields
   const [name, setName] = useState('')
   const [role, setRole] = useState<'partner' | 'w2'>('partner')
   const [npi, setNpi] = useState('')
@@ -319,7 +266,6 @@ export default function StaffDetail() {
   const [hireDate, setHireDate] = useState('')
   const [active, setActive] = useState(true)
 
-  // Compensation fields
   const [annualSalary, setAnnualSalary] = useState('')
   const [therapySessionRate, setTherapySessionRate] = useState('')
   const [otherSessionRate, setOtherSessionRate] = useState('')
@@ -348,22 +294,10 @@ export default function StaffDetail() {
     }
   }, [member])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24 text-muted">
-        <Loader2 size={20} className="animate-spin mr-2" />
-        <span className="text-sm font-body">Loading…</span>
-      </div>
-    )
-  }
+  if (isLoading) return <LoadingSpinner label="Loading…" />
 
   if (isError || !member) {
-    return (
-      <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
-        <AlertCircle size={16} />
-        {isError ? (error as Error).message : 'Staff member not found'}
-      </div>
-    )
+    return <ErrorBanner message={isError ? (error as Error).message : 'Staff member not found'} />
   }
 
   const lStatus = licenseStatus(member.licenseExpiration)
@@ -388,7 +322,6 @@ export default function StaffDetail() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Back nav */}
       <Link to="/staff" className="inline-flex items-center gap-1.5 text-sm font-body text-muted hover:text-teal transition-colors">
         <ArrowLeft size={15} />
         Back to Staff
@@ -396,52 +329,46 @@ export default function StaffDetail() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Profile panel */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-teal-pale flex items-center justify-center shrink-0">
-              <span className="font-heading text-teal font-semibold">{name[0] ?? '?'}</span>
-            </div>
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <Avatar name={name || '?'} size="lg" />
             <h1 className="font-heading text-lg font-semibold text-ink">{member.name}</h1>
           </div>
 
           {lStatus === 'expired' && (
-            <div className="flex items-center gap-2 rounded bg-red-50 border border-red-200 px-3 py-2 text-xs text-error font-body">
-              <AlertCircle size={13} />
-              Primary license expired
-            </div>
+            <ErrorBanner message="Primary license expired" className="mb-4" />
           )}
           {lStatus === 'warning' && (
-            <div className="flex items-center gap-2 rounded bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 font-body">
-              <AlertCircle size={13} />
+            <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 font-body mb-4">
               Primary license expiring soon
             </div>
           )}
 
           <div className="space-y-3">
-            <Input label="Name" value={name} onChange={setName} />
-            <SelectField
+            <Input label="Name" value={name} onChange={e => setName(e.target.value)} />
+            <Select
               label="Role"
               value={role}
-              onChange={v => setRole(v as 'partner' | 'w2')}
+              onChange={e => setRole(e.target.value as 'partner' | 'w2')}
               options={[{ value: 'partner', label: 'Partner' }, { value: 'w2', label: 'W-2' }]}
             />
-            <Input label="NPI" value={npi} onChange={setNpi} />
-            <Input label="CAQH ID" value={caqhId} onChange={setCaqhId} />
+            <Input label="NPI" value={npi} onChange={e => setNpi(e.target.value)} />
+            <Input label="CAQH ID" value={caqhId} onChange={e => setCaqhId(e.target.value)} />
 
             <div className="pt-1">
-              <p className="text-xs font-body font-medium text-muted uppercase tracking-wide mb-2">Primary License</p>
+              <p className="text-xs font-ui font-medium text-muted uppercase tracking-wide mb-2">Primary License</p>
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Type" value={licenseType} onChange={setLicenseType} />
-                <Input label="Number" value={licenseNumber} onChange={setLicenseNumber} />
+                <Input label="Type" value={licenseType} onChange={e => setLicenseType(e.target.value)} />
+                <Input label="Number" value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3 mt-3">
-                <Input label="State" value={licenseState} onChange={setLicenseState} />
-                <Input label="Expiration" value={licenseExpiration} onChange={setLicenseExpiration} type="date" />
+                <Input label="State" value={licenseState} onChange={e => setLicenseState(e.target.value)} />
+                <Input label="Expiration" value={licenseExpiration} onChange={e => setLicenseExpiration(e.target.value)} type="date" />
               </div>
               <p className="text-xs font-body text-muted mt-1.5 italic">Additional licenses are managed in the Licenses section below.</p>
             </div>
 
-            <Input label="Hire Date" value={hireDate} onChange={setHireDate} type="date" />
+            <Input label="Hire Date" value={hireDate} onChange={e => setHireDate(e.target.value)} type="date" />
 
             {/* Active toggle */}
             <label className="flex items-center gap-3 cursor-pointer select-none">
@@ -455,16 +382,14 @@ export default function StaffDetail() {
                 <div className={`w-9 h-5 rounded-full transition-colors ${active ? 'bg-teal' : 'bg-gray-300'}`} />
                 <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${active ? 'translate-x-4' : ''}`} />
               </div>
-              <span className="text-xs font-body font-medium text-muted uppercase tracking-wide">Active</span>
+              <span className="text-xs font-ui font-medium text-muted uppercase tracking-wide">Active</span>
             </label>
           </div>
-        </div>
+        </Card>
 
         {/* Compensation panel */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
-          <h2 className="font-heading text-base font-semibold text-ink">Compensation</h2>
-
-          <p className="text-xs font-body text-muted bg-gold-pale border border-gold/20 rounded px-3 py-2">
+        <Card title="Compensation">
+          <p className="text-xs font-body text-muted bg-gold-pale border border-gold/20 rounded-lg px-3 py-2 mb-4">
             Rates are used in payroll calculations. Changes take effect on the next pay period load.
           </p>
 
@@ -473,53 +398,26 @@ export default function StaffDetail() {
               <Input
                 label="Annual Salary ($)"
                 value={annualSalary}
-                onChange={setAnnualSalary}
+                onChange={e => setAnnualSalary(e.target.value)}
                 type="number"
               />
             ) : (
               <>
-                <Input
-                  label="Therapy Session Rate — 90837 / 90791 ($/session)"
-                  value={therapySessionRate}
-                  onChange={setTherapySessionRate}
-                  type="number"
-                />
-                <Input
-                  label="Other Session Rate — 90834 / 90832 / 90847 / 90846 ($/session)"
-                  value={otherSessionRate}
-                  onChange={setOtherSessionRate}
-                  type="number"
-                />
-                <Input
-                  label="No-Show / Late Cancel Rate ($/occurrence)"
-                  value={noShowRate}
-                  onChange={setNoShowRate}
-                  type="number"
-                />
-                <Input
-                  label="Admin Hourly Rate ($/hr)"
-                  value={adminHourlyRate}
-                  onChange={setAdminHourlyRate}
-                  type="number"
-                />
+                <Input label="Therapy Session Rate — 90837 / 90791 ($/session)" value={therapySessionRate} onChange={e => setTherapySessionRate(e.target.value)} type="number" />
+                <Input label="Other Session Rate — 90834 / 90832 / 90847 / 90846 ($/session)" value={otherSessionRate} onChange={e => setOtherSessionRate(e.target.value)} type="number" />
+                <Input label="No-Show / Late Cancel Rate ($/occurrence)" value={noShowRate} onChange={e => setNoShowRate(e.target.value)} type="number" />
+                <Input label="Admin Hourly Rate ($/hr)" value={adminHourlyRate} onChange={e => setAdminHourlyRate(e.target.value)} type="number" />
               </>
             )}
-            <Input label="Notes" value={notes} onChange={setNotes} />
+            <Input label="Notes" value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Single save button covering both panels */}
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors disabled:opacity-60"
-      >
-        {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+      <Button icon={<Save size={14} />} loading={isSaving} onClick={handleSave}>
         Save Changes
-      </button>
+      </Button>
 
-      {/* Licenses section — saved individually, independent of main save */}
       <LicensesSection staffId={member.id} />
     </div>
   )

@@ -1,11 +1,17 @@
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
-import { Loader2, AlertCircle, FileSpreadsheet, ChevronDown, ChevronUp, Edit2, Check, X } from 'lucide-react'
+import { FileSpreadsheet, ChevronDown, ChevronUp, Edit2 } from 'lucide-react'
 import { useOverhead, useSaveOverhead, useUpdateOverhead } from '../hooks/useOverhead'
 import { formatCurrency } from '../lib/utils'
+import PageHeader from '../components/layout/PageHeader'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Dialog from '../components/ui/Dialog'
+import ErrorBanner from '../components/ui/ErrorBanner'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 import type { OverheadEntry, XeroImportPreview } from '../types'
 
-// Discovered at build time from reporting/*.xlsx
 const xlsxAssets = import.meta.glob('../../reporting/*.xlsx', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -90,7 +96,7 @@ function parseXeroRows(rows: (string | number)[][]): XeroImportPreview | string 
 function ImportBadge({ source }: { source: 'xero-import' | 'manual' }) {
   return (
     <span className={[
-      'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-body',
+      'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-ui',
       source === 'xero-import' ? 'bg-teal-pale text-teal' : 'bg-gray-100 text-muted',
     ].join(' ')}>
       {source === 'xero-import' ? 'Xero Import' : 'Manual'}
@@ -114,7 +120,7 @@ function PreviewPanel({ preview, onConfirm, onDiscard, existing }: {
           <p className="text-xs font-body text-muted mt-0.5">Parsed from Xero P&amp;L export</p>
         </div>
         {existing && (
-          <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-body">
+          <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-ui">
             Will overwrite existing entry
           </span>
         )}
@@ -127,8 +133,8 @@ function PreviewPanel({ preview, onConfirm, onDiscard, existing }: {
           { label: 'Operational Expenses', value: formatCurrency(preview.operationalExpenses) },
           { label: 'Net Income', value: formatCurrency(preview.netIncome) },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-xs font-body text-muted">{label}</div>
+          <div key={label} className="bg-white rounded-lg border border-border p-3">
+            <div className="text-xs font-ui text-muted">{label}</div>
             <div className="font-heading text-base font-semibold text-ink mt-0.5 tabular-nums">{value}</div>
           </div>
         ))}
@@ -143,18 +149,18 @@ function PreviewPanel({ preview, onConfirm, onDiscard, existing }: {
       </button>
 
       {expanded && (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <Card padding="none">
           <table className="w-full text-sm font-body">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-surface-sunken border-b border-border">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase tracking-wide">Account</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase tracking-wide">Category</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-muted uppercase tracking-wide">Amount</th>
+                <th className="px-4 py-2 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Account</th>
+                <th className="px-4 py-2 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Category</th>
+                <th className="px-4 py-2 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {preview.lineItems.map((item, i) => (
-                <tr key={i} className="hover:bg-gray-50">
+                <tr key={i} className="hover:bg-surface-sunken">
                   <td className="px-4 py-2 text-ink">{item.account}</td>
                   <td className="px-4 py-2 text-muted capitalize">{item.category}</td>
                   <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(item.amount)}</td>
@@ -162,24 +168,12 @@ function PreviewPanel({ preview, onConfirm, onDiscard, existing }: {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       <div className="flex gap-3">
-        <button
-          onClick={onConfirm}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors"
-        >
-          <Check size={14} />
-          Confirm &amp; Save
-        </button>
-        <button
-          onClick={onDiscard}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-muted text-sm font-body rounded hover:bg-gray-50 transition-colors"
-        >
-          <X size={14} />
-          Discard
-        </button>
+        <Button onClick={onConfirm}>Confirm &amp; Save</Button>
+        <Button variant="secondary" onClick={onDiscard}>Discard</Button>
       </div>
     </div>
   )
@@ -207,39 +201,35 @@ function EditModal({ entry, onClose }: { entry: OverheadEntry; onClose: () => vo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
-        <h3 className="font-heading text-base font-semibold text-ink">
-          Edit — {new Date(entry.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-        </h3>
-        <label className="block">
-          <span className="text-xs font-body font-medium text-muted uppercase tracking-wide">Payroll Expenses ($)</span>
-          <input type="number" value={payroll} onChange={e => setPayroll(e.target.value)}
-            className="mt-1 block w-full rounded border border-gray-200 px-3 py-2 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal" />
-        </label>
-        <label className="block">
-          <span className="text-xs font-body font-medium text-muted uppercase tracking-wide">Operational Expenses ($)</span>
-          <input type="number" value={operational} onChange={e => setOperational(e.target.value)}
-            className="mt-1 block w-full rounded border border-gray-200 px-3 py-2 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal" />
-        </label>
-        <label className="block">
-          <span className="text-xs font-body font-medium text-muted uppercase tracking-wide">Notes</span>
-          <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
-            className="mt-1 block w-full rounded border border-gray-200 px-3 py-2 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal" />
-        </label>
+    <Dialog
+      open={true}
+      onClose={onClose}
+      title={`Edit — ${new Date(entry.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`}
+    >
+      <div className="space-y-4">
+        <Input
+          label="Payroll Expenses ($)"
+          type="number"
+          value={payroll}
+          onChange={e => setPayroll(e.target.value)}
+        />
+        <Input
+          label="Operational Expenses ($)"
+          type="number"
+          value={operational}
+          onChange={e => setOperational(e.target.value)}
+        />
+        <Input
+          label="Notes"
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+        />
         <div className="flex gap-3 pt-2">
-          <button onClick={handleSave} disabled={isPending}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-teal text-white text-sm font-body rounded hover:bg-teal-mid transition-colors disabled:opacity-60">
-            {isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Save
-          </button>
-          <button onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-muted text-sm font-body rounded hover:bg-gray-50 transition-colors">
-            Cancel
-          </button>
+          <Button onClick={handleSave} loading={isPending}>Save</Button>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
         </div>
       </div>
-    </div>
+    </Dialog>
   )
 }
 
@@ -253,7 +243,6 @@ export default function Overhead() {
   const [showAll, setShowAll] = useState(false)
   const [editEntry, setEditEntry] = useState<OverheadEntry | null>(null)
 
-  // Build sorted list of available P&L files from reporting/
   const reportingFiles: ReportingFile[] = Object.entries(xlsxAssets)
     .map(([path, url]) => {
       const parsed = parseFilename(path)
@@ -309,23 +298,11 @@ export default function Overhead() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-xl font-semibold text-ink">Overhead</h1>
+      <PageHeader title="Overhead" />
 
       {/* Import section */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <div>
-          <h2 className="font-heading text-base font-semibold text-ink">Import from Xero</h2>
-          <p className="text-sm font-body text-muted mt-1">
-            Drop monthly P&amp;L files from Xero into the <code className="bg-gray-100 px-1 rounded">reporting/</code> folder, then click a month to import.
-          </p>
-        </div>
-
-        {importError && (
-          <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-error font-body">
-            <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            {importError}
-          </div>
-        )}
+      <Card title="Import from Xero" subtitle="Drop monthly P&L files from Xero into the reporting/ folder, then click a month to import.">
+        {importError && <ErrorBanner message={importError} className="mb-4" />}
 
         {!preview && (
           reportingFiles.length === 0 ? (
@@ -335,24 +312,21 @@ export default function Overhead() {
               {reportingFiles.map(file => {
                 const alreadyImported = existingMonths.has(labelToMonthKey(file.label))
                 return (
-                <button
-                  key={file.url}
-                  onClick={() => handleImport(file)}
-                  disabled={importing !== null}
-                  className={[
-                    'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm font-body transition-colors',
-                    alreadyImported
-                      ? 'border-gray-200 text-muted hover:bg-gray-50'
-                      : 'border-gray-200 text-ink hover:border-teal/40 hover:bg-teal-pale/20',
-                    importing === file.label ? 'opacity-60 cursor-wait' : '',
-                  ].join(' ')}
-                >
-                  {importing === file.label
-                    ? <Loader2 size={14} className="shrink-0 animate-spin text-teal" />
-                    : <FileSpreadsheet size={14} className="shrink-0 text-teal" />
-                  }
-                  <span>{file.label}</span>
-                </button>
+                  <button
+                    key={file.url}
+                    onClick={() => handleImport(file)}
+                    disabled={importing !== null}
+                    className={[
+                      'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm font-body transition-colors',
+                      alreadyImported
+                        ? 'border-border text-muted hover:bg-surface-sunken'
+                        : 'border-border text-ink hover:border-teal/40 hover:bg-teal-pale/20',
+                      importing === file.label ? 'opacity-60 cursor-wait' : '',
+                    ].join(' ')}
+                  >
+                    <FileSpreadsheet size={14} className="shrink-0 text-teal" />
+                    <span>{file.label}</span>
+                  </button>
                 )
               })}
             </div>
@@ -367,47 +341,32 @@ export default function Overhead() {
             existing={existingMonths.has(preview.month)}
           />
         )}
-      </div>
+      </Card>
 
       {/* History table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-heading text-base font-semibold text-ink">History</h2>
-          {entries && entries.length > 6 && (
-            <button
-              onClick={() => setShowAll(x => !x)}
-              className="text-sm font-body text-teal hover:text-teal-mid transition-colors"
-            >
-              {showAll ? 'Show less' : `Show all (${entries.length})`}
-            </button>
-          )}
-        </div>
-
-        {isLoading && (
-          <div className="flex items-center justify-center py-12 text-muted">
-            <Loader2 size={18} className="animate-spin mr-2" />
-            <span className="text-sm font-body">Loading…</span>
-          </div>
-        )}
-
-        {isError && (
-          <div className="flex items-center gap-2 px-5 py-4 text-sm text-error font-body">
-            <AlertCircle size={16} />
-            {(error as Error).message}
-          </div>
-        )}
+      <Card
+        title="History"
+        actions={entries && entries.length > 6 ? (
+          <Button variant="ghost" size="sm" onClick={() => setShowAll(x => !x)}>
+            {showAll ? 'Show less' : `Show all (${entries.length})`}
+          </Button>
+        ) : undefined}
+        padding="none"
+      >
+        {isLoading && <LoadingSpinner label="Loading…" />}
+        {isError && <ErrorBanner message={(error as Error).message} className="m-4" />}
 
         {entries && (
           <table className="w-full text-sm font-body">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-surface-sunken border-b border-border">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Month</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Total Income</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Payroll</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Operational</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Net Income</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Source</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide"></th>
+                <th className="px-5 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Month</th>
+                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Total Income</th>
+                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Payroll</th>
+                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Operational</th>
+                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Net Income</th>
+                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Source</th>
+                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -419,7 +378,7 @@ export default function Overhead() {
                 </tr>
               )}
               {displayedEntries.map(entry => (
-                <tr key={entry.month} className="hover:bg-cream transition-colors">
+                <tr key={entry.month} className="hover:bg-surface-sunken transition-colors">
                   <td className="px-5 py-3 font-medium text-ink">
                     {new Date(entry.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
                   </td>
@@ -432,20 +391,16 @@ export default function Overhead() {
                   ].join(' ')}>{formatCurrency(entry.netIncome)}</td>
                   <td className="px-4 py-3"><ImportBadge source={entry.importSource} /></td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setEditEntry(entry)}
-                      className="inline-flex items-center gap-1 text-xs text-teal hover:text-teal-mid transition-colors font-body"
-                    >
-                      <Edit2 size={12} />
+                    <Button variant="ghost" size="sm" icon={<Edit2 size={12} />} onClick={() => setEditEntry(entry)}>
                       Edit
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
-      </div>
+      </Card>
 
       {editEntry && <EditModal entry={editEntry} onClose={() => setEditEntry(null)} />}
     </div>

@@ -45,12 +45,22 @@ export default function Dropdown({ trigger, children, align = 'left', className 
 
   return (
     <div ref={triggerRef} className="relative inline-block">
-      <div onClick={toggle} className="cursor-pointer">{trigger}</div>
+      <div
+        onClick={toggle}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
+        role="button"
+        tabIndex={0}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="cursor-pointer"
+      >
+        {trigger}
+      </div>
       {open && coords && createPortal(
         <div
+          role="menu"
           className={[
-            'fixed z-[60] bg-white rounded-lg border border-border shadow-lg py-1 animate-slide-down',
-            align === 'right' ? '' : '',
+            'fixed z-60 bg-white rounded-lg border border-border shadow-lg py-1 animate-slide-down',
             className,
           ].join(' ')}
           style={{
@@ -80,6 +90,7 @@ export function DropdownItem({ children, onClick, danger, disabled }: DropdownIt
   return (
     <button
       type="button"
+      role="menuitem"
       onClick={onClick}
       disabled={disabled}
       className={[

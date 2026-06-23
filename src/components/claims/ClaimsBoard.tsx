@@ -347,7 +347,7 @@ export default function ClaimsBoard({ claims, onStatusClick, compact = false }: 
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => setRowSelection({})} className="text-sm font-ui text-muted hover:text-ink transition-colors">
+        <button type="button" onClick={() => setRowSelection({})} className="text-sm font-ui text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded">
           <X size={14} className="inline mr-1" />Clear
         </button>
         <Button size="sm" onClick={() => setBulkModalOpen(true)}>Update Selected</Button>

@@ -13,32 +13,17 @@ import PageHeader from '../components/layout/PageHeader'
 import Tabs from '../components/ui/Tabs'
 import Button from '../components/ui/Button'
 import ErrorBanner from '../components/ui/ErrorBanner'
-
-function useDensity() {
-  const [density, setDensityState] = useState<'comfortable' | 'compact'>(() => {
-    try { return (localStorage.getItem('claimsTableDensity') as 'comfortable' | 'compact') ?? 'comfortable' }
-    catch { return 'comfortable' }
-  })
-  const setDensity = (d: 'comfortable' | 'compact') => {
-    setDensityState(d)
-    try { localStorage.setItem('claimsTableDensity', d) } catch {}
-  }
-  return { density, setDensity }
-}
+import useLocalStorage from '../hooks/useLocalStorage'
 
 export default function Claims() {
   const filters = useClaimFilters()
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null)
   const [exporting, setExporting] = useState(false)
-  const { density, setDensity } = useDensity()
-  const [viewMode, setViewMode] = useState<string>(() => {
-    try { return localStorage.getItem('claimsViewMode') ?? 'active' }
-    catch { return 'active' }
-  })
+  const [density, setDensity] = useLocalStorage<'comfortable' | 'compact'>('claimsTableDensity', 'comfortable')
+  const [viewMode, setViewMode] = useLocalStorage<string>('claimsViewMode', 'active')
 
   function handleViewChange(v: string) {
     setViewMode(v)
-    try { localStorage.setItem('claimsViewMode', v) } catch {}
   }
 
   const usePaymentDateFilter = filters.dateField === 'paymentDate'

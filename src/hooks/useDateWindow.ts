@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import type { DateWindow } from '../types'
+import useLocalStorage from './useLocalStorage'
 
 function getWindowDates(window: DateWindow): { startDate: Date; endDate: Date; label: string; priorLabel: string } {
   const now = new Date()
@@ -9,7 +10,7 @@ function getWindowDates(window: DateWindow): { startDate: Date; endDate: Date; l
   switch (window) {
     case 'mtd': {
       const start = new Date(y, m, 1)
-      const end = new Date(now)  // cap at today, not month-end
+      const end = new Date(now)
       const dayOfMonth = now.getDate()
       const priorMonthName = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long' })
       const priorLabel = `vs. ${priorMonthName} 1–${dayOfMonth}`
@@ -21,7 +22,7 @@ function getWindowDates(window: DateWindow): { startDate: Date; endDate: Date; l
       const end = now
       const q = Math.floor(m / 3) + 1
       const elapsedDays = Math.floor((now.getTime() - start.getTime()) / 86400000) + 1
-      const prevQNum = Math.floor(m / 3)  // 0-indexed: 0 means current Q is Q1, so prior is Q4
+      const prevQNum = Math.floor(m / 3)
       const prevQLabel = prevQNum === 0 ? `Q4 ${y - 1}` : `Q${prevQNum} ${y}`
       return { startDate: start, endDate: end, label: `Q${q} ${y} to date`, priorLabel: `vs. ${prevQLabel} (${elapsedDays} days)` }
     }
@@ -45,7 +46,6 @@ function getWindowDates(window: DateWindow): { startDate: Date; endDate: Date; l
       const start = new Date(prevY, prevQStart, 1)
       const end = new Date(prevY, prevQStart + 3, 0)
       const q = Math.floor(prevQStart / 3) + 1
-      // Prior is 2 quarters before the current quarter
       const curQNum = Math.floor(m / 3) + 1
       let priorQNum = curQNum - 2
       let priorQYear = y
@@ -56,15 +56,7 @@ function getWindowDates(window: DateWindow): { startDate: Date; endDate: Date; l
 }
 
 export function useDateWindow() {
-  const [window, setWindowState] = useState<DateWindow>(() => {
-    try { return (localStorage.getItem('dashboardDateWindow') as DateWindow) ?? 'mtd' }
-    catch { return 'mtd' }
-  })
-
-  const setWindow = (w: DateWindow) => {
-    setWindowState(w)
-    try { localStorage.setItem('dashboardDateWindow', w) } catch { /* noop */ }
-  }
+  const [window, setWindow] = useLocalStorage<DateWindow>('dashboardDateWindow', 'mtd')
 
   const { startDate, endDate, label, priorLabel } = useMemo(() => getWindowDates(window), [window])
 

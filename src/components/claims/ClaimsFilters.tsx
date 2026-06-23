@@ -2,19 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { X, Bookmark, ChevronDown } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, CLAIM_STATUSES, SERVICE_CODES } from '../../types'
+import useLocalStorage from '../../hooks/useLocalStorage'
 
 const MAX_PRESETS = 8
-const STORAGE_KEY = 'claimsFilterPresets'
 
 interface Preset { name: string; params: string }
-
-function loadPresets(): Preset[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') }
-  catch { return [] }
-}
-function savePresets(presets: Preset[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(presets)) } catch { /* noop */ }
-}
 
 export interface ActiveFilters {
   clinician: string
@@ -45,7 +37,7 @@ export function useClaimFilters(): ActiveFilters {
 
 export default function ClaimsFilters() {
   const [sp, setSp] = useSearchParams()
-  const [presets, setPresets] = useState<Preset[]>(loadPresets)
+  const [presets, setPresets] = useLocalStorage<Preset[]>('claimsFilterPresets', [])
   const [saving, setSaving] = useState(false)
   const [presetName, setPresetName] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
@@ -96,15 +88,12 @@ export default function ClaimsFilters() {
       { name: presetName.trim(), params: currentParams },
     ].slice(-MAX_PRESETS)
     setPresets(next)
-    savePresets(next)
     setPresetName('')
     setSaving(false)
   }
 
   const removePreset = (name: string) => {
-    const next = presets.filter(p => p.name !== name)
-    setPresets(next)
-    savePresets(next)
+    setPresets(presets.filter(p => p.name !== name))
   }
 
   const applyPreset = (params: string) => {

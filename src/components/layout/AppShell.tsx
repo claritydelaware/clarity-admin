@@ -3,20 +3,11 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import { ToastProvider } from '../../context/ToastContext'
+import useLocalStorage from '../../hooks/useLocalStorage'
 
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    try { return localStorage.getItem('clarity-sidebar-collapsed') === 'true' } catch { return false }
-  })
-
-  function toggleSidebarCollapse() {
-    setSidebarCollapsed(prev => {
-      const next = !prev
-      try { localStorage.setItem('clarity-sidebar-collapsed', String(next)) } catch {}
-      return next
-    })
-  }
+  const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorage('clarity-sidebar-collapsed', false)
 
   return (
     <ToastProvider>
@@ -25,7 +16,7 @@ export default function AppShell() {
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           isCollapsed={sidebarCollapsed}
-          onToggleCollapse={toggleSidebarCollapse}
+          onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
         />
         <div className={[
           'flex flex-col min-h-screen transition-[margin] duration-300 ease-in-out',
