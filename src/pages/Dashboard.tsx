@@ -377,7 +377,7 @@ export default function Dashboard() {
       )}
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
         <MetricCard
           index={0}
           icon={<Activity size={16} />}
@@ -414,20 +414,16 @@ export default function Dashboard() {
           delta={pp ? <DeltaBadge current={cm.receivedAmount} prior={pp.receivedAmount} /> : undefined}
           tooltipContent={pp ? <ReceivedTooltipContent cm={cm} pp={pp} priorLabel={priorLabel} /> : undefined}
         />
-      </div>
-
-      {/* Incoming payments */}
-      {data.incomingPayments && data.incomingPayments.count > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {data.incomingPayments && data.incomingPayments.count > 0 && (
           <MetricCard
-            index={0}
+            index={4}
             icon={<ArrowDownToLine size={16} />}
             label="Incoming Payments"
             value={formatCurrency(data.incomingPayments.amount)}
-            sub={`${data.incomingPayments.count} claim${data.incomingPayments.count !== 1 ? 's' : ''} — Payment Pending or future-dated received`}
+            sub={`${data.incomingPayments.count} claim${data.incomingPayments.count !== 1 ? 's' : ''} — Payment Pending or future-dated`}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Utilization */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
