@@ -80,12 +80,12 @@ Additional palette:
 - Success green `#16A34A`
 - Error red `#DC2626`
 
-### Typography (match public site)
-- Headings: **Fraunces** (Google Fonts) — `--font-heading` CSS variable in `index.css`
+### Typography
+- Headings: **Plus Jakarta Sans** (Google Fonts) — `--font-heading` CSS variable in `index.css`
 - Body: **DM Sans** (Google Fonts)
-- Accent/labels: **Lora** (Google Fonts)
+- Accent/labels: **Plus Jakarta Sans** (Google Fonts)
 
-Load via `<link>` in `index.html` (Fraunces + DM Sans + Lora).
+Load via `<link>` in `index.html` (Plus Jakarta Sans + DM Sans).
 
 ### UI Approach
 Light background (cream/white) content area. White sidebar with right border. Gold accent on active nav item (left border + teal-pale background). This is a utility tool — prioritize information density and clarity over decorative elements. No hero sections, no gradients on content areas.

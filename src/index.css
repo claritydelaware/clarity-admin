@@ -16,9 +16,9 @@
   --color-error:      #DC2626;
 
   /* Typography — must use --font-* for Tailwind v4 font-{name} utilities */
-  --font-heading: 'Fraunces', serif;
+  --font-heading: 'Plus Jakarta Sans', sans-serif;
   --font-body:    'DM Sans', sans-serif;
-  --font-accent:  'Lora', serif;
+  --font-accent:  'Plus Jakarta Sans', sans-serif;
 }
 
 *, *::before, *::after {
