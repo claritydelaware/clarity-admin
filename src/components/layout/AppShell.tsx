@@ -20,7 +20,7 @@ export default function AppShell() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-cream">
+      <div className="min-h-screen bg-surface-sunken">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}

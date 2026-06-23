@@ -1,4 +1,3 @@
-import { useRef, useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -22,16 +21,6 @@ interface Props {
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Props) {
   const location = useLocation()
-  const activeIndex = NAV.findIndex(item => location.pathname.startsWith(item.to))
-  const navRef = useRef<HTMLElement>(null)
-  const [indicator, setIndicator] = useState<{ top: number; height: number } | null>(null)
-
-  useEffect(() => {
-    if (!navRef.current || activeIndex < 0) return
-    const items = navRef.current.querySelectorAll('a')
-    const el = items[activeIndex] as HTMLElement | undefined
-    if (el) setIndicator({ top: el.offsetTop, height: el.offsetHeight })
-  }, [activeIndex, isCollapsed])
 
   return (
     <>
@@ -45,7 +34,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
 
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-white border-r border-gray-200',
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-teal',
           'transition-[width,transform] duration-300 ease-in-out',
           isCollapsed ? 'w-16' : 'w-60',
           'md:translate-x-0',
@@ -54,65 +43,68 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       >
         {/* Brand */}
         <div className={[
-          'flex items-center border-b border-gray-100 overflow-hidden transition-[padding] duration-300',
+          'flex items-center overflow-hidden transition-[padding] duration-300',
           isCollapsed ? 'px-0 py-4 justify-center' : 'px-5 py-4',
         ].join(' ')}>
           <img
-            src="/new-clarity-logo-transparent.png"
+            src={isCollapsed ? '/clarity-logo-white_icon.png' : '/clarity-logo-white.png'}
             alt="Clarity Counseling"
             className={[
               'object-contain transition-[height,width] duration-300',
-              isCollapsed ? 'h-7 w-7' : 'h-10 w-auto',
+              isCollapsed ? 'h-9 w-9' : 'h-12 w-auto',
             ].join(' ')}
           />
         </div>
 
+        {/* Workspace label */}
+        {!isCollapsed && (
+          <div className="px-5 pb-2">
+            <span className="text-[10px] font-ui font-semibold uppercase tracking-widest text-white/40">
+              Clarity Counseling
+            </span>
+          </div>
+        )}
+
         {/* Nav */}
-        <nav ref={navRef} className="flex-1 overflow-y-auto py-3 relative">
-          {/* Sliding active indicator */}
-          {indicator && activeIndex >= 0 && (
-            <div
-              className="absolute left-0 w-0.5 bg-gold pointer-events-none rounded-r"
-              style={{
-                top: indicator.top,
-                height: indicator.height,
-                transition: 'top 0.25s ease-in-out, height 0.25s ease-in-out',
-              }}
-            />
-          )}
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={onClose}
-              title={isCollapsed ? label : undefined}
-              className={({ isActive }) =>
-                [
-                  'flex items-center py-2.5 transition-colors',
-                  isCollapsed ? 'justify-center px-0' : 'gap-3 pl-5 pr-6',
+        <nav className="flex-1 overflow-y-auto py-1 px-2 space-y-0.5">
+          {NAV.map(({ to, label, icon: Icon }) => {
+            const isActive = location.pathname.startsWith(to)
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={onClose}
+                title={isCollapsed ? label : undefined}
+                className={[
+                  'flex items-center rounded-lg transition-colors duration-150',
+                  isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
                   isActive
-                    ? 'bg-teal-pale text-teal font-medium'
-                    : 'text-muted hover:text-teal hover:bg-gray-50',
-                ].join(' ')
-              }
-            >
-              <Icon size={17} strokeWidth={1.75} />
-              {!isCollapsed && <span className="text-sm">{label}</span>}
-            </NavLink>
-          ))}
+                    ? 'bg-white/15 text-white'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white/90',
+                ].join(' ')}
+              >
+                <Icon size={17} strokeWidth={1.75} />
+                {!isCollapsed && (
+                  <span className={`text-sm ${isActive ? 'font-medium' : ''}`}>{label}</span>
+                )}
+              </NavLink>
+            )
+          })}
         </nav>
 
         {/* Footer + collapse toggle */}
-        <div className="border-t border-gray-100">
+        <div className="border-t border-white/10">
           {!isCollapsed && (
-            <p className="px-6 py-3 text-xs text-muted font-body">Clarity Counseling of Delaware</p>
+            <p className="px-5 py-3 text-[11px] text-white/30 font-body">
+              Clarity Counseling of Delaware
+            </p>
           )}
           <button
             type="button"
             onClick={onToggleCollapse}
             className={[
-              'w-full flex items-center py-3 text-muted hover:text-teal hover:bg-gray-50 transition-colors border-t border-gray-100',
-              isCollapsed ? 'justify-center px-0' : 'gap-2 px-6',
+              'w-full flex items-center py-3 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border-t border-white/10',
+              isCollapsed ? 'justify-center px-0' : 'gap-2 px-5',
             ].join(' ')}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
