@@ -192,6 +192,7 @@ export interface DashboardData {
     bucket90plus: AgingBucket
   }
   payerMix: PayerMixEntry[]
+  incomingPayments?: { count: number; amount: number }
 }
 
 // ─── PHASE 4 TYPES ────────────────────────────────────────────────────────────

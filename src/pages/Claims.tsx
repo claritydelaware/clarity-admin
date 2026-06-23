@@ -41,12 +41,15 @@ export default function Claims() {
   const { density, setDensity } = useDensity()
   const { viewMode, setViewMode } = useViewMode()
 
+  const usePaymentDateFilter = filters.dateField === 'paymentDate'
+
   const apiFilter = {
     payer:       filters.payer       || undefined,
     // clinician, status, search are client-side only
     serviceCode: filters.serviceCode || undefined,
-    from:        filters.from        || undefined,
-    to:          filters.to          || undefined,
+    // When filtering by payment date, skip API date filter (API only supports claim date)
+    from:        (!usePaymentDateFilter && filters.from) || undefined,
+    to:          (!usePaymentDateFilter && filters.to)   || undefined,
   }
 
   const { data: claims, isLoading, isError, error } = useClaims(apiFilter)
@@ -67,6 +70,15 @@ export default function Claims() {
   )
   if (selectedStatuses.length > 0) displayed = displayed.filter(c => selectedStatuses.includes(c.status))
   if (selectedClinicians.length > 0) displayed = displayed.filter(c => selectedClinicians.includes(c.clinician))
+  if (usePaymentDateFilter && (filters.from || filters.to)) {
+    displayed = displayed.filter(c => {
+      if (!c.paymentDateReceived) return false
+      const pd = new Date(c.paymentDateReceived)
+      if (filters.from && pd < new Date(filters.from)) return false
+      if (filters.to && pd > new Date(filters.to)) return false
+      return true
+    })
+  }
   const displayedOrNull = claims ? displayed : null
 
   const handleExport = async () => {

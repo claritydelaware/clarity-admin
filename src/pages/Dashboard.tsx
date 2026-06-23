@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { AlertCircle, TrendingUp, Clock, DollarSign, Activity, Users, X, ArrowUp, ArrowDown } from 'lucide-react'
+import { AlertCircle, TrendingUp, Clock, DollarSign, Activity, Users, X, ArrowUp, ArrowDown, ArrowDownToLine } from 'lucide-react'
 import ReactApexChart from 'react-apexcharts'
 import type { ApexOptions } from 'apexcharts'
 import { useDashboard } from '../hooks/useDashboard'
@@ -415,6 +415,19 @@ export default function Dashboard() {
           tooltipContent={pp ? <ReceivedTooltipContent cm={cm} pp={pp} priorLabel={priorLabel} /> : undefined}
         />
       </div>
+
+      {/* Incoming payments */}
+      {data.incomingPayments && data.incomingPayments.count > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <MetricCard
+            index={0}
+            icon={<ArrowDownToLine size={16} />}
+            label="Incoming Payments"
+            value={formatCurrency(data.incomingPayments.amount)}
+            sub={`${data.incomingPayments.count} claim${data.incomingPayments.count !== 1 ? 's' : ''} — Payment Pending or future-dated received`}
+          />
+        </div>
+      )}
 
       {/* Utilization */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">

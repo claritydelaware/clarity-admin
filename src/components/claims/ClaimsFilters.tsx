@@ -25,6 +25,7 @@ export interface ActiveFilters {
   to: string
   search: string
   clientId: string
+  dateField: 'claimDate' | 'paymentDate'
 }
 
 export function useClaimFilters(): ActiveFilters {
@@ -38,6 +39,7 @@ export function useClaimFilters(): ActiveFilters {
     to:          sp.get('to')          ?? '',
     search:      sp.get('search')      ?? '',
     clientId:    sp.get('clientId')    ?? '',
+    dateField:   (sp.get('dateField') as 'claimDate' | 'paymentDate') || 'claimDate',
   }
 }
 
@@ -254,6 +256,16 @@ export default function ClaimsFilters() {
 
         <input type="date" value={sp.get('from') ?? ''} onChange={e => set('from', e.target.value)} className={selectClass} title="From date" />
         <input type="date" value={sp.get('to') ?? ''}   onChange={e => set('to', e.target.value)}   className={selectClass} title="To date" />
+
+        <label className="inline-flex items-center gap-1.5 text-xs font-body text-muted cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={(sp.get('dateField') ?? 'claimDate') === 'paymentDate'}
+            onChange={e => set('dateField', e.target.checked ? 'paymentDate' : '')}
+            className="rounded border-gray-300 accent-teal"
+          />
+          Payment Date
+        </label>
 
         {hasFilters && !saving && (
           <button
