@@ -29,7 +29,7 @@ const baseOptions: ApexOptions = {
   chart: {
     toolbar: { show: false },
     zoom: { enabled: false },
-    fontFamily: 'DM Sans, sans-serif',
+    fontFamily: 'Plus Jakarta Sans, sans-serif',
     background: 'transparent',
     animations: { enabled: true, speed: 400 },
   },
@@ -38,18 +38,18 @@ const baseOptions: ApexOptions = {
     strokeDashArray: 4,
   },
   xaxis: {
-    labels: { style: { fontSize: '11px', fontFamily: 'DM Sans, sans-serif' } },
+    labels: { style: { fontSize: '11px', fontFamily: 'Plus Jakarta Sans, sans-serif' } },
     axisBorder: { show: false },
     axisTicks: { show: false },
   },
   yaxis: {
-    labels: { style: { fontSize: '11px', fontFamily: 'DM Sans, sans-serif' } },
+    labels: { style: { fontSize: '11px', fontFamily: 'Plus Jakarta Sans, sans-serif' } },
   },
   tooltip: {
-    style: { fontSize: '12px', fontFamily: 'DM Sans, sans-serif' },
+    style: { fontSize: '12px', fontFamily: 'Plus Jakarta Sans, sans-serif' },
   },
   legend: {
-    fontFamily: 'DM Sans, sans-serif',
+    fontFamily: 'Plus Jakarta Sans, sans-serif',
     fontSize: '12px',
     markers: { size: 6 },
     itemMargin: { horizontal: 12, vertical: 8 },
@@ -325,7 +325,7 @@ export default function Dashboard() {
     xaxis: {
       ...baseOptions.xaxis,
       categories: payerMix.map(d => d.payer),
-      labels: { ...baseOptions.xaxis?.labels, rotate: -35, style: { fontSize: '10px', fontFamily: 'DM Sans, sans-serif' } },
+      labels: { ...baseOptions.xaxis?.labels, rotate: -35, style: { fontSize: '10px', fontFamily: 'Plus Jakarta Sans, sans-serif' } },
     },
     yaxis: {
       ...baseOptions.yaxis,

@@ -272,7 +272,7 @@ export default function Caseloads() {
                 value={newClientId}
                 onChange={e => setNewClientId(e.target.value)}
                 placeholder="e.g. fdcdd28fa306771e"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal"
                 required
                 autoFocus
               />
@@ -333,7 +333,7 @@ export default function Caseloads() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search client ID…"
-              className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal w-48 font-mono"
+              className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal w-48"
             />
           </div>
 
@@ -481,7 +481,7 @@ export default function Caseloads() {
                           href={`https://secure.simplepractice.com/clients/${entry.clientId}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-mono text-teal bg-teal-pale/60 px-2 py-0.5 rounded hover:bg-teal-pale transition-colors"
+                          className="inline-flex items-center gap-1 text-xs text-teal bg-teal-pale/60 px-2 py-0.5 rounded hover:bg-teal-pale transition-colors"
                         >
                           {entry.clientId}
                           <ExternalLink size={10} className="shrink-0 opacity-60" />

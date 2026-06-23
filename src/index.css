@@ -17,8 +17,9 @@
 
   /* Typography — must use --font-* for Tailwind v4 font-{name} utilities */
   --font-heading: 'Plus Jakarta Sans', sans-serif;
-  --font-body:    'DM Sans', sans-serif;
+  --font-body:    'Plus Jakarta Sans', sans-serif;
   --font-accent:  'Plus Jakarta Sans', sans-serif;
+  --font-ui:      'Plus Jakarta Sans', sans-serif;
 }
 
 *, *::before, *::after {

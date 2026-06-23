@@ -82,10 +82,11 @@ Additional palette:
 
 ### Typography
 - Headings: **Plus Jakarta Sans** (Google Fonts) — `--font-heading` CSS variable in `index.css`
-- Body: **DM Sans** (Google Fonts)
-- Accent/labels: **Plus Jakarta Sans** (Google Fonts)
+- Body: **Plus Jakarta Sans** (Google Fonts) — `--font-body`
+- UI/buttons: **Plus Jakarta Sans** (Google Fonts) — `--font-ui`
+- Accent/labels: **Plus Jakarta Sans** (Google Fonts) — `--font-accent`
 
-Load via `<link>` in `index.html` (Plus Jakarta Sans + DM Sans).
+All fonts are Plus Jakarta Sans (single-font stack). Load via `<link>` in `index.html`.
 
 ### UI Approach
 Light background (cream/white) content area. White sidebar with right border. Gold accent on active nav item (left border + teal-pale background). This is a utility tool — prioritize information density and clarity over decorative elements. No hero sections, no gradients on content areas.

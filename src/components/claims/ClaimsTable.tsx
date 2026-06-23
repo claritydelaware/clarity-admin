@@ -542,7 +542,7 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
       case 'claimId': {
         const wasCopied = copiedClaimIds.has(claim.rowIndex)
         return (
-          <td key={key} className={`px-4 ${rowPy} ${cellText} font-mono text-xs`}>
+          <td key={key} className={`px-4 ${rowPy} ${cellText} text-xs`}>
             <span className="inline-flex items-center gap-1">
               <InlineEditCell
                 claim={claim}
@@ -569,7 +569,7 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
         return (
           <td key={key} className={`px-4 ${rowPy} ${cellText}`}>
             <Tooltip content={claim.clientId ?? ''} disabled={!claim.clientId}>
-              <span className="block max-w-24 truncate font-mono text-xs">
+              <span className="block max-w-24 truncate text-xs">
                 {claim.clientId
                   ? <span className="text-ink">{claim.clientId}</span>
                   : <span className="text-muted">—</span>}
@@ -610,7 +610,7 @@ export default function ClaimsTable({ claims, onStatusClick, compact = false }: 
         )
       case 'serviceCode':
         return (
-          <td key={key} className={`px-4 ${rowPy} font-mono text-xs text-ink`}>
+          <td key={key} className={`px-4 ${rowPy} text-xs text-ink`}>
             <InlineEditCell
               claim={claim}
               field="serviceCode"
@@ -1049,7 +1049,7 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
               className="text-left hover:text-teal transition-colors"
               onClick={e => { e.stopPropagation(); editField('serviceCode', 'Service Code', claim.serviceCode, 'select', SERVICE_CODES) }}
             >
-              Code: <span className="font-mono text-ink">{claim.serviceCode}</span>
+              Code: <span className="text-ink">{claim.serviceCode}</span>
             </button>
             <button
               className="text-left hover:text-teal transition-colors"
@@ -1099,7 +1099,7 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
                   setTimeout(() => setCopiedId(false), 1500)
                 }}
               >
-                Claim ID: <span className="font-mono text-ink">{claim.claimId}</span>
+                Claim ID: <span className="text-ink">{claim.claimId}</span>
                 {copiedId
                   ? <Check size={11} className="text-green-600 ml-1" />
                   : <Copy size={11} className="text-muted ml-1" />}
@@ -1107,7 +1107,7 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
             )}
             {claim.clientId && (
               <span className="col-span-2 text-left">
-                Client ID: <span className="font-mono text-ink">{claim.clientId}</span>
+                Client ID: <span className="text-ink">{claim.clientId}</span>
               </span>
             )}
             <span className="col-span-2 pt-1 flex items-center gap-4">

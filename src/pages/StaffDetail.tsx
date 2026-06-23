@@ -88,7 +88,7 @@ function LicenseRow({
     <tr className="border-t border-gray-100">
       <td className="py-2 pr-3 text-sm font-body text-ink">{license.licenseState}</td>
       <td className="py-2 pr-3 text-sm font-body text-ink">{license.licenseType}</td>
-      <td className="py-2 pr-3 font-mono text-xs text-ink">{license.licenseNumber}</td>
+      <td className="py-2 pr-3 text-xs text-ink">{license.licenseNumber}</td>
       <td className="py-2 pr-3 text-xs font-body text-muted">{license.effectiveDate ?? '—'}</td>
       <td className="py-2 pr-3 text-xs font-body text-muted">{license.expirationDate ?? '—'}</td>
       <td className="py-2 pr-3"><LicenseStatusBadge exp={license.expirationDate} /></td>
