@@ -283,15 +283,12 @@ function RevenuePerSessionSection({ months }: { months: CaseloadTrendMonth[] }) 
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="font-heading text-base font-semibold text-ink">Revenue Per Session</h2>
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <p className="font-heading text-sm font-semibold text-ink">Revenue / Session</p>
-        </div>
-        <div className="px-5 pb-5">
-          <ReactApexChart options={options} series={series} type="line" height={180} />
-        </div>
+    <div className="bg-white rounded-xl border border-gray-200">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3">
+        <p className="font-heading text-sm font-semibold text-ink">Revenue / Session</p>
+      </div>
+      <div className="px-5 pb-5">
+        <ReactApexChart options={options} series={series} type="line" height={220} />
       </div>
     </div>
   )
@@ -327,18 +324,15 @@ function CollectionSection({ months }: { months: CaseloadTrendMonth[] }) {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="font-heading text-base font-semibold text-ink">Collection Efficiency</h2>
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <p className="font-heading text-sm font-semibold text-ink">Collection Variance by Month</p>
-        </div>
-        <div className="px-5 pb-5">
-          <p className="text-xs text-muted font-body mb-3">
-            Positive = under-collected vs billed; negative = over-collected. Red bars exceed ±$2,000.
-          </p>
-          <ReactApexChart options={options} series={series} type="bar" height={200} />
-        </div>
+    <div className="bg-white rounded-xl border border-gray-200">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3">
+        <p className="font-heading text-sm font-semibold text-ink">Collection Variance</p>
+      </div>
+      <div className="px-5 pb-5">
+        <p className="text-xs text-muted font-body mb-3">
+          Positive = under-collected vs billed; negative = over-collected. Red bars exceed ±$2,000.
+        </p>
+        <ReactApexChart options={options} series={series} type="bar" height={220} />
       </div>
     </div>
   )
@@ -399,8 +393,10 @@ export default function Analytics() {
       <h1 className="font-heading text-xl font-semibold text-ink">Analytics</h1>
       <FinancialSection months={months} />
       <ProductivitySection months={months} />
-      <RevenuePerSessionSection months={months} />
-      <CollectionSection months={months} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RevenuePerSessionSection months={months} />
+        <CollectionSection months={months} />
+      </div>
       <QuarterlySection />
       <QuarterProjectionSection />
       <PayerPerformanceSection />

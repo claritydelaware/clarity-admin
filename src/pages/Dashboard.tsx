@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { AlertCircle, TrendingUp, Clock, DollarSign, Activity, Users, X, ArrowUp, ArrowDown, ArrowDownToLine } from 'lucide-react'
+import { AlertCircle, TrendingUp, Clock, DollarSign, Activity, Users, X, ArrowUp, ArrowDown, ArrowDownToLine, Percent, CalendarClock } from 'lucide-react'
 import ReactApexChart from 'react-apexcharts'
 import type { ApexOptions } from 'apexcharts'
 import { useDashboard } from '../hooks/useDashboard'
@@ -376,8 +376,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+      {/* Primary metric cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <MetricCard
           index={0}
           icon={<Activity size={16} />}
@@ -414,15 +414,33 @@ export default function Dashboard() {
           delta={pp ? <DeltaBadge current={cm.receivedAmount} prior={pp.receivedAmount} /> : undefined}
           tooltipContent={pp ? <ReceivedTooltipContent cm={cm} pp={pp} priorLabel={priorLabel} /> : undefined}
         />
+      </div>
+
+      {/* Secondary metric cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {data.incomingPayments && data.incomingPayments.count > 0 && (
           <MetricCard
-            index={4}
+            index={0}
             icon={<ArrowDownToLine size={16} />}
             label="Incoming Payments"
             value={formatCurrency(data.incomingPayments.amount)}
             sub={`${data.incomingPayments.count} claim${data.incomingPayments.count !== 1 ? 's' : ''} — Payment Pending or future-dated`}
           />
         )}
+        <MetricCard
+          index={1}
+          icon={<Percent size={16} />}
+          label={`Collection Rate — ${windowLabel}`}
+          value={data.collectionRate != null ? `${data.collectionRate}%` : '—'}
+          sub="Received ÷ Revenue"
+        />
+        <MetricCard
+          index={2}
+          icon={<CalendarClock size={16} />}
+          label="Avg Days to Payment"
+          value={data.avgDaysToPayment != null ? `${data.avgDaysToPayment} days` : '—'}
+          sub="Last 90 days"
+        />
       </div>
 
       {/* Utilization */}
@@ -456,9 +474,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200">
+      {/* Revenue Trend + Aging side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200">
           <div className="flex items-center justify-between px-5 pt-4 pb-3">
             <p className="font-heading text-sm font-semibold text-ink">Revenue Trend</p>
           </div>
@@ -472,45 +490,45 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
           <div className="flex items-center justify-between px-5 pt-4 pb-3">
-            <p className="font-heading text-sm font-semibold text-ink">Payer Mix</p>
-            <span className="text-xs text-muted font-body">This month</span>
+            <p className="font-heading text-sm font-semibold text-ink">Pending Claims Aging</p>
           </div>
-          <div className="px-5 pb-5">
-            {payerMix.length === 0 ? (
-              <p className="text-sm text-muted font-body py-8 text-center">No data for this month.</p>
-            ) : (
-              <ReactApexChart
-                options={payerOptions}
-                series={payerSeries}
-                type="bar"
-                height={220}
-              />
-            )}
+          <div className="divide-y divide-gray-200">
+            {agingRows.map(row => (
+              <div key={row.label} className="flex items-center justify-between py-3 px-5">
+                <p className={`text-sm font-medium font-body ${row.danger ? 'text-error' : 'text-ink'}`}>{row.label}</p>
+                <div className="flex items-center gap-4">
+                  <p className={`text-sm tabular-nums font-body ${row.danger ? 'text-error' : 'text-muted'}`}>
+                    {row.count} claim{row.count !== 1 ? 's' : ''}
+                  </p>
+                  <p className={`text-sm font-medium tabular-nums font-body min-w-20 text-right ${row.danger ? 'text-error' : 'text-ink'}`}>
+                    {formatCurrency(row.total)}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Aging */}
+      {/* Payer Mix — full width */}
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <p className="font-heading text-sm font-semibold text-ink">Pending Claims Aging</p>
+          <p className="font-heading text-sm font-semibold text-ink">Payer Mix</p>
+          <span className="text-xs text-muted font-body">This month</span>
         </div>
-        <div className="divide-y divide-gray-200">
-          {agingRows.map(row => (
-            <div key={row.label} className="grid grid-cols-3 py-3 items-center">
-              <div className="px-5">
-                <p className={`text-sm font-medium font-body ${row.danger ? 'text-error' : 'text-ink'}`}>{row.label}</p>
-              </div>
-              <div className="px-4">
-                <p className={`text-sm tabular-nums font-body ${row.danger ? 'text-error' : 'text-muted'}`}>{row.count}</p>
-              </div>
-              <div className="px-4 text-right">
-                <p className={`text-sm font-medium tabular-nums font-body ${row.danger ? 'text-error' : 'text-ink'}`}>{formatCurrency(row.total)}</p>
-              </div>
-            </div>
-          ))}
+        <div className="px-5 pb-5">
+          {payerMix.length === 0 ? (
+            <p className="text-sm text-muted font-body py-8 text-center">No data for this month.</p>
+          ) : (
+            <ReactApexChart
+              options={payerOptions}
+              series={payerSeries}
+              type="bar"
+              height={220}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -193,6 +193,8 @@ export interface DashboardData {
   }
   payerMix: PayerMixEntry[]
   incomingPayments?: { count: number; amount: number }
+  collectionRate?: number | null
+  avgDaysToPayment?: number | null
 }
 
 // ─── PHASE 4 TYPES ────────────────────────────────────────────────────────────
