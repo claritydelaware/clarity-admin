@@ -36,6 +36,7 @@ interface BoardProps<T> {
   rowSelection?: RowSelectionState
   onRowSelectionChange?: OnChangeFn<RowSelectionState>
   enableRowSelection?: boolean
+  initialSorting?: SortingState
   pageSize?: number
   storageKey?: string
   addRowPath?: string
@@ -58,6 +59,7 @@ export default function Board<T>({
   rowSelection,
   onRowSelectionChange,
   enableRowSelection = false,
+  initialSorting,
   pageSize = 50,
   storageKey,
   addRowPath,
@@ -70,7 +72,7 @@ export default function Board<T>({
     storageKey ? storageKey + '-board-cols' : '_unused-board-cols',
     EMPTY_COL_STATE,
   )
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(colState.visibility)
   const [columnOrder, setColumnOrder] = useState<string[]>(colState.order)
   const [colMenuOpen, setColMenuOpen] = useState(false)
