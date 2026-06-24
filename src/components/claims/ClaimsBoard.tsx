@@ -369,6 +369,11 @@ export default function ClaimsBoard({ claims, onStatusClick, compact = false }: 
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
           enableRowSelection
+          initialSorting={[
+            { id: 'insurance', desc: false },
+            { id: 'claimDate', desc: false },
+            { id: 'paymentDateReceived', desc: false },
+          ]}
           storageKey="claims"
           addRowPath="/claims/new"
           addRowLabel="New Claim"
