@@ -268,7 +268,6 @@ export default function ClaimsBoard({ claims, onStatusClick, compact = false }: 
     col.accessor('paymentDateReceived', {
       header: 'Payment Date',
       size: 120,
-      meta: { defaultHidden: true },
       sortingFn: (a, b) => {
         const aT = a.original.paymentDateReceived ? new Date(a.original.paymentDateReceived).getTime() : 0
         const bT = b.original.paymentDateReceived ? new Date(b.original.paymentDateReceived).getTime() : 0

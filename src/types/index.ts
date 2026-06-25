@@ -11,10 +11,15 @@ export const CLAIM_STATUSES = ['Pending', 'Payment Pending', 'Finalized', 'Deduc
 export type ClaimStatus = typeof CLAIM_STATUSES[number]
 
 export const KNOWN_PAYERS = [
-  'BCBS', 'Aetna', 'United', 'United-MA', 'United-Surest', 'UMR', 'Medicare',
+  'BCBS', 'BCBS-MA', 'Aetna', 'United', 'United-MA', 'United-Surest', 'UMR', 'Medicare',
   'Health Options', 'Delaware First', 'Amerihealth VIP', 'Mutual of Omaha',
   'Self-Pay', 'Late Cancellation', 'Meritain',
 ] as const
+
+export const PAYER_GROUPS: Record<string, string[]> = {
+  'BCBS': ['BCBS', 'BCBS-MA'],
+  'United': ['United', 'United-MA', 'United-Surest'],
+}
 
 export interface Claim {
   rowIndex: number

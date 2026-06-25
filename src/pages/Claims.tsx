@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Download, AlignJustify, List } from 'lucide-react'
 import type { Claim } from '../types'
+import { PAYER_GROUPS } from '../types'
 import { useClaims } from '../hooks/useClaims'
 import { api } from '../lib/api'
 import { downloadCsv, isArchived } from '../lib/utils'
@@ -29,7 +30,6 @@ export default function Claims() {
   const usePaymentDateFilter = filters.dateField === 'paymentDate'
 
   const apiFilter = {
-    payer:       filters.payer       || undefined,
     serviceCode: filters.serviceCode || undefined,
     from:        (!usePaymentDateFilter && filters.from) || undefined,
     to:          (!usePaymentDateFilter && filters.to)   || undefined,
@@ -53,6 +53,15 @@ export default function Claims() {
   )
   if (selectedStatuses.length > 0) displayed = displayed.filter(c => selectedStatuses.includes(c.status))
   if (selectedClinicians.length > 0) displayed = displayed.filter(c => selectedClinicians.includes(c.clinician))
+  const selectedPayers = (filters.payer ?? '').split(',').filter(Boolean)
+  if (selectedPayers.length > 0) {
+    const expandedPayers = new Set<string>()
+    for (const p of selectedPayers) {
+      expandedPayers.add(p)
+      if (PAYER_GROUPS[p]) PAYER_GROUPS[p].forEach(g => expandedPayers.add(g))
+    }
+    displayed = displayed.filter(c => expandedPayers.has(c.insurance))
+  }
   if (usePaymentDateFilter && (filters.from || filters.to)) {
     displayed = displayed.filter(c => {
       if (!c.paymentDateReceived) return false

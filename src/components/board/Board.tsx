@@ -49,6 +49,18 @@ interface BoardProps<T> {
 interface ColumnState { visibility: VisibilityState; order: string[] }
 const EMPTY_COL_STATE: ColumnState = { visibility: {}, order: [] }
 
+function buildDefaultVisibility(cols: ColumnDef<unknown, unknown>[]): VisibilityState {
+  const vis: VisibilityState = {}
+  for (const col of cols) {
+    const meta = col.meta as { defaultHidden?: boolean } | undefined
+    if (meta?.defaultHidden) {
+      const id = (col as { accessorKey?: string; id?: string }).accessorKey ?? (col as { id?: string }).id
+      if (id) vis[id] = false
+    }
+  }
+  return vis
+}
+
 export default function Board<T>({
   data,
   columns,
@@ -72,8 +84,12 @@ export default function Board<T>({
     storageKey ? storageKey + '-board-cols' : '_unused-board-cols',
     EMPTY_COL_STATE,
   )
+  const hasSavedState = Object.keys(colState.visibility).length > 0 || colState.order.length > 0
+  const initialVisibility = hasSavedState
+    ? colState.visibility
+    : buildDefaultVisibility(columns as ColumnDef<unknown, unknown>[])
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(colState.visibility)
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialVisibility)
   const [columnOrder, setColumnOrder] = useState<string[]>(colState.order)
   const [colMenuOpen, setColMenuOpen] = useState(false)
   const colMenuRef = useRef<HTMLDivElement>(null)
@@ -166,6 +182,7 @@ export default function Board<T>({
   }
 
   const allColumns = table.getAllLeafColumns()
+  const hideableColumns = allColumns.filter(c => c.getCanHide())
 
   function handleDragStart(idx: number) { dragItem.current = idx }
   function handleDragOver(e: React.DragEvent, idx: number) { e.preventDefault(); dragOverItem.current = idx }
@@ -212,7 +229,7 @@ export default function Board<T>({
               <p className="px-3 pb-1.5 text-[10px] font-medium text-muted uppercase tracking-wide border-b border-border mb-1">
                 Columns · drag to reorder
               </p>
-              {allColumns.map((col, idx) => (
+              {hideableColumns.map((col, idx) => (
                 <div
                   key={col.id}
                   draggable
@@ -238,9 +255,10 @@ export default function Board<T>({
                 <button
                   type="button"
                   onClick={() => {
-                    setColumnVisibility({})
+                    const defaults = buildDefaultVisibility(columns as ColumnDef<unknown, unknown>[])
+                    setColumnVisibility(defaults)
                     setColumnOrder([])
-                    if (storageKey) setColState(EMPTY_COL_STATE)
+                    if (storageKey) setColState({ visibility: defaults, order: [] })
                   }}
                   className="text-xs text-muted hover:text-teal font-ui transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
                 >

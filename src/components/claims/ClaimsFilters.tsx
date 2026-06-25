@@ -42,9 +42,11 @@ export default function ClaimsFilters() {
   const [presetName, setPresetName] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
   const [clinicianOpen, setClinicianOpen] = useState(false)
+  const [payerOpen, setPayerOpen] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const statusPopoverRef = useRef<HTMLDivElement>(null)
   const clinicianPopoverRef = useRef<HTMLDivElement>(null)
+  const payerPopoverRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (saving) nameInputRef.current?.focus()
@@ -67,6 +69,15 @@ export default function ClaimsFilters() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [clinicianOpen])
+
+  useEffect(() => {
+    if (!payerOpen) return
+    function handleClick(e: MouseEvent) {
+      if (!payerPopoverRef.current?.contains(e.target as Node)) setPayerOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [payerOpen])
 
   const set = (key: string, value: string) => {
     const next = new URLSearchParams(sp)
@@ -124,6 +135,20 @@ export default function ClaimsFilters() {
       ? selectedClinicians.filter(x => x !== c)
       : [...selectedClinicians, c]
     set('clinician', next.join(','))
+  }
+
+  const selectedPayers = (sp.get('payer') ?? '').split(',').filter(Boolean)
+  const payerLabel = selectedPayers.length === 0
+    ? 'All Payers'
+    : selectedPayers.length === 1
+      ? selectedPayers[0]
+      : `${selectedPayers.length} payers`
+
+  const togglePayer = (p: string) => {
+    const next = selectedPayers.includes(p)
+      ? selectedPayers.filter(x => x !== p)
+      : [...selectedPayers, p]
+    set('payer', next.join(','))
   }
 
   const selectClass =
@@ -200,10 +225,38 @@ export default function ClaimsFilters() {
           )}
         </div>
 
-        <select value={sp.get('payer') ?? ''} onChange={e => set('payer', e.target.value)} className={selectClass}>
-          <option value="">All Payers</option>
-          {KNOWN_PAYERS.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
+        <div className="relative" ref={payerPopoverRef}>
+          <button
+            type="button"
+            onClick={() => setPayerOpen(o => !o)}
+            className={[
+              selectClass,
+              'inline-flex items-center gap-1.5 cursor-pointer',
+              selectedPayers.length > 0 ? 'border-teal text-teal' : '',
+            ].join(' ')}
+          >
+            {payerLabel}
+            <ChevronDown size={12} className="opacity-50 shrink-0" />
+          </button>
+          {payerOpen && (
+            <div className="absolute z-20 top-9 left-0 bg-white border border-gray-200 rounded-lg shadow-md py-1 min-w-48 max-h-64 overflow-y-auto">
+              {KNOWN_PAYERS.map(p => (
+                <label
+                  key={p}
+                  className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm font-body text-ink"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedPayers.includes(p)}
+                    onChange={() => togglePayer(p)}
+                    className="rounded border-gray-300 accent-teal"
+                  />
+                  {p}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="relative" ref={statusPopoverRef}>
           <button
