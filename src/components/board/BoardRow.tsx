@@ -17,11 +17,14 @@ export default function BoardRow<T>({ row, compact = false }: Props<T>) {
         selected ? 'bg-teal-pale/40' : 'hover:bg-surface-sunken/50',
       ].join(' ')}
     >
-      {row.getVisibleCells().map(cell => (
-        <td key={cell.id} role="gridcell" className={`px-4 ${rowPy} text-sm`}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </td>
-      ))}
+      {row.getVisibleCells().map(cell => {
+        const align = (cell.column.columnDef.meta as { align?: string } | undefined)?.align
+        return (
+          <td key={cell.id} role="gridcell" className={`px-4 ${rowPy} text-sm${align === 'center' ? ' text-center' : ''}`}>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </td>
+        )
+      })}
     </tr>
   )
 }

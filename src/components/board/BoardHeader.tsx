@@ -12,6 +12,7 @@ export default function BoardHeader<T>({ headerGroups }: Props<T>) {
         <tr key={hg.id} role="row">
           {hg.headers.map(header => {
             const sorted = header.column.getIsSorted()
+            const align = (header.column.columnDef.meta as { align?: string } | undefined)?.align
             return (
               <th
                 key={header.id}
@@ -19,7 +20,8 @@ export default function BoardHeader<T>({ headerGroups }: Props<T>) {
                 aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined}
                 tabIndex={header.column.getCanSort() ? 0 : undefined}
                 className={[
-                  'px-4 py-2.5 text-left text-[11px] font-ui font-medium text-muted uppercase tracking-wider whitespace-nowrap',
+                  'px-4 py-2.5 text-[11px] font-ui font-medium text-muted uppercase tracking-wider whitespace-nowrap',
+                  align === 'center' ? 'text-center' : 'text-left',
                   header.column.getCanSort() ? 'cursor-pointer select-none hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-inset' : '',
                 ].join(' ')}
                 onClick={header.column.getToggleSortingHandler()}

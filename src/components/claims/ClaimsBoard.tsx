@@ -168,6 +168,7 @@ export default function ClaimsBoard({ claims, onStatusClick, compact = false }: 
     col.accessor('insurance', {
       header: 'Payer',
       size: 110,
+      meta: { align: 'center' },
       cell: ({ getValue }) => <PayerBadge payer={getValue()} />,
     }),
     col.accessor('claimDate', {
@@ -209,6 +210,7 @@ export default function ClaimsBoard({ claims, onStatusClick, compact = false }: 
     col.accessor('status', {
       header: 'Status',
       size: 140,
+      meta: { align: 'center' },
       cell: ({ row }) => <StatusCell status={row.original.status} onClick={() => onStatusClick(row.original)} />,
     }),
     col.accessor('clientAmount', {
