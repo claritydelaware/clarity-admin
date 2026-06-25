@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Plus, Download, AlignJustify, List } from 'lucide-react'
 import type { Claim } from '../types'
 import { PAYER_GROUPS } from '../types'
@@ -9,6 +8,7 @@ import { downloadCsv, isArchived } from '../lib/utils'
 import ClaimsFilters, { useClaimFilters } from '../components/claims/ClaimsFilters'
 import ClaimsBoard from '../components/claims/ClaimsBoard'
 import StatusUpdateModal from '../components/claims/StatusUpdateModal'
+import NewClaimModal from '../components/claims/NewClaimModal'
 import { SkeletonTable } from '../components/ui/Skeleton'
 import PageHeader from '../components/layout/PageHeader'
 import Tabs from '../components/ui/Tabs'
@@ -19,6 +19,7 @@ import useLocalStorage from '../hooks/useLocalStorage'
 export default function Claims() {
   const filters = useClaimFilters()
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null)
+  const [newClaimOpen, setNewClaimOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [density, setDensity] = useLocalStorage<'comfortable' | 'compact'>('claimsTableDensity', 'comfortable')
   const [viewMode, setViewMode] = useLocalStorage<string>('claimsViewMode', 'active')
@@ -121,11 +122,9 @@ export default function Claims() {
             <Button variant="secondary" size="sm" onClick={handleExport} loading={exporting} icon={<Download size={14} />}>
               Export CSV
             </Button>
-            <Link to="/claims/new">
-              <Button size="sm" icon={<Plus size={15} strokeWidth={2.5} />}>
-                New Claim
-              </Button>
-            </Link>
+            <Button size="sm" icon={<Plus size={15} strokeWidth={2.5} />} onClick={() => setNewClaimOpen(true)}>
+              New Claim
+            </Button>
           </div>
         }
       />
@@ -139,7 +138,7 @@ export default function Claims() {
       )}
 
       {displayedOrNull && (
-        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} compact={density === 'compact'} />
+        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} />
       )}
 
       {selectedClaim && (
@@ -148,6 +147,8 @@ export default function Claims() {
           onClose={() => setSelectedClaim(null)}
         />
       )}
+
+      <NewClaimModal open={newClaimOpen} onClose={() => setNewClaimOpen(false)} />
     </div>
   )
 }

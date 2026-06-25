@@ -6,7 +6,6 @@ const BREADCRUMBS: Record<string, { parent?: string; label: string }> = {
   '/dashboard':   { label: 'Dashboard' },
   '/analytics':   { label: 'Analytics' },
   '/claims':      { label: 'Claims' },
-  '/claims/new':  { parent: 'Claims', label: 'New Claim' },
   '/forecast':    { label: 'Revenue Forecast' },
   '/overhead':    { label: 'Overhead' },
   '/pay-periods': { label: 'Pay Periods' },

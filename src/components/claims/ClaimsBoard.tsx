@@ -45,10 +45,11 @@ const GROUP_CONFIG = Object.fromEntries(
 interface Props {
   claims: Claim[]
   onStatusClick: (claim: Claim) => void
+  onAddRow?: () => void
   compact?: boolean
 }
 
-export default function ClaimsBoard({ claims, onStatusClick, compact = false }: Props) {
+export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact = false }: Props) {
   const { mutateAsync: inlineEdit } = useInlineEditClaim()
   const bulkUpdate = useBulkUpdateClaims()
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -376,7 +377,7 @@ export default function ClaimsBoard({ claims, onStatusClick, compact = false }: 
             { id: 'paymentDateReceived', desc: false },
           ]}
           storageKey="claims"
-          addRowPath="/claims/new"
+          onAddRow={onAddRow}
           addRowLabel="New Claim"
           selectionBar={selectionBar}
           compact={compact}

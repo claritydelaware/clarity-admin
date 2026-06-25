@@ -39,7 +39,7 @@ interface BoardProps<T> {
   initialSorting?: SortingState
   pageSize?: number
   storageKey?: string
-  addRowPath?: string
+  onAddRow?: () => void
   addRowLabel?: string
   selectionBar?: React.ReactNode
   compact?: boolean
@@ -74,7 +74,7 @@ export default function Board<T>({
   initialSorting,
   pageSize = 50,
   storageKey,
-  addRowPath,
+  onAddRow,
   addRowLabel,
   selectionBar,
   compact = false,
@@ -319,8 +319,8 @@ export default function Board<T>({
               ))
             )}
 
-            {addRowPath && addRowLabel && (
-              <BoardAddRow to={addRowPath} label={addRowLabel} colSpan={totalColCount} />
+            {onAddRow && addRowLabel && (
+              <BoardAddRow onClick={onAddRow} label={addRowLabel} colSpan={totalColCount} />
             )}
           </tbody>
         </table>

@@ -7,7 +7,7 @@ interface DialogProps {
   onClose: () => void
   title?: string
   children: ReactNode
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl'
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   hideCloseButton?: boolean
 }
 
@@ -16,6 +16,7 @@ const MAX_WIDTH = {
   md: 'max-w-md',
   lg: 'max-w-lg',
   xl: 'max-w-xl',
+  '2xl': 'max-w-2xl',
 }
 
 export default function Dialog({ open, onClose, title, children, maxWidth = 'md', hideCloseButton }: DialogProps) {
@@ -76,7 +77,7 @@ export default function Dialog({ open, onClose, title, children, maxWidth = 'md'
             )}
           </div>
         )}
-        <div className="p-5">{children}</div>
+        <div className="p-5 overflow-y-auto max-h-[calc(100vh-10rem)]">{children}</div>
       </div>
     </div>,
     document.body
