@@ -115,7 +115,7 @@ export default function NewClaimModal({ open, onClose }: Props) {
   const [hasDraft, setHasDraft] = useState(false)
   const comboRef = useRef<HTMLDivElement>(null)
   const skipAutoFillRef = useRef(false)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const { register, handleSubmit, watch, setValue, unregister, reset, getValues, formState: { errors } } = useForm<FormValues>({
     defaultValues: { ...FRESH_DEFAULTS, claimDate: todayInputDate() },
