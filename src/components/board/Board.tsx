@@ -202,10 +202,10 @@ export default function Board<T>({
     <div>
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-1.5">
-        {sorting.length > 0 ? (
+        {JSON.stringify(sorting) !== JSON.stringify(initialSorting ?? []) ? (
           <button
             type="button"
-            onClick={() => setSorting([])}
+            onClick={() => setSorting(initialSorting ?? [])}
             className="inline-flex items-center gap-1 text-xs text-muted hover:text-teal font-ui transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
           >
             <RotateCcw size={11} /> Reset sort
