@@ -44,15 +44,13 @@ export default function Topbar({ onMenuClick }: Props) {
         <Menu size={18} />
       </button>
 
-      <nav className="flex items-center gap-1.5 text-sm font-ui">
-        {crumb.parent && (
-          <>
-            <span className="text-muted">{crumb.parent}</span>
-            <ChevronRight size={14} className="text-muted/50" />
-          </>
-        )}
-        <span className="font-medium text-ink">{crumb.label}</span>
-      </nav>
+      {crumb.parent && (
+        <nav className="flex items-center gap-1.5 text-sm font-ui">
+          <span className="text-muted">{crumb.parent}</span>
+          <ChevronRight size={14} className="text-muted/50" />
+          <span className="font-medium text-ink">{crumb.label}</span>
+        </nav>
+      )}
 
       <div className="ml-auto">
         <Avatar name="Bruce Spadaccini" size="sm" />

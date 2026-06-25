@@ -5,6 +5,13 @@ const CLINICIAN_COLORS: Record<string, string> = {
   Shana:   'bg-[var(--color-clinician-shana)] text-white',
 }
 
+const CLINICIAN_PHOTOS: Record<string, string> = {
+  Shannon: '/avatars/shannon-tarolli.webp',
+  Jen:     '/avatars/jen-meehan.webp',
+  Emily:   '/avatars/emily-bryant.webp',
+  Shana:   '/avatars/shana_1.jpg',
+}
+
 const FALLBACK_COLORS = [
   'bg-teal text-white',
   'bg-gold text-ink',
@@ -18,10 +25,16 @@ interface AvatarProps {
   className?: string
 }
 
-const SIZE_CLASSES = {
-  sm: 'w-6 h-6 text-[10px]',
-  md: 'w-8 h-8 text-xs',
-  lg: 'w-10 h-10 text-sm',
+const SIZE_DIMS = {
+  sm: 'w-6 h-6',
+  md: 'w-8 h-8',
+  lg: 'w-10 h-10',
+}
+
+const SIZE_TEXT = {
+  sm: 'text-[10px]',
+  md: 'text-xs',
+  lg: 'text-sm',
 }
 
 function getInitials(name: string): string {
@@ -38,11 +51,29 @@ function getColorClass(name: string): string {
 }
 
 export default function Avatar({ name, size = 'md', className = '' }: AvatarProps) {
+  const photo = CLINICIAN_PHOTOS[name]
+
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt={name}
+        title={name}
+        className={[
+          'rounded-full object-cover shrink-0',
+          SIZE_DIMS[size],
+          className,
+        ].join(' ')}
+      />
+    )
+  }
+
   return (
     <span
       className={[
         'inline-flex items-center justify-center rounded-full font-ui font-semibold shrink-0',
-        SIZE_CLASSES[size],
+        SIZE_DIMS[size],
+        SIZE_TEXT[size],
         getColorClass(name),
         className,
       ].join(' ')}
