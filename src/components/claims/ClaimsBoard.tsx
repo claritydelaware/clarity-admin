@@ -372,8 +372,8 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
           onRowSelectionChange={setRowSelection}
           enableRowSelection
           initialSorting={[
-            { id: 'claimDate', desc: true },
             { id: 'insurance', desc: false },
+            { id: 'claimDate', desc: false },
             { id: 'paymentDateReceived', desc: false },
           ]}
           storageKey="claims"
