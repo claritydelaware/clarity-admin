@@ -331,7 +331,7 @@ export default function Board<T>({
 
       {/* Table */}
       {virtualize ? (
-        <div ref={scrollRef} className="overflow-auto rounded-lg border border-border bg-white" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+        <div ref={scrollRef} className="overflow-auto rounded-lg border border-border bg-white" style={{ maxHeight: 'calc(100vh - 160px)' }}>
           <table className="w-full text-sm font-body" role="grid" aria-label="Data board">
             <BoardHeader headerGroups={headerGroups} sticky />
             <tbody>
