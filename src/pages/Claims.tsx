@@ -8,6 +8,7 @@ import { downloadCsv, isArchived } from '../lib/utils'
 import ClaimsFilters, { useClaimFilters } from '../components/claims/ClaimsFilters'
 import ClaimsBoard from '../components/claims/ClaimsBoard'
 import StatusUpdateModal from '../components/claims/StatusUpdateModal'
+import DeleteClaimModal from '../components/claims/DeleteClaimModal'
 import NewClaimModal from '../components/claims/NewClaimModal'
 import { SkeletonTable } from '../components/ui/Skeleton'
 import PageHeader from '../components/layout/PageHeader'
@@ -19,6 +20,7 @@ import useLocalStorage from '../hooks/useLocalStorage'
 export default function Claims() {
   const filters = useClaimFilters()
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null)
+  const [deletingClaim, setDeletingClaim] = useState<Claim | null>(null)
   const [newClaimOpen, setNewClaimOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [density, setDensity] = useLocalStorage<'comfortable' | 'compact'>('claimsTableDensity', 'comfortable')
@@ -138,7 +140,7 @@ export default function Claims() {
       )}
 
       {displayedOrNull && (
-        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} virtualize={viewMode === 'all'} />
+        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} onDeleteClick={setDeletingClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} virtualize={viewMode === 'all'} />
       )}
 
       {selectedClaim && (
@@ -149,6 +151,13 @@ export default function Claims() {
       )}
 
       <NewClaimModal open={newClaimOpen} onClose={() => setNewClaimOpen(false)} />
+
+      {deletingClaim && (
+        <DeleteClaimModal
+          claim={deletingClaim}
+          onClose={() => setDeletingClaim(null)}
+        />
+      )}
     </div>
   )
 }

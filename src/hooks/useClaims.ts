@@ -73,6 +73,20 @@ export function useFullEditClaim() {
   })
 }
 
+export function useDeleteClaim() {
+  const qc = useQueryClient()
+  const toast = useToast()
+  return useMutation({
+    mutationFn: (rowIndex: number) => api.claims.delete(rowIndex),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['claims'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success('Claim deleted')
+    },
+    onError: () => toast.error('Delete failed — please try again'),
+  })
+}
+
 export function useInlineEditClaim() {
   const qc = useQueryClient()
   const toast = useToast()

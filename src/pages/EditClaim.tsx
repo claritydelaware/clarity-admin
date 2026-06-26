@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { ArrowLeft, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Trash2 } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, SERVICE_CODES, SUBMISSION_METHODS, CLAIM_STATUSES } from '../types'
 import type { Claim, ClaimFullEditInput, Clinician } from '../types'
 import { useClaim, useFullEditClaim, useCaseloads } from '../hooks/useClaims'
@@ -11,6 +11,7 @@ import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import DeleteClaimModal from '../components/claims/DeleteClaimModal'
 
 interface FormValues {
   claimDate: string
@@ -55,6 +56,7 @@ export default function EditClaim() {
   const rowIndex = parseInt(rowIndexStr ?? '0', 10)
   const navigate = useNavigate()
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const { data: claim, isLoading, isError, error } = useClaim(rowIndex)
   const { mutate, isPending, isError: isMutateError, error: mutateError } = useFullEditClaim()
   const { data: caseloads } = useCaseloads()
@@ -323,17 +325,37 @@ export default function EditClaim() {
 
             {isMutateError && <ErrorBanner message={(mutateError as Error).message} />}
 
-            <div className="flex justify-end gap-2 pt-1">
-              <Link to="/claims">
-                <Button variant="secondary" type="button">Cancel</Button>
-              </Link>
-              <Button type="submit" loading={isPending}>
-                {isPending ? 'Saving…' : 'Save Changes'}
+            <div className="flex items-center justify-between pt-1">
+              <Button
+                variant="ghost"
+                type="button"
+                size="sm"
+                icon={<Trash2 size={14} />}
+                className="text-muted hover:text-error hover:bg-red-50"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Delete
               </Button>
+              <div className="flex gap-2">
+                <Link to="/claims">
+                  <Button variant="secondary" type="button">Cancel</Button>
+                </Link>
+                <Button type="submit" loading={isPending}>
+                  {isPending ? 'Saving…' : 'Save Changes'}
+                </Button>
+              </div>
             </div>
           </div>
         </Card>
       </form>
+
+      {showDeleteModal && claim && (
+        <DeleteClaimModal
+          claim={claim}
+          onClose={() => setShowDeleteModal(false)}
+          onDeleted={() => navigate('/claims')}
+        />
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { createColumnHelper, type ColumnDef, type RowSelectionState } from '@tanstack/react-table'
-import { Copy, Check, X } from 'lucide-react'
+import { Copy, Check, X, Trash2 } from 'lucide-react'
 import type { Claim, ClaimStatus } from '../../types'
 import { SERVICE_CODES, SUBMISSION_METHODS } from '../../types'
 import { formatCurrency, formatDate, toInputDate } from '../../lib/utils'
@@ -45,12 +45,13 @@ const GROUP_CONFIG = Object.fromEntries(
 interface Props {
   claims: Claim[]
   onStatusClick: (claim: Claim) => void
+  onDeleteClick: (claim: Claim) => void
   onAddRow?: () => void
   compact?: boolean
   virtualize?: boolean
 }
 
-export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact = false, virtualize = false }: Props) {
+export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAddRow, compact = false, virtualize = false }: Props) {
   const { mutateAsync: inlineEdit } = useInlineEditClaim()
   const bulkUpdate = useBulkUpdateClaims()
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -151,6 +152,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
       header: 'Client ID',
       size: 100,
       enableSorting: false,
+      meta: { defaultHidden: true },
       cell: ({ getValue }) => {
         const v = getValue()
         return (
@@ -163,19 +165,19 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
       },
     }),
     col.accessor('clinician', {
-      header: 'Clinician',
-      size: 120,
+      header: 'Clin.',
+      size: 90,
       cell: ({ getValue }) => <PersonCell name={getValue()} />,
     }),
     col.accessor('insurance', {
       header: 'Payer',
-      size: 110,
+      size: 95,
       meta: { align: 'center' },
       cell: ({ getValue }) => <PayerBadge payer={getValue()} />,
     }),
     col.accessor('claimDate', {
       header: 'Date',
-      size: 110,
+      size: 100,
       sortingFn: (a, b) => new Date(a.original.claimDate).getTime() - new Date(b.original.claimDate).getTime(),
       cell: ({ getValue }) => <span className="text-muted whitespace-nowrap">{formatDate(getValue())}</span>,
     }),
@@ -188,6 +190,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
     col.accessor('submissionMethod', {
       header: 'Method',
       size: 100,
+      meta: { defaultHidden: true },
       cell: ({ row }) => (
         <TextCell
           value={row.original.submissionMethod}
@@ -211,12 +214,12 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
     }),
     col.accessor('status', {
       header: 'Status',
-      size: 140,
+      size: 120,
       meta: { align: 'center' },
       cell: ({ row }) => <StatusCell status={row.original.status} onClick={() => onStatusClick(row.original)} />,
     }),
     col.accessor('clientAmount', {
-      header: 'Client $',
+      header: 'Client',
       size: 100,
       cell: ({ row }) => <CurrencyCell value={row.original.clientAmount} onSave={save(row.original.rowIndex, 'clientAmount')} />,
     }),
@@ -238,7 +241,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
       },
     }),
     col.accessor('insuranceAmount', {
-      header: 'Insurance $',
+      header: 'Ins.',
       size: 100,
       cell: ({ row }) => <CurrencyCell value={row.original.insuranceAmount} onSave={save(row.original.rowIndex, 'insuranceAmount')} />,
     }),
@@ -270,8 +273,8 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
       cell: ({ getValue }) => <span className="tabular-nums text-right font-medium">{formatCurrency(getValue())}</span>,
     }),
     col.accessor('paymentDateReceived', {
-      header: 'Payment Date',
-      size: 120,
+      header: 'Pmt Date',
+      size: 100,
       sortingFn: (a, b) => {
         const aT = a.original.paymentDateReceived ? new Date(a.original.paymentDateReceived).getTime() : 0
         const bT = b.original.paymentDateReceived ? new Date(b.original.paymentDateReceived).getTime() : 0
@@ -293,7 +296,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
     }),
     col.accessor('notes', {
       header: 'Notes',
-      size: 140,
+      size: 120,
       enableSorting: false,
       cell: ({ row }) => (
         <Tooltip content={row.original.notes ?? ''} disabled={!row.original.notes}>
@@ -308,13 +311,23 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
       enableHiding: false,
       header: '',
       cell: ({ row }) => (
-        <Link
-          to={`/claims/${row.original.rowIndex}/edit`}
-          className="text-xs text-teal hover:underline font-ui"
-          onClick={e => e.stopPropagation()}
-        >
-          Edit
-        </Link>
+        <span className="inline-flex items-center gap-2">
+          <Link
+            to={`/claims/${row.original.rowIndex}/edit`}
+            className="text-xs text-teal hover:underline font-ui"
+            onClick={e => e.stopPropagation()}
+          >
+            Edit
+          </Link>
+          <button
+            type="button"
+            title="Delete claim"
+            onClick={e => { e.stopPropagation(); onDeleteClick(row.original) }}
+            className="p-0.5 text-muted hover:text-error transition-colors"
+          >
+            <Trash2 size={13} />
+          </button>
+        </span>
       ),
     }),
   ]
@@ -393,7 +406,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
           <p className="text-center text-muted text-sm py-8">No claims match the current filters.</p>
         )}
         {claims.slice(0, 50).map(claim => (
-          <MobileCard key={claim.rowIndex} claim={claim} onStatusClick={onStatusClick} />
+          <MobileCard key={claim.rowIndex} claim={claim} onStatusClick={onStatusClick} onDeleteClick={onDeleteClick} />
         ))}
         {claims.length > 50 && (
           <p className="text-center text-muted text-xs py-2">
@@ -414,7 +427,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
   )
 }
 
-function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c: Claim) => void }) {
+function MobileCard({ claim, onStatusClick, onDeleteClick }: { claim: Claim; onStatusClick: (c: Claim) => void; onDeleteClick: (c: Claim) => void }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -440,7 +453,7 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
           <span>Method: <span className="text-ink">{claim.submissionMethod}</span></span>
           <span>Insurance: <span className="text-ink">{formatCurrency(claim.insuranceAmount)}</span></span>
           {claim.notes && <span className="col-span-2">Notes: <span className="text-ink">{claim.notes}</span></span>}
-          <span className="col-span-2 pt-1">
+          <span className="col-span-2 pt-1 flex items-center gap-4">
             <Link
               to={`/claims/${claim.rowIndex}/edit`}
               className="text-xs text-teal hover:underline font-ui"
@@ -448,6 +461,13 @@ function MobileCard({ claim, onStatusClick }: { claim: Claim; onStatusClick: (c:
             >
               Full edit
             </Link>
+            <button
+              type="button"
+              className="text-xs text-muted hover:text-error font-ui transition-colors"
+              onClick={e => { e.stopPropagation(); onDeleteClick(claim) }}
+            >
+              Delete
+            </button>
           </span>
         </div>
       )}

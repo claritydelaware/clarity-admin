@@ -20,7 +20,7 @@ export default function BoardRow<T>({ row, compact = false }: Props<T>) {
       {row.getVisibleCells().map(cell => {
         const align = (cell.column.columnDef.meta as { align?: string } | undefined)?.align
         return (
-          <td key={cell.id} role="gridcell" className={`px-4 ${rowPy} text-sm${align === 'center' ? ' text-center' : ''}`}>
+          <td key={cell.id} role="gridcell" className={`px-3 ${rowPy} text-sm${align === 'center' ? ' text-center' : ''}`}>
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </td>
         )

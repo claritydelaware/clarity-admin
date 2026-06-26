@@ -72,6 +72,9 @@ export const api = {
         body: JSON.stringify(data),
       })
     },
+    delete(rowIndex: number): Promise<{ ok: boolean }> {
+      return apiFetch<{ ok: boolean }>(`/claims/${rowIndex}`, { method: 'DELETE' })
+    },
     exportRaw(): Promise<string[][]> {
       return apiFetch<string[][]>('/export/claims')
     },
