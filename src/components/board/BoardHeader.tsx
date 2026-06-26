@@ -3,11 +3,12 @@ import { ChevronUp, ChevronDown } from 'lucide-react'
 
 interface Props<T> {
   headerGroups: HeaderGroup<T>[]
+  sticky?: boolean
 }
 
-export default function BoardHeader<T>({ headerGroups }: Props<T>) {
+export default function BoardHeader<T>({ headerGroups, sticky = false }: Props<T>) {
   return (
-    <thead className="bg-surface-sunken border-b border-border">
+    <thead className={`bg-surface-sunken border-b border-border${sticky ? ' sticky top-0 z-10' : ''}`}>
       {headerGroups.map(hg => (
         <tr key={hg.id} role="row">
           {hg.headers.map(header => {

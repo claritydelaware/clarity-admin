@@ -47,9 +47,10 @@ interface Props {
   onStatusClick: (claim: Claim) => void
   onAddRow?: () => void
   compact?: boolean
+  virtualize?: boolean
 }
 
-export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact = false }: Props) {
+export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact = false, virtualize = false }: Props) {
   const { mutateAsync: inlineEdit } = useInlineEditClaim()
   const bulkUpdate = useBulkUpdateClaims()
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -381,6 +382,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onAddRow, compact =
           addRowLabel="New Claim"
           selectionBar={selectionBar}
           compact={compact}
+          virtualize={virtualize}
           emptyMessage="No claims match the current filters."
         />
       </div>

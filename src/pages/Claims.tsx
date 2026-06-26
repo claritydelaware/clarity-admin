@@ -138,7 +138,7 @@ export default function Claims() {
       )}
 
       {displayedOrNull && (
-        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} />
+        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} virtualize={viewMode === 'all'} />
       )}
 
       {selectedClaim && (

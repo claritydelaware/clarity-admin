@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
-  getPaginationRowModel,
   type ColumnDef,
   type SortingState,
   type VisibilityState,
@@ -11,13 +10,13 @@ import {
   type OnChangeFn,
   type Row,
 } from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { RotateCcw, SlidersHorizontal, GripVertical } from 'lucide-react'
 import BoardHeader from './BoardHeader'
 import BoardRow from './BoardRow'
 import BoardGroup from './BoardGroup'
 import BoardAddRow from './BoardAddRow'
 import { formatCurrency } from '../../lib/utils'
-import Button from '../ui/Button'
 import useLocalStorage from '../../hooks/useLocalStorage'
 
 interface GroupConfig {
@@ -37,13 +36,13 @@ interface BoardProps<T> {
   onRowSelectionChange?: OnChangeFn<RowSelectionState>
   enableRowSelection?: boolean
   initialSorting?: SortingState
-  pageSize?: number
   storageKey?: string
   onAddRow?: () => void
   addRowLabel?: string
   selectionBar?: React.ReactNode
   compact?: boolean
   emptyMessage?: string
+  virtualize?: boolean
 }
 
 interface ColumnState { visibility: VisibilityState; order: string[] }
@@ -72,13 +71,13 @@ export default function Board<T>({
   onRowSelectionChange,
   enableRowSelection = false,
   initialSorting,
-  pageSize = 50,
   storageKey,
   onAddRow,
   addRowLabel,
   selectionBar,
   compact = false,
   emptyMessage = 'No data to display.',
+  virtualize = false,
 }: BoardProps<T>) {
   const [colState, setColState] = useLocalStorage<ColumnState>(
     storageKey ? storageKey + '-board-cols' : '_unused-board-cols',
@@ -106,7 +105,6 @@ export default function Board<T>({
       columnVisibility,
       columnOrder: columnOrder.length ? columnOrder : undefined,
       rowSelection: rowSelection ?? {},
-      pagination: { pageIndex: 0, pageSize },
     },
     onSortingChange: setSorting,
     onColumnVisibilityChange: (updater) => {
@@ -126,7 +124,6 @@ export default function Board<T>({
     onRowSelectionChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getRowId: (row) => getRowId(row),
     enableRowSelection,
   })
@@ -134,12 +131,6 @@ export default function Board<T>({
   const rows = table.getRowModel().rows
   const headerGroups = table.getHeaderGroups()
   const totalColCount = table.getVisibleFlatColumns().length
-
-  // Pagination
-  const pageCount = table.getPageCount()
-  const canPrev = table.getCanPreviousPage()
-  const canNext = table.getCanNextPage()
-  const pageIndex = table.getState().pagination.pageIndex
 
   // Select-all checkbox
   useEffect(() => {
@@ -167,8 +158,8 @@ export default function Board<T>({
   }, [colMenuOpen])
 
   // Group rows
-  let groupedRows: { key: string; rows: Row<T>[] }[] | null = null
-  if (groupBy) {
+  const groupedRows = useMemo(() => {
+    if (!groupBy) return null
     const map = new Map<string, Row<T>[]>()
     for (const row of rows) {
       const key = groupBy(row.original)
@@ -176,10 +167,54 @@ export default function Board<T>({
       map.get(key)!.push(row)
     }
     const order = groupOrder ?? [...map.keys()]
-    groupedRows = order.filter(k => map.has(k)).map(k => ({ key: k, rows: map.get(k)! }))
+    const result = order.filter(k => map.has(k)).map(k => ({ key: k, rows: map.get(k)! }))
     const remaining = [...map.keys()].filter(k => !order.includes(k))
-    for (const k of remaining) groupedRows.push({ key: k, rows: map.get(k)! })
-  }
+    for (const k of remaining) result.push({ key: k, rows: map.get(k)! })
+    return result
+  }, [rows, groupBy, groupOrder])
+
+  // Virtualization: collapsed state for groups + flat item list
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  const toggleGroup = useCallback((key: string) => {
+    setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }))
+  }, [])
+
+  type FlatItem = { type: 'group'; key: string; group: { key: string; rows: Row<T>[] } }
+    | { type: 'row'; row: Row<T> }
+    | { type: 'add-row' }
+
+  const flatItems = useMemo<FlatItem[]>(() => {
+    if (!virtualize) return []
+    const items: FlatItem[] = []
+    if (groupedRows) {
+      for (const group of groupedRows) {
+        items.push({ type: 'group', key: group.key, group })
+        if (!collapsedGroups[group.key]) {
+          for (const row of group.rows) {
+            items.push({ type: 'row', row })
+          }
+        }
+      }
+    } else {
+      for (const row of rows) {
+        items.push({ type: 'row', row })
+      }
+    }
+    if (onAddRow && addRowLabel) items.push({ type: 'add-row' })
+    return items
+  }, [virtualize, groupedRows, rows, collapsedGroups, onAddRow, addRowLabel])
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const rowHeight = compact ? 37 : 45
+  const groupHeaderHeight = 41
+
+  const virtualizer = useVirtualizer({
+    count: flatItems.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (i) => flatItems[i]?.type === 'group' ? groupHeaderHeight : rowHeight,
+    overscan: 15,
+    enabled: virtualize && flatItems.length > 0,
+  })
 
   const allColumns = table.getAllLeafColumns()
   const hideableColumns = allColumns.filter(c => c.getCanHide())
@@ -274,82 +309,117 @@ export default function Board<T>({
       {selectionBar}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-white">
-        <table className="w-full text-sm font-body" role="grid" aria-label="Data board">
-          <BoardHeader headerGroups={headerGroups} />
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={totalColCount} className="px-4 py-12 text-center text-muted text-sm">
-                  {emptyMessage}
-                </td>
-              </tr>
-            )}
+      {virtualize ? (
+        <div ref={scrollRef} className="overflow-auto rounded-lg border border-border bg-white" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+          <table className="w-full text-sm font-body" role="grid" aria-label="Data board">
+            <BoardHeader headerGroups={headerGroups} sticky />
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={totalColCount} className="px-4 py-12 text-center text-muted text-sm">
+                    {emptyMessage}
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {virtualizer.getVirtualItems()[0]?.start > 0 && (
+                    <tr><td colSpan={totalColCount} style={{ height: virtualizer.getVirtualItems()[0].start }} /></tr>
+                  )}
+                  {virtualizer.getVirtualItems().map(vItem => {
+                    const item = flatItems[vItem.index]
+                    if (item.type === 'group') {
+                      const cfg = groupConfig?.[item.key]
+                      const color = cfg?.color ?? '#C4C4C4'
+                      const label = cfg?.label ?? item.key
+                      const summary = cfg?.summarize
+                        ? cfg.summarize(item.group.rows as Row<never>[])
+                        : formatCurrency(item.group.rows.reduce((sum, r) => {
+                            const v = (r.original as Record<string, unknown>)['totalPayment']
+                            return sum + (typeof v === 'number' ? v : 0)
+                          }, 0))
+                      return (
+                        <BoardGroup
+                          key={item.key}
+                          label={label}
+                          count={item.group.rows.length}
+                          color={color}
+                          colSpan={totalColCount}
+                          summary={summary}
+                          collapsed={!!collapsedGroups[item.key]}
+                          onToggle={() => toggleGroup(item.key)}
+                        />
+                      )
+                    }
+                    if (item.type === 'add-row') {
+                      return <BoardAddRow key="__add" onClick={onAddRow!} label={addRowLabel!} colSpan={totalColCount} />
+                    }
+                    return <BoardRow key={item.row.id} row={item.row} compact={compact} />
+                  })}
+                  {(() => {
+                    const vItems = virtualizer.getVirtualItems()
+                    const last = vItems[vItems.length - 1]
+                    const remaining = last ? virtualizer.getTotalSize() - last.end : 0
+                    return remaining > 0 ? <tr><td colSpan={totalColCount} style={{ height: remaining }} /></tr> : null
+                  })()}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border bg-white">
+          <table className="w-full text-sm font-body" role="grid" aria-label="Data board">
+            <BoardHeader headerGroups={headerGroups} />
+            <tbody>
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={totalColCount} className="px-4 py-12 text-center text-muted text-sm">
+                    {emptyMessage}
+                  </td>
+                </tr>
+              )}
 
-            {groupedRows ? (
-              groupedRows.map(group => {
-                const cfg = groupConfig?.[group.key]
-                const color = cfg?.color ?? '#C4C4C4'
-                const label = cfg?.label ?? group.key
-                const summary = cfg?.summarize
-                  ? cfg.summarize(group.rows as Row<never>[])
-                  : formatCurrency(group.rows.reduce((sum, r) => {
-                      const v = (r.original as Record<string, unknown>)['totalPayment']
-                      return sum + (typeof v === 'number' ? v : 0)
-                    }, 0))
+              {groupedRows ? (
+                groupedRows.map(group => {
+                  const cfg = groupConfig?.[group.key]
+                  const color = cfg?.color ?? '#C4C4C4'
+                  const label = cfg?.label ?? group.key
+                  const summary = cfg?.summarize
+                    ? cfg.summarize(group.rows as Row<never>[])
+                    : formatCurrency(group.rows.reduce((sum, r) => {
+                        const v = (r.original as Record<string, unknown>)['totalPayment']
+                        return sum + (typeof v === 'number' ? v : 0)
+                      }, 0))
 
-                return (
-                  <BoardGroup
-                    key={group.key}
-                    label={label}
-                    count={group.rows.length}
-                    color={color}
-                    colSpan={totalColCount}
-                    summary={summary}
-                  >
-                    {group.rows.map(row => (
-                      <BoardRow key={row.id} row={row} compact={compact} />
-                    ))}
-                  </BoardGroup>
-                )
-              })
-            ) : (
-              rows.map(row => (
-                <BoardRow key={row.id} row={row} compact={compact} />
-              ))
-            )}
+                  return (
+                    <BoardGroup
+                      key={group.key}
+                      label={label}
+                      count={group.rows.length}
+                      color={color}
+                      colSpan={totalColCount}
+                      summary={summary}
+                    >
+                      {group.rows.map(row => (
+                        <BoardRow key={row.id} row={row} compact={compact} />
+                      ))}
+                    </BoardGroup>
+                  )
+                })
+              ) : (
+                rows.map(row => (
+                  <BoardRow key={row.id} row={row} compact={compact} />
+                ))
+              )}
 
-            {onAddRow && addRowLabel && (
-              <BoardAddRow onClick={onAddRow} label={addRowLabel} colSpan={totalColCount} />
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {pageCount > 1 && (
-        <div className="flex items-center justify-between mt-3 text-sm font-ui text-muted">
-          <span>{data.length} items · page {pageIndex + 1} of {pageCount}</span>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!canPrev}
-            >
-              Prev
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!canNext}
-            >
-              Next
-            </Button>
-          </div>
+              {onAddRow && addRowLabel && (
+                <BoardAddRow onClick={onAddRow} label={addRowLabel} colSpan={totalColCount} />
+              )}
+            </tbody>
+          </table>
         </div>
       )}
+
     </div>
   )
 }

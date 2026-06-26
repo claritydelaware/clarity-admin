@@ -8,19 +8,28 @@ interface Props {
   colSpan: number
   summary?: string
   defaultCollapsed?: boolean
-  children: React.ReactNode
+  collapsed?: boolean
+  onToggle?: () => void
+  children?: React.ReactNode
 }
 
-export default function BoardGroup({ label, count, color, colSpan, summary, defaultCollapsed = false, children }: Props) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+export default function BoardGroup({ label, count, color, colSpan, summary, defaultCollapsed = false, collapsed: controlledCollapsed, onToggle, children }: Props) {
+  const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed)
+  const isControlled = controlledCollapsed !== undefined
+  const collapsed = isControlled ? controlledCollapsed : internalCollapsed
+
+  const toggle = () => {
+    if (isControlled) onToggle?.()
+    else setInternalCollapsed(c => !c)
+  }
 
   return (
     <>
       <tr
         role="row"
         className="cursor-pointer select-none hover:bg-surface-sunken/50 transition-colors"
-        onClick={() => setCollapsed(c => !c)}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollapsed(c => !c) } }}
+        onClick={toggle}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
         tabIndex={0}
         aria-expanded={!collapsed}
       >
