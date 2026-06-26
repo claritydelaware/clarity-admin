@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
 interface Props {
@@ -11,12 +11,21 @@ interface Props {
   collapsed?: boolean
   onToggle?: () => void
   children?: React.ReactNode
+  selectionState?: 'all' | 'some' | 'none'
+  onSelectAll?: () => void
 }
 
-export default function BoardGroup({ label, count, color, colSpan, summary, defaultCollapsed = false, collapsed: controlledCollapsed, onToggle, children }: Props) {
+export default function BoardGroup({ label, count, color, colSpan, summary, defaultCollapsed = false, collapsed: controlledCollapsed, onToggle, children, selectionState, onSelectAll }: Props) {
   const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed)
   const isControlled = controlledCollapsed !== undefined
   const collapsed = isControlled ? controlledCollapsed : internalCollapsed
+  const checkRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!checkRef.current || !selectionState) return
+    checkRef.current.checked = selectionState === 'all'
+    checkRef.current.indeterminate = selectionState === 'some'
+  }, [selectionState])
 
   const toggle = () => {
     if (isControlled) onToggle?.()
@@ -35,10 +44,19 @@ export default function BoardGroup({ label, count, color, colSpan, summary, defa
       >
         <td
           colSpan={colSpan}
-          className="py-2 px-4"
+          className="py-2 px-3"
           style={{ borderLeft: `4px solid ${color}` }}
         >
           <div className="flex items-center gap-2">
+            {onSelectAll && (
+              <input
+                ref={checkRef}
+                type="checkbox"
+                onClick={e => { e.stopPropagation(); onSelectAll() }}
+                className="rounded border-gray-300 text-teal focus:ring-teal cursor-pointer shrink-0"
+                aria-label={`Select all ${label} claims`}
+              />
+            )}
             {collapsed
               ? <ChevronRight size={16} className="text-muted shrink-0" />
               : <ChevronDown size={16} className="text-muted shrink-0" />

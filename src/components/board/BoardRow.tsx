@@ -13,7 +13,7 @@ export default function BoardRow<T>({ row, compact = false }: Props<T>) {
     <tr
       role="row"
       className={[
-        'transition-colors border-b border-border/50',
+        'group transition-colors border-b border-border/50',
         selected ? 'bg-teal-pale/40' : 'hover:bg-surface-sunken/50',
       ].join(' ')}
     >

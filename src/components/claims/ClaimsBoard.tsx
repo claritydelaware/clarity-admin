@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { createColumnHelper, type ColumnDef, type RowSelectionState } from '@tanstack/react-table'
-import { Copy, Check, X, Trash2 } from 'lucide-react'
+import { Copy, Check, X, Trash2, ExternalLink } from 'lucide-react'
 import type { Claim, ClaimStatus } from '../../types'
 import { SERVICE_CODES, SUBMISSION_METHODS } from '../../types'
 import { formatCurrency, formatDate, toInputDate } from '../../lib/utils'
@@ -12,7 +12,6 @@ import CurrencyCell from '../board/cells/CurrencyCell'
 import DateCell from '../board/cells/DateCell'
 import PersonCell from '../board/cells/PersonCell'
 import TextCell from '../board/cells/TextCell'
-import LinkCell from '../board/cells/LinkCell'
 import NumberCell from '../board/cells/NumberCell'
 import Tooltip from '../ui/Tooltip'
 import { PayerBadge } from '../ui/Badge'
@@ -91,7 +90,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
   const columns = [
     col.display({
       id: 'select',
-      size: 40,
+      size: 44,
       enableSorting: false,
       enableHiding: false,
       header: ({ table }) => (
@@ -104,25 +103,29 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
         />
       ),
       cell: ({ row }) => (
-        <input
-          type="checkbox"
-          checked={row.getIsSelected()}
-          onChange={row.getToggleSelectedHandler()}
-          onClick={e => e.stopPropagation()}
-          className="rounded border-gray-300 text-teal focus:ring-teal cursor-pointer"
-          aria-label={`Select claim ${row.original.claimId ?? row.original.rowIndex}`}
-        />
+        <div className="flex flex-col items-center gap-0.5">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            onClick={e => e.stopPropagation()}
+            className="rounded border-gray-300 text-teal focus:ring-teal cursor-pointer"
+            aria-label={`Select claim ${row.original.claimId ?? row.original.rowIndex}`}
+          />
+          {row.original.clientId && (
+            <a
+              href={`https://secure.simplepractice.com/clients/${row.original.clientId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open in SimplePractice"
+              onClick={e => e.stopPropagation()}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted hover:text-teal p-0.5"
+            >
+              <ExternalLink size={11} />
+            </a>
+          )}
+        </div>
       ),
-    }),
-    col.display({
-      id: 'spLink',
-      size: 40,
-      enableSorting: false,
-      enableHiding: false,
-      header: '',
-      cell: ({ row }) => row.original.clientId
-        ? <LinkCell href={`https://secure.simplepractice.com/clients/${row.original.clientId}`} title="Open in SimplePractice" />
-        : null,
     }),
     col.accessor('claimId', {
       header: 'Claim ID',

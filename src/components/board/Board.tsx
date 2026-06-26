@@ -173,6 +173,27 @@ export default function Board<T>({
     return result
   }, [rows, groupBy, groupOrder])
 
+  const getGroupSelectionState = useCallback((groupRows: Row<T>[]): 'all' | 'some' | 'none' => {
+    if (!enableRowSelection || groupRows.length === 0) return 'none'
+    const sel = rowSelection ?? {}
+    const selectedCount = groupRows.filter(r => sel[r.id]).length
+    if (selectedCount === 0) return 'none'
+    if (selectedCount === groupRows.length) return 'all'
+    return 'some'
+  }, [enableRowSelection, rowSelection])
+
+  const toggleGroupSelection = useCallback((groupRows: Row<T>[]) => {
+    if (!onRowSelectionChange) return
+    const sel = rowSelection ?? {}
+    const allSelected = groupRows.every(r => sel[r.id])
+    const next = { ...sel }
+    for (const r of groupRows) {
+      if (allSelected) delete next[r.id]
+      else next[r.id] = true
+    }
+    onRowSelectionChange(next)
+  }, [rowSelection, onRowSelectionChange])
+
   // Virtualization: collapsed state for groups + flat item list
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
   const toggleGroup = useCallback((key: string) => {
@@ -347,6 +368,8 @@ export default function Board<T>({
                           summary={summary}
                           collapsed={!!collapsedGroups[item.key]}
                           onToggle={() => toggleGroup(item.key)}
+                          selectionState={enableRowSelection ? getGroupSelectionState(item.group.rows) : undefined}
+                          onSelectAll={enableRowSelection ? () => toggleGroupSelection(item.group.rows) : undefined}
                         />
                       )
                     }
@@ -399,6 +422,8 @@ export default function Board<T>({
                       color={color}
                       colSpan={totalColCount}
                       summary={summary}
+                      selectionState={enableRowSelection ? getGroupSelectionState(group.rows) : undefined}
+                      onSelectAll={enableRowSelection ? () => toggleGroupSelection(group.rows) : undefined}
                     >
                       {group.rows.map(row => (
                         <BoardRow key={row.id} row={row} compact={compact} />
