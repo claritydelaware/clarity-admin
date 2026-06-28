@@ -1,7 +1,7 @@
 import type {
   Claim, NewClaimInput, ClaimUpdateInput, ClaimFullEditInput, PayPeriod, CaseloadEntry, CaseloadClientStat,
   DashboardData, CaseloadTrendMonth, ForecastAccuracyWeek,
-  StaffMember, StaffLicense, OverheadEntry, QuarterlySummary, PayerPerformance,
+  StaffMember, StaffLicense, OverheadEntry, PayrollEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
   Clinician,
@@ -150,6 +150,11 @@ export const api = {
       apiFetch<OverheadEntry>('/overhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
     update: (month: string, data: Partial<OverheadEntry>): Promise<OverheadEntry> =>
       apiFetch<OverheadEntry>(`/overhead/${month}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  },
+  payroll: {
+    list: (): Promise<PayrollEntry[]> => apiFetch<PayrollEntry[]>('/payroll'),
+    save: (data: PayrollEntry): Promise<PayrollEntry> =>
+      apiFetch<PayrollEntry>('/payroll', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   },
   payPeriodsFull: {
     list: (): Promise<{ salaryPeriods: SalaryPayPeriod[]; hourlyPeriods: HourlyPayPeriod[] }> =>

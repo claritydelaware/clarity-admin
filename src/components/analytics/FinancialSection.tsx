@@ -77,9 +77,9 @@ export default function FinancialSection({ months }: { months: CaseloadTrendMont
             sub={pct(latest.grossMarginPct)}
           />
           <MetricCard
-            label="Collection Variance"
+            label="Net Collections"
             value={formatCurrency(latest.collectionVariance ?? 0)}
-            className={(latest.collectionVariance ?? 0) > 500 ? 'border-red-200' : ''}
+            className={(latest.collectionVariance ?? 0) < 0 ? 'border-amber-200' : (latest.collectionVariance ?? 0) > 0 ? 'border-green-200' : ''}
           />
         </div>
       )}

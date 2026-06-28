@@ -252,6 +252,25 @@ export interface OverheadEntry {
   notes: string
 }
 
+export interface PayrollEmployee {
+  name: string
+  grossEarnings: number
+  employerTaxes: number
+  partnerDistribution: number
+}
+
+export interface PayrollEntry {
+  month: string
+  grossEarnings: number
+  employerTaxes: number
+  totalPayrollCost: number
+  partnerDistributions: number
+  employeeCount: number
+  breakdown: PayrollEmployee[]
+  importSource: 'gusto-import' | 'manual'
+  notes: string
+}
+
 export interface SalaryPayPeriod {
   periodStart: string
   periodEnd: string
