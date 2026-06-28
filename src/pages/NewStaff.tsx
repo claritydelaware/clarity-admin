@@ -25,6 +25,7 @@ interface FormValues {
   otherSessionRate: string
   noShowRate: string
   adminHourlyRate: string
+  targetCapacity: string
   notes: string
 }
 
@@ -67,6 +68,7 @@ export default function NewStaff() {
       otherSessionRate:   isSessionRate && values.otherSessionRate   ? parseFloat(values.otherSessionRate)   : null,
       noShowRate:         isSessionRate && values.noShowRate         ? parseFloat(values.noShowRate)         : null,
       adminHourlyRate:    isSessionRate && values.adminHourlyRate    ? parseFloat(values.adminHourlyRate)    : null,
+      targetCapacity: values.targetCapacity ? parseFloat(values.targetCapacity) : null,
       active: true,
       notes: values.notes,
     }
@@ -191,6 +193,11 @@ export default function NewStaff() {
                 </div>
               </>
             )}
+
+            <div>
+              <label className={labelClass}>Weekly Session Target (for utilization %)</label>
+              <input type="number" step="1" min="1" {...register('targetCapacity')} className={inputClass} placeholder="25" />
+            </div>
 
             <div>
               <label className={labelClass}>Notes</label>

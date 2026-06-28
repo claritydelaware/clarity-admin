@@ -349,6 +349,7 @@ export interface StaffMember {
   therapySessionRate: number | null
   otherSessionRate: number | null
   noShowRate: number | null
+  targetCapacity: number | null
 }
 
 export interface StaffLicense {

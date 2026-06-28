@@ -78,8 +78,8 @@ Six UI patterns adopted from a Landingfolio dashboard template (`templates/tailw
 
 **`CLAIM_STATUSES` array order is canonical.** The display order in the array drives all dropdowns and the multi-select popover. StatusUpdateModal, NewClaim, and EditClaim all pick up new statuses automatically via `.map()`. Current order: Pending → Payment Pending → Finalized → Deductible → Sent to Secondary → Payment Received → Denied.
 
-**Staff sheet header row is 19 columns (A:S):**
-`id, name, role, npi, licenseType, licenseNumber, licenseState, licenseExpiration, hireDate, compensationType, annualSalary, sessionRate, adminHourlyRate, active, notes, caqhId, therapySessionRate, otherSessionRate, noShowRate`
+**Staff sheet header row is 20 columns (A:T):**
+`id, name, role, npi, licenseType, licenseNumber, licenseState, licenseExpiration, hireDate, compensationType, annualSalary, sessionRate, adminHourlyRate, active, notes, caqhId, therapySessionRate, otherSessionRate, noShowRate, targetCapacity`
 
 **`Staff_Licenses` tab columns (A:H):**
 `id, staffId, licenseType, licenseNumber, licenseState, effectiveDate, expirationDate, active`
@@ -94,10 +94,11 @@ Six UI patterns adopted from a Landingfolio dashboard template (`templates/tailw
 
 **Overhead xlsx import is a local-only workflow.** `Overhead.tsx` uses `import.meta.glob('../../reporting/*.xlsx', { eager: true })` to discover files at Vite build/dev-server start time — not at runtime. Consequences: (1) files added to `reporting/` after the dev server starts won't appear until the server is restarted; (2) the production site (`admin.claritydelaware.com`) can never access xlsx files because `reporting/` is gitignored and is not included in the Cloudflare Pages build. The correct workflow: drop the Xero export into `reporting/` locally → restart the dev server → import and confirm in the UI → data is saved to the `Overhead` Google Sheet tab → confirmed data is then readable from the live site via the Worker.
 
-**There are three separate overhead data sources — do not conflate them:**
-1. **`Overhead` sheet tab** — Xero-imported entries saved via the Overhead page. This is the source for Analytics quarterly summary (`getQuarterlySummary`) and quarter projection (`getQuarterProjection`). Missing months trigger amber warning banners in Analytics.
-2. **`Caseload Trends` sheet columns AK–AL** (indices 36–37) — formula-driven overhead figures read by `getCaseloadTrends`. These populate `CaseloadTrendMonth.operationalOverhead` and `.totalOverhead`, which drive the Overhead line in the Analytics Financial Performance chart. This data is managed entirely in the spreadsheet; the portal doesn't write to it.
-3. **Formula constants in the Worker** (`EMILY_PAYROLL_TAX_RATE = 0.0956`, `EMILY_FIXED_OVERHEAD_PER_PERIOD = 110.80`) — used to estimate overhead per pay period on the Emily payroll tab and in Emily's `PayPeriodSummary` entries stored in `Payroll_Records`. These have no relationship to Xero imports. The source of truth for these constants is `Config!I1:J2` in the spreadsheet.
+**There are two separate overhead data sources — do not conflate them:**
+1. **`Overhead` sheet tab** — Xero-imported entries saved via the Overhead page. This is the source for Analytics quarterly summary (`getQuarterlySummary`), quarter projection (`getQuarterProjection`), and the Financial Performance chart via `getCaseloadTrends`. Missing months trigger amber warning banners in Analytics.
+2. **Formula constants in the Worker** (`W2_PAYROLL_TAX_RATE = 0.0956`, `W2_FIXED_OVERHEAD_PER_PERIOD = 110.80`) — used to estimate overhead per pay period on the hourly clinician payroll tab and in `PayPeriodSummary` entries stored in `Payroll_Records`. These have no relationship to Xero imports. The source of truth for these constants is `Config!I1:J2` in the spreadsheet, also exposed via `GET /api/config`.
+
+**`getCaseloadTrends` no longer reads from the `Caseload Trends` sheet.** All fields (sessions, clients, revenue, avg/week, utilization, payroll, overhead, margin) are computed from Claims + Staff + Overhead data. The `Caseload Trends` sheet is now a legacy reference only. The `Actual vs Forecast` sheet is also no longer read — `getForecastAccuracy` computes all values from Claims data.
 
 ---
 

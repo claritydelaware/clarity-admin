@@ -271,6 +271,7 @@ export default function StaffDetail() {
   const [otherSessionRate, setOtherSessionRate] = useState('')
   const [noShowRate, setNoShowRate] = useState('')
   const [adminHourlyRate, setAdminHourlyRate] = useState('')
+  const [targetCapacity, setTargetCapacity] = useState('')
   const [notes, setNotes] = useState('')
 
   useEffect(() => {
@@ -290,6 +291,7 @@ export default function StaffDetail() {
       setOtherSessionRate(member.otherSessionRate != null ? String(member.otherSessionRate) : '')
       setNoShowRate(member.noShowRate != null ? String(member.noShowRate) : '')
       setAdminHourlyRate(member.adminHourlyRate != null ? String(member.adminHourlyRate) : '')
+      setTargetCapacity(member.targetCapacity != null ? String(member.targetCapacity) : '')
       setNotes(member.notes)
     }
   }, [member])
@@ -317,6 +319,7 @@ export default function StaffDetail() {
       updates.noShowRate         = parseFloat(noShowRate) || null
       updates.adminHourlyRate    = parseFloat(adminHourlyRate) || null
     }
+    updates.targetCapacity = parseFloat(targetCapacity) || null
     updateStaff({ id: member.id, data: updates })
   }
 
@@ -409,6 +412,7 @@ export default function StaffDetail() {
                 <Input label="Admin Hourly Rate ($/hr)" value={adminHourlyRate} onChange={e => setAdminHourlyRate(e.target.value)} type="number" />
               </>
             )}
+            <Input label="Weekly Session Target (for utilization %)" value={targetCapacity} onChange={e => setTargetCapacity(e.target.value)} type="number" />
             <Input label="Notes" value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
         </Card>

@@ -376,13 +376,21 @@ PATCH /api/claims/:rowIndex
      Returns: updated claim object
 
 GET  /api/analytics/caseload-trends
-     No params. Reads Caseload Trends!A:AO. Filters rows where Month is null.
+     No params. Computes all fields from Claims + Staff + Overhead data.
      Returns: CaseloadTrendMonth[] sorted ascending by month (ISO date strings).
      Util percentages are returned as decimals (0.85 = 85%).
+     Sessions, clients, revenue computed from Claims. Utilization uses
+     Staff.targetCapacity. Payroll/overhead from Staff salaries + Overhead tab.
 
 GET  /api/analytics/forecast-accuracy
-     No params. Reads 'Actual vs Forecast'!A:E. Filters rows where both Forecast
-     and Actual are null. Returns: ForecastAccuracyWeek[] sorted ascending by weekStart.
+     No params. Computes forecast vs actual from Claims forecastWeek and
+     receivedWeek columns. Returns: ForecastAccuracyWeek[] sorted ascending
+     by weekStart, with running cumulative difference.
+
+GET  /api/config
+     No params. Reads Config!I1:J2 from the spreadsheet.
+     Returns: { w2PayrollTaxRate, w2FixedOverheadPerPeriod }
+     Falls back to hardcoded defaults if Config tab is missing.
 ```
 
 ### CORS Policy
