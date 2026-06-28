@@ -147,11 +147,25 @@ function parseGustoCsv(text: string, month: string, periodLabel: string): GustoP
   let inSection = false
   let payRunCount = 0
   let totalDistributions = 0
+  let currentEmployee: string | null = null
 
   for (let i = 0; i < lines.length; i++) {
     const row = lines[i]
 
-    if (!row[0] || row[0] === '') { inSection = false; continue }
+    if (!row[0] || row[0] === '') {
+      if (inSection && currentEmployee) {
+        const job = row[4] ?? ''
+        const payType = row[5] ?? ''
+        if (job !== 'Totals' && payType !== 'Gross') {
+          const addlAmount = parseFloat(row[colMap.amount ?? 8]?.replace(/[$,]/g, '') ?? '') || 0
+          if (addlAmount > 0) {
+            const emp = employees.get(currentEmployee)
+            if (emp) emp.grossEarnings += addlAmount
+          }
+        }
+      }
+      continue
+    }
 
     if (row[0] === 'Last Name') {
       colMap = {}
@@ -165,15 +179,17 @@ function parseGustoCsv(text: string, month: string, periodLabel: string): GustoP
       }
       payRunCount++
       inSection = true
+      currentEmployee = null
       continue
     }
 
     if (!inSection) continue
-    if (row[0] === 'Payroll Totals') { inSection = false; continue }
+    if (row[0] === 'Payroll Totals') { inSection = false; currentEmployee = null; continue }
 
     const lastName = row[colMap.lastName ?? 0] ?? ''
     const firstName = row[colMap.firstName ?? 1] ?? ''
     if (!lastName) continue
+    if (!(row[2] ?? '').trim()) continue
 
     const amount = parseFloat(row[colMap.amount ?? 2]?.replace(/[$,]/g, '') ?? '') || 0
     const eTaxes = parseFloat(row[colMap.employerTaxes ?? 4]?.replace(/[$,]/g, '') ?? '') || 0
@@ -182,6 +198,7 @@ function parseGustoCsv(text: string, month: string, periodLabel: string): GustoP
       : 0
 
     const name = `${firstName} ${lastName}`.trim()
+    currentEmployee = name
     const existing = employees.get(name) ?? { name, grossEarnings: 0, employerTaxes: 0, partnerDistribution: 0 }
     existing.grossEarnings += amount
     existing.employerTaxes += eTaxes
