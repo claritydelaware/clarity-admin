@@ -198,6 +198,9 @@ export default function NewClaimModal({ open, onClose }: Props) {
 
   const is90785Alone = serviceCode === '90785' && !showSupplemental
 
+  const notes = watch('notes') ?? ''
+  const hasCollectionNote = notes.toLowerCase().includes('copay received') || notes.toLowerCase().includes('coinsurance received')
+
   const clientAmount = parseFloat(clientAmountRaw) || 0
   const stripeFees = clientAmount > 0 ? Math.round((clientAmount * 0.029 + 0.3) * 100) / 100 : 0
 
@@ -459,6 +462,33 @@ export default function NewClaimModal({ open, onClose }: Props) {
 
           <div>
             <label className={labelClass}>Notes</label>
+            <div className="flex items-center gap-4 mb-2">
+              {(['Copay received', 'Coinsurance received'] as const).map(label => {
+                const currentNotes = watch('notes') ?? ''
+                const isChecked = currentNotes.includes(label)
+                return (
+                  <label key={label} className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {
+                        const other = label === 'Copay received' ? 'Coinsurance received' : 'Copay received'
+                        let notes = currentNotes
+                        if (isChecked) {
+                          notes = notes.replace(label, '').replace(/^[,;\s]+|[,;\s]+$/g, '').replace(/\s{2,}/g, ' ')
+                        } else {
+                          notes = notes.replace(other, '').replace(/^[,;\s]+|[,;\s]+$/g, '').replace(/\s{2,}/g, ' ')
+                          notes = notes ? `${label}; ${notes}` : label
+                        }
+                        setValue('notes', notes)
+                      }}
+                      className="rounded border-gray-300 text-teal focus:ring-teal cursor-pointer"
+                    />
+                    <span className="text-xs font-ui text-muted">{label}</span>
+                  </label>
+                )
+              })}
+            </div>
             <textarea
               {...register('notes')}
               rows={3}
@@ -554,6 +584,12 @@ export default function NewClaimModal({ open, onClose }: Props) {
             <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
               90785 is an add-on code and cannot be billed alone. Use "+ Add supplemental code" to pair it with a primary service.
+            </div>
+          )}
+          {clientAmount > 0 && status !== 'Deductible' && !['self-pay', 'late cancellation'].includes((insurance ?? '').toLowerCase()) && !hasCollectionNote && (
+            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+              <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+              Client amount of {formatCurrency(clientAmount)} entered without copay/coinsurance collection noted. This claim will be flagged as outstanding.
             </div>
           )}
 

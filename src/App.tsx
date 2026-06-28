@@ -3,7 +3,6 @@ import AppShell from './components/layout/AppShell'
 import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
 import Claims from './pages/Claims'
-import EditClaim from './pages/EditClaim'
 import Forecast from './pages/Forecast'
 import Overhead from './pages/Overhead'
 import PayPeriodSummary from './pages/PayPeriodSummary'
@@ -21,7 +20,6 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="claims" element={<Claims />} />
-          <Route path="claims/:rowIndex/edit" element={<EditClaim />} />
           <Route path="forecast" element={<Forecast />} />
           <Route path="overhead" element={<Overhead />} />
           <Route path="pay-periods" element={<PayPeriodSummary />} />

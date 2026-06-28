@@ -22,6 +22,7 @@ const MAX_WIDTH = {
 export default function Dialog({ open, onClose, title, children, maxWidth = 'md', hideCloseButton }: DialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const mouseDownTarget = useRef<EventTarget | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -51,7 +52,12 @@ export default function Dialog({ open, onClose, title, children, maxWidth = 'md'
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-      onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
+      onMouseDown={(e) => { mouseDownTarget.current = e.target }}
+      onClick={(e) => {
+        const outsidePanel = panelRef.current && !panelRef.current.contains(e.target as Node)
+        const startedOutside = panelRef.current && !panelRef.current.contains(mouseDownTarget.current as Node)
+        if (outsidePanel && startedOutside) onClose()
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={title}

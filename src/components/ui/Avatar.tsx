@@ -22,6 +22,7 @@ const FALLBACK_COLORS = [
 interface AvatarProps {
   name: string
   size?: 'sm' | 'md' | 'lg'
+  pixelSize?: number
   className?: string
 }
 
@@ -50,7 +51,14 @@ function getColorClass(name: string): string {
   return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length]
 }
 
-export default function Avatar({ name, size = 'md', className = '' }: AvatarProps) {
+function pxFontSize(px: number): string {
+  if (px <= 24) return '10px'
+  if (px <= 32) return '12px'
+  if (px <= 48) return '14px'
+  return '16px'
+}
+
+export default function Avatar({ name, size = 'md', pixelSize, className = '' }: AvatarProps) {
   const photo = CLINICIAN_PHOTOS[name]
 
   if (photo) {
@@ -61,9 +69,10 @@ export default function Avatar({ name, size = 'md', className = '' }: AvatarProp
         title={name}
         className={[
           'rounded-full object-cover shrink-0',
-          SIZE_DIMS[size],
+          !pixelSize && SIZE_DIMS[size],
           className,
-        ].join(' ')}
+        ].filter(Boolean).join(' ')}
+        style={pixelSize ? { width: pixelSize, height: pixelSize } : undefined}
       />
     )
   }
@@ -72,11 +81,12 @@ export default function Avatar({ name, size = 'md', className = '' }: AvatarProp
     <span
       className={[
         'inline-flex items-center justify-center rounded-full font-ui font-semibold shrink-0',
-        SIZE_DIMS[size],
-        SIZE_TEXT[size],
+        !pixelSize && SIZE_DIMS[size],
+        !pixelSize && SIZE_TEXT[size],
         getColorClass(name),
         className,
-      ].join(' ')}
+      ].filter(Boolean).join(' ')}
+      style={pixelSize ? { width: pixelSize, height: pixelSize, fontSize: pxFontSize(pixelSize) } : undefined}
       title={name}
     >
       {getInitials(name)}

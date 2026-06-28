@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { createColumnHelper, type ColumnDef, type RowSelectionState, type Row } from '@tanstack/react-table'
 import { Copy, Check, X, Trash2, ExternalLink } from 'lucide-react'
 import type { Claim, ClaimStatus } from '../../types'
 import { SERVICE_CODES, SUBMISSION_METHODS } from '../../types'
-import { formatCurrency, formatDate, toInputDate, getPayerStyle } from '../../lib/utils'
+import { formatCurrency, formatDate, toInputDate, getPayerStyle, hasOutstandingCollection } from '../../lib/utils'
 import { useInlineEditClaim, useBulkUpdateClaims } from '../../hooks/useClaims'
 import Board from '../board/Board'
 import StatusCell, { STATUS_COLORS } from '../board/cells/StatusCell'
@@ -42,16 +42,59 @@ const GROUP_CONFIG = Object.fromEntries(
   STATUS_ORDER.map(s => [s, { color: STATUS_COLORS[s], label: s }])
 ) as Record<string, { color: string; label: string }>
 
+function CollectionDot({ onMark }: { onMark: (label: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        title="Outstanding copay/coinsurance"
+        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        className="w-2.5 h-2.5 rounded-full bg-error shrink-0 cursor-pointer hover:ring-2 hover:ring-error/30 transition-shadow"
+      />
+      {open && (
+        <div className="absolute z-30 right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg py-1 min-w-40 animate-slide-down">
+          <p className="px-3 py-1 text-[10px] font-medium text-muted uppercase tracking-wide border-b border-border mb-0.5">
+            Mark as collected
+          </p>
+          {['Copay received', 'Coinsurance received'].map(label => (
+            <button
+              key={label}
+              type="button"
+              onClick={e => { e.stopPropagation(); onMark(label); setOpen(false) }}
+              className="w-full text-left px-3 py-1.5 text-sm font-ui text-ink hover:bg-teal-pale transition-colors"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   claims: Claim[]
   onStatusClick: (claim: Claim) => void
   onDeleteClick: (claim: Claim) => void
+  onEditClick: (claim: Claim) => void
   onAddRow?: () => void
   compact?: boolean
   virtualize?: boolean
 }
 
-export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAddRow, compact = false, virtualize = false }: Props) {
+export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEditClick, onAddRow, compact = false, virtualize = false }: Props) {
   const { mutateAsync: inlineEdit } = useInlineEditClaim()
   const bulkUpdate = useBulkUpdateClaims()
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -174,7 +217,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
       header: 'Clin.',
       size: 60,
       meta: { align: 'center' },
-      cell: ({ getValue }) => <PersonCell name={getValue()} />,
+      cell: ({ getValue, column }) => <PersonCell name={getValue()} columnWidth={column.getSize()} />,
     }),
     col.accessor('insurance', {
       header: 'Payer',
@@ -271,7 +314,23 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
       header: 'Client',
       size: 100,
       meta: { align: 'center' },
-      cell: ({ row }) => <CurrencyCell value={row.original.clientAmount} onSave={save(row.original.rowIndex, 'clientAmount')} />,
+      cell: ({ row }) => {
+        const outstanding = hasOutstandingCollection(row.original)
+        return (
+          <span className="inline-flex items-center gap-1.5">
+            <CurrencyCell value={row.original.clientAmount} onSave={save(row.original.rowIndex, 'clientAmount')} />
+            {outstanding && (
+              <CollectionDot
+                onMark={(label) => {
+                  const existing = row.original.notes ?? ''
+                  const notes = existing ? `${label}; ${existing}` : label
+                  save(row.original.rowIndex, 'notes')(notes)
+                }}
+              />
+            )}
+          </span>
+        )
+      },
     }),
     col.accessor('trueClientAmount', {
       header: 'True Client $',
@@ -367,13 +426,13 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
       header: '',
       cell: ({ row }) => (
         <span className="inline-flex items-center gap-2">
-          <Link
-            to={`/claims/${row.original.rowIndex}/edit`}
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onEditClick(row.original) }}
             className="text-xs text-teal hover:underline font-ui"
-            onClick={e => e.stopPropagation()}
           >
             Edit
-          </Link>
+          </button>
           <button
             type="button"
             title="Delete claim"

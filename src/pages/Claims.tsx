@@ -4,11 +4,12 @@ import type { Claim } from '../types'
 import { PAYER_GROUPS } from '../types'
 import { useClaims } from '../hooks/useClaims'
 import { api } from '../lib/api'
-import { downloadCsv, isArchived } from '../lib/utils'
+import { downloadCsv, isArchived, hasOutstandingCollection } from '../lib/utils'
 import ClaimsFilters, { useClaimFilters } from '../components/claims/ClaimsFilters'
 import ClaimsBoard from '../components/claims/ClaimsBoard'
 import StatusUpdateModal from '../components/claims/StatusUpdateModal'
 import DeleteClaimModal from '../components/claims/DeleteClaimModal'
+import EditClaimModal from '../components/claims/EditClaimModal'
 import NewClaimModal from '../components/claims/NewClaimModal'
 import { SkeletonTable } from '../components/ui/Skeleton'
 import PageHeader from '../components/layout/PageHeader'
@@ -20,6 +21,7 @@ import useLocalStorage from '../hooks/useLocalStorage'
 export default function Claims() {
   const filters = useClaimFilters()
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null)
+  const [editingClaim, setEditingClaim] = useState<Claim | null>(null)
   const [deletingClaim, setDeletingClaim] = useState<Claim | null>(null)
   const [newClaimOpen, setNewClaimOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -73,6 +75,9 @@ export default function Claims() {
       if (filters.to && pd > new Date(filters.to)) return false
       return true
     })
+  }
+  if (filters.pendingCollection) {
+    displayed = displayed.filter(hasOutstandingCollection)
   }
   const displayedOrNull = claims ? displayed : null
 
@@ -140,7 +145,7 @@ export default function Claims() {
       )}
 
       {displayedOrNull && (
-        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} onDeleteClick={setDeletingClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} virtualize={viewMode === 'all'} />
+        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} onDeleteClick={setDeletingClaim} onEditClick={setEditingClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} virtualize={viewMode === 'all'} />
       )}
 
       {selectedClaim && (
@@ -151,6 +156,13 @@ export default function Claims() {
       )}
 
       <NewClaimModal open={newClaimOpen} onClose={() => setNewClaimOpen(false)} />
+
+      {editingClaim && (
+        <EditClaimModal
+          claim={editingClaim}
+          onClose={() => setEditingClaim(null)}
+        />
+      )}
 
       {deletingClaim && (
         <DeleteClaimModal

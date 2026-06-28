@@ -15,6 +15,18 @@ export function isArchived(claim: Claim): boolean {
   return false
 }
 
+const COLLECTION_EXEMPT_PAYERS = ['self-pay', 'late cancellation']
+
+export function hasOutstandingCollection(claim: Claim): boolean {
+  if (claim.clientAmount <= 0) return false
+  if (claim.status === 'Deductible') return !claim.paymentDateReceived
+  if (COLLECTION_EXEMPT_PAYERS.includes(claim.insurance.toLowerCase())) {
+    return claim.status !== 'Payment Received'
+  }
+  const notes = (claim.notes ?? '').toLowerCase()
+  return !notes.includes('copay received') && !notes.includes('coinsurance received')
+}
+
 export function getSundayOfWeek(date: Date): Date {
   const d = new Date(date)
   d.setDate(d.getDate() - d.getDay())

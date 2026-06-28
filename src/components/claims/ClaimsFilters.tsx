@@ -18,6 +18,7 @@ export interface ActiveFilters {
   search: string
   clientId: string
   dateField: 'claimDate' | 'paymentDate'
+  pendingCollection: boolean
 }
 
 export function useClaimFilters(): ActiveFilters {
@@ -32,6 +33,7 @@ export function useClaimFilters(): ActiveFilters {
     search:      sp.get('search')      ?? '',
     clientId:    sp.get('clientId')    ?? '',
     dateField:   (sp.get('dateField') as 'claimDate' | 'paymentDate') || 'claimDate',
+    pendingCollection: sp.get('pendingCollection') === '1',
   }
 }
 
@@ -307,6 +309,19 @@ export default function ClaimsFilters() {
             className="rounded border-gray-300 accent-teal"
           />
           Payment Date
+        </label>
+
+        <label className="inline-flex items-center gap-1.5 text-xs font-body text-muted cursor-pointer select-none" title="Show only claims with outstanding copay/coinsurance">
+          <input
+            type="checkbox"
+            checked={sp.get('pendingCollection') === '1'}
+            onChange={e => set('pendingCollection', e.target.checked ? '1' : '')}
+            className="rounded border-gray-300 accent-teal"
+          />
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-error inline-block" />
+            Pending Collection
+          </span>
         </label>
 
         {hasFilters && !saving && (
