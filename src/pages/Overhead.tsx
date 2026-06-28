@@ -144,12 +144,14 @@ function parseGustoCsv(text: string, month: string, periodLabel: string): GustoP
 
   const employees = new Map<string, PayrollEmployee>()
   let colMap: Record<string, number> = {}
+  let inSection = false
   let payRunCount = 0
   let totalDistributions = 0
 
   for (let i = 0; i < lines.length; i++) {
     const row = lines[i]
-    if (!row[0]) continue
+
+    if (!row[0] || row[0] === '') { inSection = false; continue }
 
     if (row[0] === 'Last Name') {
       colMap = {}
@@ -162,14 +164,16 @@ function parseGustoCsv(text: string, month: string, periodLabel: string): GustoP
         if (h === 'partner distribution') colMap.partnerDistribution = j
       }
       payRunCount++
+      inSection = true
       continue
     }
 
-    if (row[0] === 'Payroll Totals' || !row[0]) continue
+    if (!inSection) continue
+    if (row[0] === 'Payroll Totals') { inSection = false; continue }
 
     const lastName = row[colMap.lastName ?? 0] ?? ''
     const firstName = row[colMap.firstName ?? 1] ?? ''
-    if (!lastName || lastName === 'Payroll Totals') continue
+    if (!lastName) continue
 
     const amount = parseFloat(row[colMap.amount ?? 2]?.replace(/[$,]/g, '') ?? '') || 0
     const eTaxes = parseFloat(row[colMap.employerTaxes ?? 4]?.replace(/[$,]/g, '') ?? '') || 0
