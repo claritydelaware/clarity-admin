@@ -201,7 +201,7 @@ export default function Board<T>({
   }, [])
 
   type FlatItem = { type: 'group'; key: string; group: { key: string; rows: Row<T>[] } }
-    | { type: 'row'; row: Row<T> }
+    | { type: 'row'; row: Row<T>; groupKey?: string }
     | { type: 'add-row' }
 
   const flatItems = useMemo<FlatItem[]>(() => {
@@ -212,7 +212,7 @@ export default function Board<T>({
         items.push({ type: 'group', key: group.key, group })
         if (!collapsedGroups[group.key]) {
           for (const row of group.rows) {
-            items.push({ type: 'row', row })
+            items.push({ type: 'row', row, groupKey: group.key })
           }
         }
       }
@@ -332,7 +332,7 @@ export default function Board<T>({
       {/* Table */}
       {virtualize ? (
         <div ref={scrollRef} className="overflow-auto rounded-lg border border-border bg-white" style={{ maxHeight: 'calc(100vh - 160px)' }}>
-          <table className="w-full text-sm font-body" role="grid" aria-label="Data board">
+          <table className="w-full text-sm font-body" role="grid" aria-label="Data board" style={{ borderCollapse: 'separate', borderSpacing: '0 3px' }}>
             <BoardHeader headerGroups={headerGroups} sticky />
             <tbody>
               {rows.length === 0 ? (
@@ -376,7 +376,8 @@ export default function Board<T>({
                     if (item.type === 'add-row') {
                       return <BoardAddRow key="__add" onClick={onAddRow!} label={addRowLabel!} colSpan={totalColCount} />
                     }
-                    return <BoardRow key={item.row.id} row={item.row} compact={compact} />
+                    const gColor = item.groupKey ? groupConfig?.[item.groupKey]?.color : undefined
+                    return <BoardRow key={item.row.id} row={item.row} compact={compact} groupColor={gColor} />
                   })}
                   {(() => {
                     const vItems = virtualizer.getVirtualItems()
@@ -391,7 +392,7 @@ export default function Board<T>({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border bg-white">
-          <table className="w-full text-sm font-body" role="grid" aria-label="Data board">
+          <table className="w-full text-sm font-body" role="grid" aria-label="Data board" style={{ borderCollapse: 'separate', borderSpacing: '0 3px' }}>
             <BoardHeader headerGroups={headerGroups} />
             <tbody>
               {rows.length === 0 && (

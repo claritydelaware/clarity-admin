@@ -21,7 +21,7 @@ export default function BoardHeader<T>({ headerGroups, sticky = false }: Props<T
                 aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined}
                 tabIndex={header.column.getCanSort() ? 0 : undefined}
                 className={[
-                  'px-3 py-2.5 text-[11px] font-ui font-medium text-muted uppercase tracking-wider whitespace-nowrap',
+                  'px-3 py-2.5 text-[11px] font-ui font-medium text-muted uppercase tracking-wider whitespace-nowrap border-r border-border-strong/40 last:border-r-0',
                   align === 'center' ? 'text-center' : 'text-left',
                   header.column.getCanSort() ? 'cursor-pointer select-none hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-inset' : '',
                 ].join(' ')}

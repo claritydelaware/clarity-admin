@@ -8,7 +8,7 @@ const CLINICIAN_COLORS: Record<string, string> = {
 const CLINICIAN_PHOTOS: Record<string, string> = {
   Shannon: '/avatars/shannon-tarolli.webp',
   Jen:     '/avatars/jen-meehan.webp',
-  Emily:   '/avatars/emily-bryant.webp',
+  Emily:   '/avatars/emily-bryant.png',
   Shana:   '/avatars/shana_1.jpg',
 }
 

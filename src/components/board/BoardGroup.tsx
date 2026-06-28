@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Children, cloneElement, isValidElement } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
 interface Props {
@@ -32,11 +32,19 @@ export default function BoardGroup({ label, count, color, colSpan, summary, defa
     else setInternalCollapsed(c => !c)
   }
 
+  const coloredChildren = Children.map(children, child => {
+    if (isValidElement(child)) {
+      return cloneElement(child as React.ReactElement<{ groupColor?: string }>, { groupColor: color })
+    }
+    return child
+  })
+
   return (
     <>
       <tr
         role="row"
-        className="cursor-pointer select-none hover:bg-surface-sunken/50 transition-colors"
+        className="cursor-pointer select-none transition-colors"
+        style={{ backgroundColor: color }}
         onClick={toggle}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
         tabIndex={0}
@@ -44,7 +52,7 @@ export default function BoardGroup({ label, count, color, colSpan, summary, defa
       >
         <td
           colSpan={colSpan}
-          className="py-2 px-3"
+          className="py-2.5 px-3 border-b border-border/50"
           style={{ borderLeft: `4px solid ${color}` }}
         >
           <div className="flex items-center gap-2">
@@ -53,25 +61,25 @@ export default function BoardGroup({ label, count, color, colSpan, summary, defa
                 ref={checkRef}
                 type="checkbox"
                 onClick={e => { e.stopPropagation(); onSelectAll() }}
-                className="rounded border-gray-300 text-teal focus:ring-teal cursor-pointer shrink-0"
+                className="rounded border-white/60 text-teal focus:ring-white cursor-pointer shrink-0"
                 aria-label={`Select all ${label} claims`}
               />
             )}
             {collapsed
-              ? <ChevronRight size={16} className="text-muted shrink-0" />
-              : <ChevronDown size={16} className="text-muted shrink-0" />
+              ? <ChevronRight size={16} className="shrink-0 text-white" />
+              : <ChevronDown size={16} className="shrink-0 text-white" />
             }
-            <span className="text-sm font-heading font-semibold text-ink">{label}</span>
-            <span className="text-xs font-ui text-muted bg-surface-sunken px-2 py-0.5 rounded-full">
+            <span className="text-sm font-heading font-semibold text-white">{label}</span>
+            <span className="text-xs font-ui font-medium px-2 py-0.5 rounded-full bg-white/20 text-white">
               {count}
             </span>
             {summary && (
-              <span className="ml-auto text-xs font-ui text-muted tabular-nums">{summary}</span>
+              <span className="ml-auto text-xs font-ui text-white/80 tabular-nums">{summary}</span>
             )}
           </div>
         </td>
       </tr>
-      {!collapsed && children}
+      {!collapsed && coloredChildren}
     </>
   )
 }

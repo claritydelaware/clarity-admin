@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { createColumnHelper, type ColumnDef, type RowSelectionState } from '@tanstack/react-table'
+import { createColumnHelper, type ColumnDef, type RowSelectionState, type Row } from '@tanstack/react-table'
 import { Copy, Check, X, Trash2, ExternalLink } from 'lucide-react'
 import type { Claim, ClaimStatus } from '../../types'
 import { SERVICE_CODES, SUBMISSION_METHODS } from '../../types'
-import { formatCurrency, formatDate, toInputDate } from '../../lib/utils'
+import { formatCurrency, formatDate, toInputDate, getPayerStyle } from '../../lib/utils'
 import { useInlineEditClaim, useBulkUpdateClaims } from '../../hooks/useClaims'
 import Board from '../board/Board'
 import StatusCell, { STATUS_COLORS } from '../board/cells/StatusCell'
@@ -13,6 +13,7 @@ import DateCell from '../board/cells/DateCell'
 import PersonCell from '../board/cells/PersonCell'
 import TextCell from '../board/cells/TextCell'
 import NumberCell from '../board/cells/NumberCell'
+import TimelineCell from '../board/cells/TimelineCell'
 import Tooltip from '../ui/Tooltip'
 import { PayerBadge } from '../ui/Badge'
 import BulkUpdateModal from './BulkUpdateModal'
@@ -85,6 +86,15 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     })
   }
 
+  const maxClaimIdLen = useMemo(() => {
+    let max = 0
+    for (const c of claims) {
+      if (c.claimId && c.claimId.length > max) max = c.claimId.length
+    }
+    return max
+  }, [claims])
+  const claimIdColWidth = Math.max(maxClaimIdLen * 5 + 15, 50)
+
   const col = createColumnHelper<Claim>()
 
   const columns = [
@@ -129,7 +139,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     }),
     col.accessor('claimId', {
       header: 'Claim ID',
-      size: 110,
+      size: claimIdColWidth,
       enableSorting: false,
       cell: ({ row }) => {
         const claim = row.original
@@ -169,31 +179,61 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     }),
     col.accessor('clinician', {
       header: 'Clin.',
-      size: 90,
+      size: 60,
+      meta: { align: 'center' },
       cell: ({ getValue }) => <PersonCell name={getValue()} />,
     }),
     col.accessor('insurance', {
       header: 'Payer',
-      size: 95,
-      meta: { align: 'center' },
-      cell: ({ getValue }) => <PayerBadge payer={getValue()} />,
+      size: 110,
+      meta: {
+        align: 'center',
+        cellBg: (row: Row<Claim>) => getPayerStyle(row.original.insurance).backgroundColor,
+      },
+      cell: ({ getValue }) => {
+        const payer = getValue()
+        const style = getPayerStyle(payer)
+        return <span className="text-xs font-ui font-medium" style={{ color: style.color }}>{payer}</span>
+      },
     }),
     col.accessor('claimDate', {
       header: 'Date',
       size: 100,
+      meta: { align: 'center' },
       sortingFn: (a, b) => new Date(a.original.claimDate).getTime() - new Date(b.original.claimDate).getTime(),
       cell: ({ getValue }) => <span className="text-muted whitespace-nowrap">{formatDate(getValue())}</span>,
     }),
+    col.accessor('forecastPaymentDate', {
+      id: 'timeline',
+      header: 'Timeline',
+      size: 160,
+      meta: { align: 'center' },
+      enableSorting: true,
+      sortingFn: (a, b) => {
+        const aDate = a.original.forecastPaymentDate ? new Date(a.original.forecastPaymentDate).getTime() : 0
+        const bDate = b.original.forecastPaymentDate ? new Date(b.original.forecastPaymentDate).getTime() : 0
+        return aDate - bDate
+      },
+      cell: ({ row }) => (
+        <TimelineCell
+          claimDate={row.original.claimDate}
+          forecastPaymentDate={row.original.forecastPaymentDate}
+          paymentDateReceived={row.original.paymentDateReceived}
+          status={row.original.status}
+        />
+      ),
+    }),
     col.accessor('payPeriod', {
       header: 'Pay Period',
+      size: 100,
       enableSorting: false,
-      meta: { defaultHidden: true },
+      meta: { defaultHidden: true, align: 'center' },
       cell: ({ getValue }) => <span className="text-muted whitespace-nowrap">{getValue() || '—'}</span>,
     }),
     col.accessor('submissionMethod', {
       header: 'Method',
       size: 100,
-      meta: { defaultHidden: true },
+      meta: { defaultHidden: true, align: 'center' },
       cell: ({ row }) => (
         <TextCell
           value={row.original.submissionMethod}
@@ -206,6 +246,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     col.accessor('serviceCode', {
       header: 'Code',
       size: 80,
+      meta: { align: 'center' },
       cell: ({ row }) => (
         <TextCell
           value={row.original.serviceCode}
@@ -217,41 +258,55 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     }),
     col.accessor('status', {
       header: 'Status',
-      size: 120,
-      meta: { align: 'center' },
-      cell: ({ row }) => <StatusCell status={row.original.status} onClick={() => onStatusClick(row.original)} />,
+      size: 130,
+      meta: {
+        align: 'center',
+        cellBg: (row: Row<Claim>) => STATUS_COLORS[row.original.status] ?? 'var(--color-status-gray)',
+      },
+      cell: ({ row }) => (
+        <button
+          type="button"
+          onClick={() => onStatusClick(row.original)}
+          className="w-full h-full text-xs font-ui font-medium text-white cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal"
+          title="Click to update status"
+        >
+          {row.original.status}
+        </button>
+      ),
     }),
     col.accessor('clientAmount', {
       header: 'Client',
       size: 100,
+      meta: { align: 'center' },
       cell: ({ row }) => <CurrencyCell value={row.original.clientAmount} onSave={save(row.original.rowIndex, 'clientAmount')} />,
     }),
     col.accessor('trueClientAmount', {
       header: 'True Client $',
       size: 100,
-      meta: { defaultHidden: true },
-      cell: ({ getValue }) => <span className="tabular-nums text-right">{formatCurrency(getValue())}</span>,
+      meta: { defaultHidden: true, align: 'center' },
+      cell: ({ getValue }) => <span className="tabular-nums">{formatCurrency(getValue())}</span>,
     }),
     col.accessor('stripeFees', {
       header: 'Stripe Fees',
       size: 90,
-      meta: { defaultHidden: true },
+      meta: { defaultHidden: true, align: 'center' },
       cell: ({ getValue }) => {
         const v = getValue()
         return v > 0
-          ? <span className="tabular-nums text-right text-muted">{formatCurrency(v)}</span>
+          ? <span className="tabular-nums text-muted">{formatCurrency(v)}</span>
           : <span className="text-muted italic">—</span>
       },
     }),
     col.accessor('insuranceAmount', {
       header: 'Ins.',
       size: 100,
+      meta: { align: 'center' },
       cell: ({ row }) => <CurrencyCell value={row.original.insuranceAmount} onSave={save(row.original.rowIndex, 'insuranceAmount')} />,
     }),
     col.accessor('insurancePaidHHO', {
       header: 'Ins. Paid (HHO)',
       size: 110,
-      meta: { defaultHidden: true },
+      meta: { defaultHidden: true, align: 'center' },
       cell: ({ row }) => (
         <CurrencyCell value={row.original.insurancePaidHHO ?? 0} onSave={save(row.original.rowIndex, 'insurancePaidHHO')} />
       ),
@@ -259,12 +314,12 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     col.accessor('overUnderHHO', {
       header: 'Over/Under (HHO)',
       size: 120,
-      meta: { defaultHidden: true },
+      meta: { defaultHidden: true, align: 'center' },
       cell: ({ getValue }) => {
         const v = getValue()
         if (v == null) return <span className="text-muted italic">—</span>
         return (
-          <span className={`tabular-nums text-right font-medium ${v > 0 ? 'text-green-600' : v < 0 ? 'text-error' : ''}`}>
+          <span className={`tabular-nums font-medium ${v > 0 ? 'text-green-600' : v < 0 ? 'text-error' : ''}`}>
             {formatCurrency(v)}
           </span>
         )
@@ -273,11 +328,13 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     col.accessor('totalPayment', {
       header: 'Total',
       size: 100,
-      cell: ({ getValue }) => <span className="tabular-nums text-right font-medium">{formatCurrency(getValue())}</span>,
+      meta: { align: 'center' },
+      cell: ({ getValue }) => <span className="tabular-nums font-medium">{formatCurrency(getValue())}</span>,
     }),
     col.accessor('paymentDateReceived', {
       header: 'Pmt Date',
       size: 100,
+      meta: { align: 'center' },
       sortingFn: (a, b) => {
         const aT = a.original.paymentDateReceived ? new Date(a.original.paymentDateReceived).getTime() : 0
         const bT = b.original.paymentDateReceived ? new Date(b.original.paymentDateReceived).getTime() : 0
@@ -294,12 +351,13 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     col.accessor('lagDays', {
       header: 'Lag Days',
       size: 80,
-      meta: { defaultHidden: true },
+      meta: { defaultHidden: true, align: 'center' },
       cell: ({ getValue }) => <NumberCell value={getValue() ?? null} suffix="d" />,
     }),
     col.accessor('notes', {
       header: 'Notes',
       size: 120,
+      meta: { align: 'center' },
       enableSorting: false,
       cell: ({ row }) => (
         <Tooltip content={row.original.notes ?? ''} disabled={!row.original.notes}>
@@ -393,7 +451,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
             { id: 'claimDate', desc: false },
             { id: 'paymentDateReceived', desc: false },
           ]}
-          storageKey="claims"
+          storageKey="claims-v2"
           onAddRow={onAddRow}
           addRowLabel="New Claim"
           selectionBar={selectionBar}

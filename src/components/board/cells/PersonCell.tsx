@@ -7,9 +7,8 @@ interface Props {
 
 export default function PersonCell({ name, className = '' }: Props) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <Avatar name={name} size="md" />
-      <span className="font-medium text-ink text-sm">{name}</span>
+    <span className={`inline-flex items-center justify-center ${className}`} title={name}>
+      <Avatar name={name} size="lg" />
     </span>
   )
 }
