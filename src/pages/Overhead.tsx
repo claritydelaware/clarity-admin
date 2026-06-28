@@ -11,7 +11,7 @@ import Input from '../components/ui/Input'
 import Dialog from '../components/ui/Dialog'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
-import type { OverheadEntry, XeroImportPreview, PayrollEntry, PayrollEmployee } from '../types'
+import type { OverheadEntry, XeroImportPreview, PayrollEmployee } from '../types'
 
 const xlsxAssets = import.meta.glob('../../reporting/*.xlsx', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 const csvAssets = import.meta.glob('../../reporting/*.csv', { query: '?url', import: 'default', eager: true }) as Record<string, string>
