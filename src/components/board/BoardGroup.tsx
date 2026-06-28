@@ -1,12 +1,18 @@
 import { useState, useRef, useEffect, Children, cloneElement, isValidElement } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
+export interface ColumnSummary {
+  id: string
+  value?: string
+}
+
 interface Props {
   label: string
   count: number
   color: string
   colSpan: number
   summary?: string
+  columnSummaries?: ColumnSummary[]
   defaultCollapsed?: boolean
   collapsed?: boolean
   onToggle?: () => void
@@ -15,7 +21,7 @@ interface Props {
   onSelectAll?: () => void
 }
 
-export default function BoardGroup({ label, count, color, colSpan, summary, defaultCollapsed = false, collapsed: controlledCollapsed, onToggle, children, selectionState, onSelectAll }: Props) {
+export default function BoardGroup({ label, count, color, colSpan, summary, columnSummaries, defaultCollapsed = false, collapsed: controlledCollapsed, onToggle, children, selectionState, onSelectAll }: Props) {
   const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed)
   const isControlled = controlledCollapsed !== undefined
   const collapsed = isControlled ? controlledCollapsed : internalCollapsed
@@ -39,6 +45,10 @@ export default function BoardGroup({ label, count, color, colSpan, summary, defa
     return child
   })
 
+  const firstSummaryIdx = columnSummaries?.findIndex(c => c.value) ?? -1
+  const useCellLayout = columnSummaries && firstSummaryIdx >= 0
+  const labelSpan = useCellLayout ? firstSummaryIdx : colSpan
+
   return (
     <>
       <tr
@@ -51,7 +61,7 @@ export default function BoardGroup({ label, count, color, colSpan, summary, defa
         aria-expanded={!collapsed}
       >
         <td
-          colSpan={colSpan}
+          colSpan={labelSpan}
           className="py-2.5 px-3 border-b border-border/50"
           style={{ borderLeft: `4px solid ${color}` }}
         >
@@ -73,11 +83,21 @@ export default function BoardGroup({ label, count, color, colSpan, summary, defa
             <span className="text-xs font-ui font-medium px-2 py-0.5 rounded-full bg-white/20 text-white">
               {count}
             </span>
-            {summary && (
-              <span className="ml-auto text-xs font-ui text-white/80 tabular-nums">{summary}</span>
+            {!useCellLayout && summary && (
+              <span className="text-xs font-ui text-white/80 tabular-nums">{summary}</span>
             )}
           </div>
         </td>
+        {useCellLayout && columnSummaries!.slice(firstSummaryIdx).map(col => (
+          <td
+            key={col.id}
+            className="py-2.5 px-2 border-b border-border/50 text-center"
+          >
+            {col.value && (
+              <span className="text-xs font-ui font-semibold text-white tabular-nums">{col.value}</span>
+            )}
+          </td>
+        ))}
       </tr>
       {!collapsed && coloredChildren}
     </>

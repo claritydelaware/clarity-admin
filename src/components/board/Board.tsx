@@ -6,6 +6,7 @@ import {
   type ColumnDef,
   type SortingState,
   type VisibilityState,
+  type ColumnSizingState,
   type RowSelectionState,
   type OnChangeFn,
   type Row,
@@ -14,7 +15,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { RotateCcw, SlidersHorizontal, GripVertical } from 'lucide-react'
 import BoardHeader from './BoardHeader'
 import BoardRow from './BoardRow'
-import BoardGroup from './BoardGroup'
+import BoardGroup, { type ColumnSummary } from './BoardGroup'
 import BoardAddRow from './BoardAddRow'
 import { formatCurrency } from '../../lib/utils'
 import useLocalStorage from '../../hooks/useLocalStorage'
@@ -43,10 +44,11 @@ interface BoardProps<T> {
   compact?: boolean
   emptyMessage?: string
   virtualize?: boolean
+  summaryColumns?: string[]
 }
 
-interface ColumnState { visibility: VisibilityState; order: string[] }
-const EMPTY_COL_STATE: ColumnState = { visibility: {}, order: [] }
+interface ColumnState { visibility: VisibilityState; order: string[]; sizes?: ColumnSizingState }
+const EMPTY_COL_STATE: ColumnState = { visibility: {}, order: [], sizes: {} }
 
 function buildDefaultVisibility(cols: ColumnDef<unknown, unknown>[]): VisibilityState {
   const vis: VisibilityState = {}
@@ -58,6 +60,21 @@ function buildDefaultVisibility(cols: ColumnDef<unknown, unknown>[]): Visibility
     }
   }
   return vis
+}
+
+function buildColumnSummaries<T>(
+  groupRows: Row<T>[],
+  visibleColumnIds: string[],
+  sumCols: string[],
+): ColumnSummary[] {
+  return visibleColumnIds.map(id => {
+    if (!sumCols.includes(id)) return { id }
+    const sum = groupRows.reduce((acc, row) => {
+      const val = row.getValue(id)
+      return acc + (typeof val === 'number' ? val : 0)
+    }, 0)
+    return { id, value: formatCurrency(sum) }
+  })
 }
 
 export default function Board<T>({
@@ -78,6 +95,7 @@ export default function Board<T>({
   compact = false,
   emptyMessage = 'No data to display.',
   virtualize = false,
+  summaryColumns,
 }: BoardProps<T>) {
   const [colState, setColState] = useLocalStorage<ColumnState>(
     storageKey ? storageKey + '-board-cols' : '_unused-board-cols',
@@ -90,6 +108,7 @@ export default function Board<T>({
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialVisibility)
   const [columnOrder, setColumnOrder] = useState<string[]>(colState.order)
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(colState.sizes ?? {})
   const [colMenuOpen, setColMenuOpen] = useState(false)
   const colMenuRef = useRef<HTMLDivElement>(null)
   const selectAllRef = useRef<HTMLInputElement>(null)
@@ -104,20 +123,29 @@ export default function Board<T>({
       sorting,
       columnVisibility,
       columnOrder: columnOrder.length ? columnOrder : undefined,
+      columnSizing,
       rowSelection: rowSelection ?? {},
     },
     onSortingChange: setSorting,
+    enableColumnResizing: true,
+    columnResizeMode: 'onChange',
+    onColumnSizingChange: (updater) => {
+      setColumnSizing(prev => {
+        const next = typeof updater === 'function' ? updater(prev) : updater
+        return next
+      })
+    },
     onColumnVisibilityChange: (updater) => {
       setColumnVisibility(prev => {
         const next = typeof updater === 'function' ? updater(prev) : updater
-        if (storageKey) setColState({ visibility: next, order: columnOrder })
+        if (storageKey) setColState({ visibility: next, order: columnOrder, sizes: columnSizing })
         return next
       })
     },
     onColumnOrderChange: (updater) => {
       setColumnOrder(prev => {
         const next = typeof updater === 'function' ? updater(prev) : updater
-        if (storageKey) setColState({ visibility: columnVisibility, order: next })
+        if (storageKey) setColState({ visibility: columnVisibility, order: next, sizes: columnSizing })
         return next
       })
     },
@@ -127,6 +155,19 @@ export default function Board<T>({
     getRowId: (row) => getRowId(row),
     enableRowSelection,
   })
+
+  const isResizing = table.getState().columnSizingInfo.isResizingColumn
+  const sizingTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
+  useEffect(() => {
+    if (isResizing || !storageKey) return
+    if (sizingTimerRef.current) clearTimeout(sizingTimerRef.current)
+    sizingTimerRef.current = setTimeout(() => {
+      if (Object.keys(columnSizing).length > 0) {
+        setColState({ visibility: columnVisibility, order: columnOrder, sizes: columnSizing })
+      }
+    }, 300)
+    return () => { if (sizingTimerRef.current) clearTimeout(sizingTimerRef.current) }
+  }, [isResizing, columnSizing, storageKey])
 
   const rows = table.getRowModel().rows
   const headerGroups = table.getHeaderGroups()
@@ -250,7 +291,7 @@ export default function Board<T>({
     const [moved] = ids.splice(dragItem.current, 1)
     ids.splice(dragOverItem.current, 0, moved)
     setColumnOrder(ids)
-    if (storageKey) setColState({ visibility: columnVisibility, order: ids })
+    if (storageKey) setColState({ visibility: columnVisibility, order: ids, sizes: columnSizing })
     dragItem.current = null; dragOverItem.current = null
   }
 
@@ -314,7 +355,8 @@ export default function Board<T>({
                     const defaults = buildDefaultVisibility(columns as ColumnDef<unknown, unknown>[])
                     setColumnVisibility(defaults)
                     setColumnOrder([])
-                    if (storageKey) setColState({ visibility: defaults, order: [] })
+                    setColumnSizing({})
+                    if (storageKey) setColState({ visibility: defaults, order: [], sizes: {} })
                   }}
                   className="text-xs text-muted hover:text-teal font-ui transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded"
                 >
@@ -332,7 +374,7 @@ export default function Board<T>({
       {/* Table */}
       {virtualize ? (
         <div ref={scrollRef} className="overflow-auto rounded-lg border border-border bg-white" style={{ maxHeight: 'calc(100vh - 160px)' }}>
-          <table className="w-full text-sm font-body" role="grid" aria-label="Data board" style={{ borderCollapse: 'separate', borderSpacing: '0 3px' }}>
+          <table className="w-full text-sm font-body" role="grid" aria-label="Data board" style={{ borderCollapse: 'separate', borderSpacing: '0 3px', tableLayout: 'fixed' }}>
             <BoardHeader headerGroups={headerGroups} sticky />
             <tbody>
               {rows.length === 0 ? (
@@ -352,12 +394,18 @@ export default function Board<T>({
                       const cfg = groupConfig?.[item.key]
                       const color = cfg?.color ?? '#C4C4C4'
                       const label = cfg?.label ?? item.key
-                      const summary = cfg?.summarize
-                        ? cfg.summarize(item.group.rows as Row<never>[])
-                        : formatCurrency(item.group.rows.reduce((sum, r) => {
-                            const v = (r.original as Record<string, unknown>)['totalPayment']
-                            return sum + (typeof v === 'number' ? v : 0)
-                          }, 0))
+                      const visColIds = table.getVisibleFlatColumns().map(c => c.id)
+                      const colSummaries = summaryColumns?.length
+                        ? buildColumnSummaries(item.group.rows, visColIds, summaryColumns)
+                        : undefined
+                      const summary = !colSummaries
+                        ? (cfg?.summarize
+                          ? cfg.summarize(item.group.rows as Row<never>[])
+                          : formatCurrency(item.group.rows.reduce((sum, r) => {
+                              const v = (r.original as Record<string, unknown>)['totalPayment']
+                              return sum + (typeof v === 'number' ? v : 0)
+                            }, 0)))
+                        : undefined
                       return (
                         <BoardGroup
                           key={item.key}
@@ -366,6 +414,7 @@ export default function Board<T>({
                           color={color}
                           colSpan={totalColCount}
                           summary={summary}
+                          columnSummaries={colSummaries}
                           collapsed={!!collapsedGroups[item.key]}
                           onToggle={() => toggleGroup(item.key)}
                           selectionState={enableRowSelection ? getGroupSelectionState(item.group.rows) : undefined}
@@ -392,7 +441,7 @@ export default function Board<T>({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border bg-white">
-          <table className="w-full text-sm font-body" role="grid" aria-label="Data board" style={{ borderCollapse: 'separate', borderSpacing: '0 3px' }}>
+          <table className="w-full text-sm font-body" role="grid" aria-label="Data board" style={{ borderCollapse: 'separate', borderSpacing: '0 3px', tableLayout: 'fixed' }}>
             <BoardHeader headerGroups={headerGroups} />
             <tbody>
               {rows.length === 0 && (
@@ -408,12 +457,18 @@ export default function Board<T>({
                   const cfg = groupConfig?.[group.key]
                   const color = cfg?.color ?? '#C4C4C4'
                   const label = cfg?.label ?? group.key
-                  const summary = cfg?.summarize
-                    ? cfg.summarize(group.rows as Row<never>[])
-                    : formatCurrency(group.rows.reduce((sum, r) => {
-                        const v = (r.original as Record<string, unknown>)['totalPayment']
-                        return sum + (typeof v === 'number' ? v : 0)
-                      }, 0))
+                  const visColIds = table.getVisibleFlatColumns().map(c => c.id)
+                  const colSummaries = summaryColumns?.length
+                    ? buildColumnSummaries(group.rows, visColIds, summaryColumns)
+                    : undefined
+                  const summary = !colSummaries
+                    ? (cfg?.summarize
+                      ? cfg.summarize(group.rows as Row<never>[])
+                      : formatCurrency(group.rows.reduce((sum, r) => {
+                          const v = (r.original as Record<string, unknown>)['totalPayment']
+                          return sum + (typeof v === 'number' ? v : 0)
+                        }, 0)))
+                    : undefined
 
                   return (
                     <BoardGroup
@@ -423,6 +478,7 @@ export default function Board<T>({
                       color={color}
                       colSpan={totalColCount}
                       summary={summary}
+                      columnSummaries={colSummaries}
                       selectionState={enableRowSelection ? getGroupSelectionState(group.rows) : undefined}
                       onSelectAll={enableRowSelection ? () => toggleGroupSelection(group.rows) : undefined}
                     >

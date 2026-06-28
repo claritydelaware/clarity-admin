@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { createColumnHelper, type ColumnDef, type RowSelectionState, type Row } from '@tanstack/react-table'
 import { Copy, Check, X, Trash2, ExternalLink } from 'lucide-react'
@@ -86,14 +86,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     })
   }
 
-  const maxClaimIdLen = useMemo(() => {
-    let max = 0
-    for (const c of claims) {
-      if (c.claimId && c.claimId.length > max) max = c.claimId.length
-    }
-    return max
-  }, [claims])
-  const claimIdColWidth = Math.max(maxClaimIdLen * 5 + 15, 50)
+  const claimIdColWidth = 70
 
   const col = createColumnHelper<Claim>()
 
@@ -170,7 +163,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
         const v = getValue()
         return (
           <Tooltip content={v ?? ''} disabled={!v}>
-            <span className="block max-w-24 truncate text-xs">
+            <span className="block truncate">
               {v ? <span className="text-ink">{v}</span> : <span className="text-muted">—</span>}
             </span>
           </Tooltip>
@@ -206,7 +199,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
     col.accessor('forecastPaymentDate', {
       id: 'timeline',
       header: 'Timeline',
-      size: 160,
+      size: 112,
       meta: { align: 'center' },
       enableSorting: true,
       sortingFn: (a, b) => {
@@ -361,7 +354,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
       enableSorting: false,
       cell: ({ row }) => (
         <Tooltip content={row.original.notes ?? ''} disabled={!row.original.notes}>
-          <TextCell value={row.original.notes ?? ''} onSave={save(row.original.rowIndex, 'notes')} truncate />
+          <TextCell value={row.original.notes ?? ''} onSave={save(row.original.rowIndex, 'notes')} />
         </Tooltip>
       ),
     }),
@@ -370,6 +363,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
       size: 60,
       enableSorting: false,
       enableHiding: false,
+      enableResizing: false,
       header: '',
       cell: ({ row }) => (
         <span className="inline-flex items-center gap-2">
@@ -457,6 +451,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onAd
           selectionBar={selectionBar}
           compact={compact}
           virtualize={virtualize}
+          summaryColumns={['clientAmount', 'trueClientAmount', 'stripeFees', 'insuranceAmount', 'insurancePaidHHO', 'overUnderHHO', 'totalPayment']}
           emptyMessage="No claims match the current filters."
         />
       </div>
