@@ -332,6 +332,7 @@ export interface EmilyPayPeriodSummary {
   totalExpenses: number
   claimsPerCode: Record<string, number>
   priorPeriodAvgSessions: number
+  isFinalized: boolean
   // backward-compat fields
   sessionRate: number
   sessionPay: number

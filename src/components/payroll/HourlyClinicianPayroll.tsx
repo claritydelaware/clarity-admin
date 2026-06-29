@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Loader2, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { Loader2, Copy, Check, ChevronDown, ChevronRight, Lock, LockOpen } from 'lucide-react'
 import ReactApexChart from 'react-apexcharts'
 import type { ApexOptions } from 'apexcharts'
 import { useHourlySummary, useSavePayrollRecord } from '../../hooks/usePayPeriodSummary'
@@ -55,6 +55,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const [notes, setNotes] = useState('')
   const [reconcOpen, setReconcOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [unlocked, setUnlocked] = useState(false)
 
   const { data: rawData, isLoading, isError, error } = useHourlySummary(clinician, selectedPeriod)
   const summary = rawData as EmilyPayPeriodSummary | undefined
@@ -62,6 +63,9 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const { data: history, isLoading: historyLoading } = useHourlyPaymentAnalysis(clinician)
   const { mutate: saveRecord, isPending: isSaving } = useSavePayrollRecord()
   const { copied, copy } = useCopied()
+
+  const isFinalized = summary?.isFinalized ?? false
+  const isLocked = isFinalized && !unlocked
 
   useEffect(() => {
     setTherapySessions('')
@@ -71,6 +75,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     setConsultations('')
     setBonusPay('')
     setNotes('')
+    setUnlocked(false)
   }, [selectedPeriod])
 
   const period = periods.find(p => p.periodStart === selectedPeriod)
@@ -80,16 +85,34 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const savedBonusPay    = summary?.bonusPay        ?? 0
 
   const sub = submission as EmilySubmission | null | undefined
+  const subTherapy    = sub ? sub.counts['90837'] + sub.counts['90791'] : null
+  const subOther      = sub ? sub.counts['90834'] + sub.counts['90832'] + sub.counts['90847'] + sub.counts['90846'] : null
+  const subNoShows    = sub ? sub.counts.lateCancel : null
   const subMeetingH   = sub ? sub.adminHours.meeting    : null
   const subTrainingH  = sub ? sub.adminHours.training   : null
   const subConsults   = sub ? sub.adminHours.consultations : null
 
-  const effTherapySessions = therapySessions !== '' ? (parseInt(therapySessions) || 0) : (summary?.therapySessions ?? 0)
-  const effOtherSessions   = otherSessions   !== '' ? (parseInt(otherSessions)   || 0) : (summary?.otherSessions   ?? 0)
-  const effNoShows         = noShows         !== '' ? (parseInt(noShows)         || 0) : (summary?.noShows         ?? 0)
-  const effMeetingH        = meetingHours    !== '' ? (parseFloat(meetingHours)  || 0) : (subMeetingH !== null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)
-  const effConsults        = consultations   !== '' ? (parseInt(consultations)   || 0) : (subConsults  ?? savedConsults)
-  const effBonusP          = bonusPay        !== '' ? (parseFloat(bonusPay)      || 0) : savedBonusPay
+  // Pre-population priority:
+  // Finalized (locked): saved values from Payroll_Records (read-only)
+  // Not finalized: user input → submission → Claims
+  const effTherapySessions = isLocked
+    ? (summary?.therapySessions ?? 0)
+    : therapySessions !== '' ? (parseInt(therapySessions) || 0) : (subTherapy ?? summary?.claimsTherapySessions ?? 0)
+  const effOtherSessions = isLocked
+    ? (summary?.otherSessions ?? 0)
+    : otherSessions !== '' ? (parseInt(otherSessions) || 0) : (subOther ?? summary?.claimsOtherSessions ?? 0)
+  const effNoShows = isLocked
+    ? (summary?.noShows ?? 0)
+    : noShows !== '' ? (parseInt(noShows) || 0) : (subNoShows ?? summary?.claimsNoShows ?? 0)
+  const effMeetingH = isLocked
+    ? savedMeetingH
+    : meetingHours !== '' ? (parseFloat(meetingHours) || 0) : (subMeetingH !== null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)
+  const effConsults = isLocked
+    ? savedConsults
+    : consultations !== '' ? (parseInt(consultations) || 0) : (subConsults ?? savedConsults)
+  const effBonusP = isLocked
+    ? savedBonusPay
+    : bonusPay !== '' ? (parseFloat(bonusPay) || 0) : savedBonusPay
 
   const adminHourlyRate = summary?.adminHourlyRate ?? 25
   const effTherapyPay   = effTherapySessions * (summary?.therapySessionRate ?? 50)
@@ -265,10 +288,11 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 (
                 <input
                   type="number" min="0" step="1"
-                  placeholder={String(summary.therapySessions)}
-                  value={therapySessions}
+                  placeholder={String(effTherapySessions)}
+                  value={isLocked ? String(effTherapySessions) : therapySessions}
                   onChange={e => setTherapySessions(e.target.value)}
-                  className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  disabled={isLocked}
+                  className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60 disabled:bg-gray-50"
                 />
                 × ${summary.therapySessionRate})
               </span>
@@ -281,10 +305,11 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 (
                 <input
                   type="number" min="0" step="1"
-                  placeholder={String(summary.otherSessions)}
-                  value={otherSessions}
+                  placeholder={String(effOtherSessions)}
+                  value={isLocked ? String(effOtherSessions) : otherSessions}
                   onChange={e => setOtherSessions(e.target.value)}
-                  className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  disabled={isLocked}
+                  className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60 disabled:bg-gray-50"
                 />
                 × ${summary.otherSessionRate})
               </span>
@@ -295,10 +320,11 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 No-shows (
                 <input
                   type="number" min="0" step="1"
-                  placeholder={String(summary.noShows)}
-                  value={noShows}
+                  placeholder={String(effNoShows)}
+                  value={isLocked ? String(effNoShows) : noShows}
                   onChange={e => setNoShows(e.target.value)}
-                  className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  disabled={isLocked}
+                  className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60 disabled:bg-gray-50"
                 />
                 × ${summary.noShowRate})
               </span>
@@ -320,6 +346,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   value={meetingHours}
                   onChange={e => setMeetingHours(e.target.value)}
                   hint={sub ? `From submission: ${sub.adminHours.meeting + sub.adminHours.training}h` : undefined}
+                  disabled={isLocked}
                 />
               </div>
               <div>
@@ -332,6 +359,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   value={consultations}
                   onChange={e => setConsultations(e.target.value)}
                   hint={sub ? `From submission: ${sub.adminHours.consultations}` : undefined}
+                  disabled={isLocked}
                 />
               </div>
             </div>
@@ -356,6 +384,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
               placeholder={String(savedBonusPay)}
               value={bonusPay}
               onChange={e => setBonusPay(e.target.value)}
+              disabled={isLocked}
               className="pt-1 w-48"
             />
 
@@ -466,11 +495,26 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
             onChange={e => setNotes(e.target.value)}
             placeholder={summary.savedNotes || 'Optional period notes…'}
             className="mt-4"
+            disabled={isLocked}
           />
 
-          <Button onClick={handleSave} loading={isSaving} className="mt-4">
-            Save Payroll Record
-          </Button>
+          <div className="flex items-center gap-3 mt-4">
+            {isFinalized && !unlocked ? (
+              <>
+                <div className="flex items-center gap-1.5 text-xs font-ui text-success">
+                  <Lock size={13} />
+                  <span>Finalized</span>
+                </div>
+                <Button variant="ghost" size="sm" icon={<LockOpen size={13} />} onClick={() => setUnlocked(true)}>
+                  Unlock to Edit
+                </Button>
+              </>
+            ) : (
+              <Button onClick={handleSave} loading={isSaving}>
+                {isFinalized ? 'Re-finalize' : 'Finalize Period'}
+              </Button>
+            )}
+          </div>
         </Card>
       )}
 
