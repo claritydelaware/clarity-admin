@@ -206,7 +206,7 @@ export default function Caseloads() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <Card title="Active Clients by Clinician">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {CLINICIANS.map(name => (
                 <div key={name}>
                   <p className="text-xs text-muted font-ui uppercase tracking-wide">{name}</p>
@@ -218,7 +218,7 @@ export default function Caseloads() {
           </Card>
 
           <Card title="Practice Overview">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
                   <Activity size={13} className="text-green-600" />
@@ -353,7 +353,8 @@ export default function Caseloads() {
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted">No clients match the current filters.</div>
           ) : (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b border-border bg-surface-sunken">
                   <th className={thClass('index')} onClick={() => toggleSort('index')}>
@@ -457,6 +458,7 @@ export default function Caseloads() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </Card>
       )}

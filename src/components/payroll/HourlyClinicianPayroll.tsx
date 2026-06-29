@@ -170,7 +170,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
           value={selectedPeriod}
           onChange={e => setSelectedPeriod(e.target.value)}
           options={periodOptions}
-          className="w-64"
+          className="w-full sm:w-64"
         />
         {period && (
           <div className="text-xs font-body text-muted">
@@ -192,7 +192,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
 
       {summary && (
         <Card>
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
               <Avatar name={clinicianFullName} size="lg" />
               <div>
@@ -240,9 +240,11 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
           </div>
 
           <div className="border-t border-border pt-4 space-y-2 text-sm font-body">
-            <div className="flex items-center justify-between text-muted text-xs">
-              <span className="flex items-center gap-1">
-                Therapy sessions (
+            <div className="flex items-center justify-between text-muted text-xs gap-2">
+              <span className="flex items-center gap-1 min-w-0">
+                <span className="hidden sm:inline">Therapy sessions</span>
+                <span className="sm:hidden">Therapy</span>
+                (
                 <input
                   type="number" min="0" step="1"
                   placeholder={String(summary.therapySessions)}
@@ -252,11 +254,13 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 />
                 × ${summary.therapySessionRate})
               </span>
-              <span className="tabular-nums text-ink">{formatCurrency(effTherapyPay)}</span>
+              <span className="tabular-nums text-ink shrink-0">{formatCurrency(effTherapyPay)}</span>
             </div>
-            <div className="flex items-center justify-between text-muted text-xs">
-              <span className="flex items-center gap-1">
-                Other sessions (
+            <div className="flex items-center justify-between text-muted text-xs gap-2">
+              <span className="flex items-center gap-1 min-w-0">
+                <span className="hidden sm:inline">Other sessions</span>
+                <span className="sm:hidden">Other</span>
+                (
                 <input
                   type="number" min="0" step="1"
                   placeholder={String(summary.otherSessions)}
@@ -266,10 +270,10 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 />
                 × ${summary.otherSessionRate})
               </span>
-              <span className="tabular-nums text-ink">{formatCurrency(effOtherPay)}</span>
+              <span className="tabular-nums text-ink shrink-0">{formatCurrency(effOtherPay)}</span>
             </div>
-            <div className="flex items-center justify-between text-muted text-xs">
-              <span className="flex items-center gap-1">
+            <div className="flex items-center justify-between text-muted text-xs gap-2">
+              <span className="flex items-center gap-1 min-w-0">
                 No-shows (
                 <input
                   type="number" min="0" step="1"
@@ -280,7 +284,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 />
                 × ${summary.noShowRate})
               </span>
-              <span className="tabular-nums text-ink">{formatCurrency(effNoShowPay)}</span>
+              <span className="tabular-nums text-ink shrink-0">{formatCurrency(effNoShowPay)}</span>
             </div>
             <div className="flex justify-between font-medium border-t border-dashed border-border pt-1.5 text-xs">
               <span>Session Pay subtotal</span>

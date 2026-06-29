@@ -77,8 +77,8 @@ function ForecastWeekGroup({ forecastWeek, items, isOverdue }: WeekGroup & { isO
       </button>
 
       {open && (
-        <div className="bg-white">
-          <table className="w-full text-sm font-body">
+        <div className="bg-white overflow-x-auto">
+          <table className="w-full text-sm font-body min-w-[500px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Clinician</th>
@@ -136,8 +136,8 @@ function OverdueSection({ weeks }: { weeks: WeekGroup[] }) {
         </span>
       </div>
 
-      <div className="bg-white">
-        <table className="w-full text-sm font-body">
+      <div className="bg-white overflow-x-auto">
+        <table className="w-full text-sm font-body min-w-[500px]">
           <thead>
             <tr className="border-b border-red-100">
               <th className="text-left px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Clinician</th>
@@ -179,9 +179,9 @@ function QuarterBanner({ label, collected, remaining, pendingCount }: {
   pendingCount: number
 }) {
   return (
-    <div className="rounded-xl border border-teal/20 bg-teal-pale/30 px-5 py-3 flex items-center gap-6">
+    <div className="rounded-xl border border-teal/20 bg-teal-pale/30 px-5 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
       <p className="text-xs font-ui text-teal font-medium uppercase tracking-wide shrink-0">{label}</p>
-      <div className="h-7 w-px bg-teal/15 shrink-0" />
+      <div className="h-7 w-px bg-teal/15 shrink-0 hidden sm:block" />
       <div className="shrink-0">
         <p className="text-xs font-body text-muted">Collected</p>
         <p className="font-heading text-lg font-semibold text-success tabular-nums">{formatCurrency(collected)}</p>
@@ -190,7 +190,7 @@ function QuarterBanner({ label, collected, remaining, pendingCount }: {
         <p className="text-xs font-body text-muted">Remaining</p>
         <p className="font-heading text-lg font-semibold text-teal tabular-nums">{formatCurrency(remaining)}</p>
       </div>
-      <p className="text-sm text-teal/60 font-body ml-auto">
+      <p className="text-sm text-teal/60 font-body sm:ml-auto">
         {pendingCount} claim{pendingCount !== 1 ? 's' : ''} pending this quarter
       </p>
     </div>
@@ -433,7 +433,7 @@ export default function Forecast() {
         title="Revenue Forecast"
         subtitle="Pending claims by expected payment week"
         actions={
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 flex-wrap">
             <Button
               variant="secondary"
               size="sm"
@@ -441,7 +441,7 @@ export default function Forecast() {
               icon={recalcState === 'done' ? undefined : <RefreshCw size={13} />}
               onClick={handleRecalculate}
             >
-              {recalcState === 'loading' ? 'Recalculating…' : recalcState === 'done' ? `Updated ${recalcCount} claims` : 'Recalculate Forecasts'}
+              {recalcState === 'loading' ? 'Recalculating…' : recalcState === 'done' ? `Updated ${recalcCount} claims` : 'Recalculate'}
             </Button>
             {weeks.length > 0 && (
               <div className="text-right">
@@ -457,7 +457,7 @@ export default function Forecast() {
       />
 
       {/* KPI strip */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <MetricCard label="Total pipeline" value={formatCurrency(totalExpected)} sub={`${totalCount} pending claim${totalCount !== 1 ? 's' : ''}`} />
         <MetricCard label="Overdue" value={formatCurrency(overdueAmount)} sub={`${overdueCount} claim${overdueCount !== 1 ? 's' : ''} past forecast date`} accentColor="var(--color-status-red)" icon={<AlertCircle size={12} />} />
         <MetricCard label="Due next 30 days" value={formatCurrency(next30Amount)} sub={`${next30Count} claim${next30Count !== 1 ? 's' : ''}`} />
@@ -475,7 +475,7 @@ export default function Forecast() {
       )}
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-[1fr_288px] gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_288px] gap-4 items-start">
         <div className="space-y-4">
           {overdueWeeks.length > 0 && <OverdueSection weeks={overdueWeeks} />}
 

@@ -626,7 +626,8 @@ export default function Overhead() {
         {isError && <ErrorBanner message={(error as Error).message} className="m-4" />}
 
         {entries && (
-          <table className="w-full text-sm font-body">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm font-body min-w-[700px]">
             <thead className="bg-surface-sunken border-b border-border">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Month</th>
@@ -668,6 +669,7 @@ export default function Overhead() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
 
@@ -727,7 +729,8 @@ export default function Overhead() {
         {payrollLoading && <LoadingSpinner label="Loading…" />}
 
         {payrollEntries && (
-          <table className="w-full text-sm font-body">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm font-body min-w-[600px]">
             <thead className="bg-surface-sunken border-b border-border">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Month</th>
@@ -760,6 +763,7 @@ export default function Overhead() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
 

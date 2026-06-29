@@ -96,7 +96,7 @@ export default function Claims() {
       <PageHeader
         title="Claims"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Tabs
               tabs={[
                 { value: 'active', label: 'Active' },
@@ -107,7 +107,7 @@ export default function Claims() {
               size="sm"
             />
 
-            <div className="flex items-center border border-border rounded-lg overflow-hidden">
+            <div className="hidden sm:flex items-center border border-border rounded-lg overflow-hidden">
               <button
                 type="button"
                 title="Comfortable density"
@@ -127,10 +127,12 @@ export default function Claims() {
             </div>
 
             <Button variant="secondary" size="sm" onClick={handleExport} loading={exporting} icon={<Download size={14} />}>
-              Export CSV
+              <span className="hidden sm:inline">Export CSV</span>
+              <span className="sm:hidden">CSV</span>
             </Button>
             <Button size="sm" icon={<Plus size={15} strokeWidth={2.5} />} onClick={() => setNewClaimOpen(true)}>
-              New Claim
+              <span className="hidden sm:inline">New Claim</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
         }

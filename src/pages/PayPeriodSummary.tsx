@@ -73,7 +73,7 @@ function PartnerTab({ periods }: { periods: SalaryPayPeriod[] }) {
           value={selectedPeriod}
           onChange={e => setSelectedPeriod(e.target.value)}
           options={periodOptions}
-          className="w-64"
+          className="w-full sm:w-64"
         />
         {period && (
           <div className="text-xs font-body text-muted">

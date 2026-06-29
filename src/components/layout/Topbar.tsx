@@ -33,7 +33,7 @@ export default function Topbar({ onMenuClick }: Props) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-4 h-12 px-6 bg-white border-b border-border">
+    <header className="sticky top-0 z-30 flex items-center gap-4 h-12 px-4 md:px-6 bg-white border-b border-border">
       <button
         type="button"
         onClick={onMenuClick}

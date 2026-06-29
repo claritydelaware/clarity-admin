@@ -92,7 +92,8 @@ function QuarterlyPerformance() {
       </ChartCard>
 
       <Card padding="none">
-        <table className="w-full text-sm font-body">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm font-body min-w-[600px]">
           <thead className="bg-surface-sunken border-b border-border">
             <tr>
               <th className="px-5 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Quarter</th>
@@ -122,6 +123,7 @@ function QuarterlyPerformance() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
     </div>
   )

@@ -23,7 +23,7 @@ export default function AppShell() {
           sidebarCollapsed ? 'md:ml-16' : 'md:ml-60',
         ].join(' ')}>
           <Topbar onMenuClick={() => setSidebarOpen(true)} />
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-4 md:p-6">
             <Outlet />
           </main>
         </div>
