@@ -325,7 +325,13 @@ export interface EmilyPayPeriodSummary {
   meetingHours: number
   trainingHours: number
   overheadCosts: number
+  overheadTaxRate: number
+  overheadFixedAmount: number
+  overheadSource: 'formula' | 'gusto'
+  gustoEmployerTaxes?: number
   totalExpenses: number
+  claimsPerCode: Record<string, number>
+  priorPeriodAvgSessions: number
   // backward-compat fields
   sessionRate: number
   sessionPay: number
@@ -459,4 +465,9 @@ export interface EmilyPaymentAnalysisRow {
   totalExpenses: number
   profit: number
   profitMargin: number
+}
+
+export interface ConfigData {
+  w2PayrollTaxRate: number
+  w2FixedOverheadPerPeriod: number
 }

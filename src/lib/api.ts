@@ -4,7 +4,7 @@ import type {
   StaffMember, StaffLicense, OverheadEntry, PayrollEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
-  Clinician,
+  Clinician, ConfigData,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -171,5 +171,10 @@ export const api = {
       adminHours?: number; bonusPay?: number; notes?: string
     }): Promise<{ ok: boolean }> =>
       apiFetch('/pay-periods/record', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  },
+  config: {
+    get: (): Promise<ConfigData> => apiFetch<ConfigData>('/config'),
+    update: (data: Partial<ConfigData>): Promise<ConfigData> =>
+      apiFetch<ConfigData>('/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   },
 }

@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, Settings } from 'lucide-react'
 import { usePayPeriodList, usePartnerSummary } from '../hooks/usePayPeriodSummary'
+import { useConfig, useUpdateConfig } from '../hooks/useConfig'
 import { formatCurrency } from '../lib/utils'
 import PageHeader from '../components/layout/PageHeader'
 import Tabs from '../components/ui/Tabs'
 import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Dialog from '../components/ui/Dialog'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import PartnerCard from '../components/payroll/PartnerCard'
@@ -104,13 +107,77 @@ function PartnerTab({ periods }: { periods: SalaryPayPeriod[] }) {
   )
 }
 
+function OverheadSettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { data: config } = useConfig()
+  const { mutate: updateConfig, isPending } = useUpdateConfig()
+  const [taxPct, setTaxPct] = useState('')
+  const [fixedAmt, setFixedAmt] = useState('')
+
+  const currentPct = config ? (config.w2PayrollTaxRate * 100).toFixed(2) : '9.56'
+  const currentFixed = config ? config.w2FixedOverheadPerPeriod.toFixed(2) : '110.80'
+
+  const handleSave = () => {
+    const rate = taxPct !== '' ? parseFloat(taxPct) / 100 : undefined
+    const fixed = fixedAmt !== '' ? parseFloat(fixedAmt) : undefined
+    if (rate === undefined && fixed === undefined) { onClose(); return }
+    updateConfig({ w2PayrollTaxRate: rate, w2FixedOverheadPerPeriod: fixed }, {
+      onSuccess: () => { setTaxPct(''); setFixedAmt(''); onClose() },
+    })
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} title="W-2 Overhead Settings" maxWidth="sm">
+      <div className="space-y-4">
+        <p className="text-xs font-body text-muted">
+          These values are used to estimate employer overhead on W-2 clinician pay.
+          When Gusto data is available it will replace these estimates.
+        </p>
+        <Input
+          label="Employer Tax Rate (%)"
+          type="number"
+          min={0}
+          max={30}
+          step={0.01}
+          placeholder={currentPct}
+          value={taxPct}
+          onChange={e => setTaxPct(e.target.value)}
+          hint={`Current: ${currentPct}%`}
+        />
+        <Input
+          label="Fixed Overhead Per Period ($)"
+          type="number"
+          min={0}
+          max={500}
+          step={0.01}
+          placeholder={currentFixed}
+          value={fixedAmt}
+          onChange={e => setFixedAmt(e.target.value)}
+          hint={`Current: $${currentFixed}`}
+        />
+        <div className="flex gap-3 pt-2">
+          <Button onClick={handleSave} loading={isPending}>Save</Button>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
 export default function PayPeriodSummary() {
   const { data: periodLists, isLoading, isError, error } = usePayPeriodList()
   const [tab, setTab] = useState<string>('partner')
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Pay Periods" />
+      <PageHeader
+        title="Pay Periods"
+        actions={
+          <Button variant="ghost" size="sm" icon={<Settings size={14} />} onClick={() => setSettingsOpen(true)}>
+            Overhead Settings
+          </Button>
+        }
+      />
 
       {isLoading && <LoadingSpinner label="Loading periods…" />}
       {isError && <ErrorBanner message={(error as Error).message} />}
@@ -144,6 +211,8 @@ export default function PayPeriodSummary() {
           )}
         </>
       )}
+
+      <OverheadSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )
 }

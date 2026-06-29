@@ -99,7 +99,10 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const effConsultPay   = effConsults * (adminHourlyRate / 4)
   const effAdminPay     = effMeetingH * adminHourlyRate + effConsultPay
   const effTotalPay     = effSessionPay + effAdminPay + effBonusP
-  const effOverhead     = effTotalPay * 0.0956 + 110.80
+  const taxRate         = summary?.overheadTaxRate ?? 0.0956
+  const fixedOverhead   = summary?.overheadFixedAmount ?? 110.80
+  const hasGustoActuals = summary?.overheadSource === 'gusto' && summary.gustoEmployerTaxes != null
+  const effOverhead     = hasGustoActuals ? summary!.gustoEmployerTaxes! : (effTotalPay * taxRate + fixedOverhead)
   const effTotalExp     = effTotalPay + effOverhead
   const effPaymentsRcv  = summary?.paymentsReceived ?? 0
   const effProfit       = effPaymentsRcv - effTotalExp
@@ -149,13 +152,28 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     })
   }
 
+  const perCode = summary?.claimsPerCode ?? {}
   const reconcRows = sub && summary ? [
-    { label: 'Therapy sessions (90837 + 90791)', reported: sub.counts['90837'] + sub.counts['90791'], claims: summary.claimsTherapySessions },
-    { label: 'Other sessions (90834/90832/90847/90846)', reported: sub.counts['90834'] + sub.counts['90832'] + sub.counts['90847'] + sub.counts['90846'], claims: summary.claimsOtherSessions },
-    { label: 'Late Cancel / No-Show', reported: sub.counts.lateCancel, claims: summary.claimsNoShows },
+    { label: '90837 — Therapy (53 min)', reported: sub.counts['90837'], claims: perCode['90837'] ?? 0 },
+    { label: '90791 — Intake / Eval', reported: sub.counts['90791'], claims: perCode['90791'] ?? 0 },
+    { label: '90834 — Therapy (45 min)', reported: sub.counts['90834'], claims: perCode['90834'] ?? 0 },
+    { label: '90832 — Therapy (30 min)', reported: sub.counts['90832'], claims: perCode['90832'] ?? 0 },
+    { label: '90847 — Family / Couples', reported: sub.counts['90847'], claims: perCode['90847'] ?? 0 },
+    { label: '90846 — Family (no pt)', reported: sub.counts['90846'], claims: perCode['90846'] ?? 0 },
+    { label: 'Late Cancel / No-Show', reported: sub.counts.lateCancel, claims: perCode['lateCancel'] ?? 0 },
   ] : []
 
-  const allMatch = reconcRows.length > 0 && reconcRows.every(r => r.reported === r.claims)
+  const totalReported = reconcRows.reduce((s, r) => s + r.reported, 0)
+  const totalClaims = reconcRows.reduce((s, r) => s + r.claims, 0)
+  const totalDelta = totalReported - totalClaims
+  const maxDelta = reconcRows.reduce((max, r) => Math.max(max, Math.abs(r.reported - r.claims)), 0)
+  const reconcStatus: 'green' | 'amber' | 'red' =
+    reconcRows.length === 0 ? 'green'
+    : maxDelta === 0 && totalDelta === 0 ? 'green'
+    : Math.abs(totalDelta) <= 2 && maxDelta <= 2 ? 'amber'
+    : 'red'
+  const reconcStatusLabel = { green: '✓ Counts match', amber: '⚠ Minor discrepancies', red: '✗ Significant mismatch' }
+  const reconcStatusColor = { green: 'text-success', amber: 'text-amber-600', red: 'text-error' }
 
   const periodOptions = [...periods].reverse().map(p => ({
     value: p.periodStart,
@@ -346,7 +364,12 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
               <span className="tabular-nums text-teal text-lg font-heading">{formatCurrency(effTotalPay)}</span>
             </div>
             <div className="flex justify-between text-muted text-xs">
-              <span>Overhead (pay × 9.56% + $110.80)</span>
+              <span>
+                {hasGustoActuals
+                  ? <>Overhead <span className="text-teal font-medium">(from Gusto)</span></>
+                  : `Overhead (pay × ${(taxRate * 100).toFixed(2)}% + $${fixedOverhead.toFixed(2)})`
+                }
+              </span>
               <span className="tabular-nums">{formatCurrency(effOverhead)}</span>
             </div>
             <div className="flex justify-between text-xs font-medium">
@@ -377,10 +400,10 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
               >
                 {reconcOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                 Submission vs. Claim Tracking
-                {allMatch && <span className="ml-2 text-success">✓ Counts match</span>}
+                <span className={`ml-2 ${reconcStatusColor[reconcStatus]}`}>{reconcStatusLabel[reconcStatus]}</span>
               </button>
               {reconcOpen && (
-                <div className="mt-3">
+                <div className="mt-3 space-y-3">
                   <table className="w-full text-xs font-body">
                     <thead>
                       <tr className="border-b border-border">
@@ -391,21 +414,47 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                       </tr>
                     </thead>
                     <tbody>
-                      {reconcRows.map(r => {
+                      {reconcRows.filter(r => r.reported > 0 || r.claims > 0).map(r => {
                         const delta = r.reported - r.claims
                         return (
                           <tr key={r.label} className="border-t border-gray-50">
                             <td className="py-1.5 text-ink">{r.label}</td>
                             <td className="py-1.5 text-right tabular-nums">{r.reported}</td>
                             <td className="py-1.5 text-right tabular-nums">{r.claims}</td>
-                            <td className={`py-1.5 text-right tabular-nums font-medium ${delta !== 0 ? 'text-amber-600' : 'text-muted'}`}>
+                            <td className={`py-1.5 text-right tabular-nums font-medium ${delta !== 0 ? Math.abs(delta) >= 3 ? 'text-error' : 'text-amber-600' : 'text-muted'}`}>
                               {delta !== 0 ? (delta > 0 ? `+${delta}` : String(delta)) : '—'}
                             </td>
                           </tr>
                         )
                       })}
+                      <tr className="border-t-2 border-border font-medium">
+                        <td className="py-1.5 text-ink">Total</td>
+                        <td className="py-1.5 text-right tabular-nums">{totalReported}</td>
+                        <td className="py-1.5 text-right tabular-nums">{totalClaims}</td>
+                        <td className={`py-1.5 text-right tabular-nums font-medium ${totalDelta !== 0 ? Math.abs(totalDelta) >= 3 ? 'text-error' : 'text-amber-600' : 'text-muted'}`}>
+                          {totalDelta !== 0 ? (totalDelta > 0 ? `+${totalDelta}` : String(totalDelta)) : '—'}
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
+
+                  {summary.priorPeriodAvgSessions > 0 && (
+                    <p className="text-xs font-body text-muted">
+                      Prior 3-period avg therapy sessions: <span className="font-medium text-ink">{summary.priorPeriodAvgSessions}</span>
+                      {effTherapySessions > 0 && Math.abs(effTherapySessions - summary.priorPeriodAvgSessions) > 3 && (
+                        <span className="ml-1.5 text-amber-600">
+                          ({effTherapySessions > summary.priorPeriodAvgSessions ? '+' : ''}{Math.round(effTherapySessions - summary.priorPeriodAvgSessions)} from avg)
+                        </span>
+                      )}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs font-body text-muted border-t border-dashed border-border pt-2">
+                    <span>Therapy rate: <span className="font-medium text-ink">${summary.therapySessionRate}</span></span>
+                    <span>Other rate: <span className="font-medium text-ink">${summary.otherSessionRate}</span></span>
+                    <span>No-show rate: <span className="font-medium text-ink">${summary.noShowRate}</span></span>
+                    <span>Admin hourly: <span className="font-medium text-ink">${adminHourlyRate}</span></span>
+                  </div>
                 </div>
               )}
             </div>

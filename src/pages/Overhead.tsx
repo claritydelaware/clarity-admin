@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
-import { FileSpreadsheet, ChevronDown, ChevronUp, Edit2, DollarSign } from 'lucide-react'
+import { FileSpreadsheet, ChevronDown, ChevronUp, Edit2, DollarSign, ClipboardPaste } from 'lucide-react'
 import { useOverhead, useSaveOverhead, useUpdateOverhead } from '../hooks/useOverhead'
 import { usePayroll, useSavePayroll } from '../hooks/usePayroll'
 import { formatCurrency } from '../lib/utils'
@@ -461,6 +461,9 @@ export default function Overhead() {
   const [payrollImporting, setPayrollImporting] = useState<string | null>(null)
   const [payrollImportError, setPayrollImportError] = useState<string | null>(null)
   const [showAllPayroll, setShowAllPayroll] = useState(false)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const [pasteError, setPasteError] = useState<string | null>(null)
 
   const reportingFiles: ReportingFile[] = Object.entries(xlsxAssets)
     .map(([path, url]) => {
@@ -552,6 +555,27 @@ export default function Overhead() {
       notes: '',
     })
     setPayrollPreview(null)
+  }
+
+  const handlePasteImport = () => {
+    setPasteError(null)
+    try {
+      const data = JSON.parse(pasteText.trim()) as GustoPayrollPreview
+      if (!data.month || !data.grossEarnings) {
+        setPasteError('JSON must include at least "month" and "grossEarnings" fields')
+        return
+      }
+      if (!data.periodLabel) data.periodLabel = new Date(data.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+      if (!data.breakdown) data.breakdown = []
+      if (!data.employeeCount) data.employeeCount = data.breakdown.length
+      if (!data.totalPayrollCost) data.totalPayrollCost = Math.round((data.grossEarnings + (data.employerTaxes ?? 0)) * 100) / 100
+      if (!data.payRunCount) data.payRunCount = 1
+      setPayrollPreview(data)
+      setPasteOpen(false)
+      setPasteText('')
+    } catch {
+      setPasteError('Invalid JSON — paste the block provided by Claude')
+    }
   }
 
   const existingPayrollMonths = new Set(payrollEntries?.map(e => e.month) ?? [])
@@ -674,36 +698,49 @@ export default function Overhead() {
       </Card>
 
       {/* ─── Payroll Import (Gusto) ───────────────────────────────────────── */}
-      <Card title="Import Payroll from Gusto" subtitle="Drop Gusto payroll summary CSVs into the reporting/ folder, then click a month to import.">
+      <Card title="Import Payroll from Gusto" subtitle="Ask Claude to pull Gusto payroll data, then paste the JSON here.">
         {payrollImportError && <ErrorBanner message={payrollImportError} className="mb-4" />}
 
         {!payrollPreview && (
-          payrollFiles.length === 0 ? (
-            <p className="text-sm font-body text-muted italic">No Gusto CSV files found in <code className="bg-gray-100 px-1 rounded">reporting/</code>.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {payrollFiles.map(file => {
-                const alreadyImported = existingPayrollMonths.has(file.month)
-                return (
-                  <button
-                    key={file.url}
-                    onClick={() => handlePayrollImport(file)}
-                    disabled={payrollImporting !== null}
-                    className={[
-                      'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm font-body transition-colors',
-                      alreadyImported
-                        ? 'border-border text-muted hover:bg-surface-sunken'
-                        : 'border-border text-ink hover:border-teal/40 hover:bg-teal-pale/20',
-                      payrollImporting === file.label ? 'opacity-60 cursor-wait' : '',
-                    ].join(' ')}
-                  >
-                    <DollarSign size={14} className="shrink-0 text-teal" />
-                    <span>{file.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          )
+          <div className="space-y-3">
+            <Button
+              variant="secondary"
+              icon={<ClipboardPaste size={14} />}
+              onClick={() => { setPasteOpen(true); setPasteError(null) }}
+            >
+              Paste Gusto Data
+            </Button>
+
+            {payrollFiles.length > 0 && (
+              <details className="group">
+                <summary className="text-xs font-ui text-muted cursor-pointer hover:text-teal transition-colors">
+                  Or import from CSV files ({payrollFiles.length} available)
+                </summary>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
+                  {payrollFiles.map(file => {
+                    const alreadyImported = existingPayrollMonths.has(file.month)
+                    return (
+                      <button
+                        key={file.url}
+                        onClick={() => handlePayrollImport(file)}
+                        disabled={payrollImporting !== null}
+                        className={[
+                          'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm font-body transition-colors',
+                          alreadyImported
+                            ? 'border-border text-muted hover:bg-surface-sunken'
+                            : 'border-border text-ink hover:border-teal/40 hover:bg-teal-pale/20',
+                          payrollImporting === file.label ? 'opacity-60 cursor-wait' : '',
+                        ].join(' ')}
+                      >
+                        <DollarSign size={14} className="shrink-0 text-teal" />
+                        <span>{file.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </details>
+            )}
+          </div>
         )}
 
         {payrollPreview && (
@@ -715,6 +752,26 @@ export default function Overhead() {
           />
         )}
       </Card>
+
+      <Dialog open={pasteOpen} onClose={() => setPasteOpen(false)} title="Paste Gusto Payroll JSON" maxWidth="lg">
+        <div className="space-y-3">
+          <p className="text-xs font-body text-muted">
+            Ask Claude: <span className="font-medium text-ink">"Pull Gusto payroll for [month]"</span> — then paste the JSON block here.
+          </p>
+          {pasteError && <ErrorBanner message={pasteError} />}
+          <textarea
+            value={pasteText}
+            onChange={e => setPasteText(e.target.value)}
+            placeholder='{"month":"2026-06-01","periodLabel":"June 2026",...}'
+            rows={12}
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm font-mono text-ink bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-teal resize-y"
+          />
+          <div className="flex gap-3">
+            <Button onClick={handlePasteImport} disabled={!pasteText.trim()}>Import</Button>
+            <Button variant="secondary" onClick={() => { setPasteOpen(false); setPasteText('') }}>Cancel</Button>
+          </div>
+        </div>
+      </Dialog>
 
       {/* Payroll History */}
       <Card
