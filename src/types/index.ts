@@ -472,3 +472,9 @@ export interface ConfigData {
   w2PayrollTaxRate: number
   w2FixedOverheadPerPeriod: number
 }
+
+export interface ContractRate {
+  payer: string
+  effectiveDate: string
+  rates: Partial<Record<string, number>>
+}

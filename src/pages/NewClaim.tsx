@@ -5,6 +5,7 @@ import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, SERVICE_CODES, SUBMISSION_METHODS, CLAIM_STATUSES } from '../types'
 import type { NewClaimInput, Clinician } from '../types'
 import { useCreateClaim, useCaseloads, useClaims } from '../hooks/useClaims'
+import { useContractRates, makeLookup } from '../hooks/useContractRates'
 import { formatCurrency } from '../lib/utils'
 import PageHeader from '../components/layout/PageHeader'
 import Card from '../components/ui/Card'
@@ -52,11 +53,16 @@ export default function NewClaim() {
   const { data: caseloads } = useCaseloads()
   const { data: claims } = useClaims()
 
+  const { data: contractRateRows } = useContractRates()
+  const lookupRate = makeLookup(contractRateRows)
+
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
   const [showSupplemental, setShowSupplemental] = useState(false)
   const [suppError, setSuppError] = useState<string | null>(null)
   const [comboOpen, setComboOpen] = useState(false)
   const [comboQuery, setComboQuery] = useState('')
+  const [insuranceAmountSource, setInsuranceAmountSource] = useState<'contract-rate' | 'prior-claim' | null>(null)
+  const insuranceManualRef = useRef(false)
   const comboRef = useRef<HTMLDivElement>(null)
 
   const { register, handleSubmit, watch, setValue, unregister, formState: { errors } } = useForm<FormValues>({
@@ -125,6 +131,8 @@ export default function NewClaim() {
   useEffect(() => {
     if (!clientIdValue) {
       setAutoFilledFields(new Set())
+      setInsuranceAmountSource(null)
+      insuranceManualRef.current = false
       return
     }
     const filled = new Set<string>()
@@ -148,16 +156,51 @@ export default function NewClaim() {
       filled.add('submissionMethod')
       setValue('clientAmount', String(recent.clientAmount))
       filled.add('clientAmount')
-      setValue('insuranceAmount', String(recent.insuranceAmount))
-      filled.add('insuranceAmount')
+      // insuranceAmount is intentionally omitted here — the contract rate effect
+      // will fill it (recalculating from the current rate minus client portion).
+      // If no contract rate exists, fall back to the prior claim value below.
       if (!caseload) {
         setValue('clinician', recent.clinician as Clinician)
         filled.add('clinician')
       }
     }
 
+    insuranceManualRef.current = false
     setAutoFilledFields(filled)
   }, [clientIdValue, caseloads, claims, setValue])
+
+  // Contract rate auto-fill: fires whenever payer, code, or client amount changes.
+  // Skipped if the user has manually edited the insurance amount field.
+  // When a contract rate is found: insuranceAmount = max(0, allowable - clientAmount).
+  // Falls back to the prior claim's insuranceAmount when no rate exists for this payer.
+  useEffect(() => {
+    if (insuranceManualRef.current) return
+
+    const clientAmt = parseFloat(clientAmountRaw) || 0
+
+    if (insurance && serviceCode) {
+      const rate = lookupRate(insurance, serviceCode)
+      if (rate !== null) {
+        const insAmt = Math.max(0, rate - clientAmt)
+        setValue('insuranceAmount', insAmt.toFixed(2))
+        setInsuranceAmountSource('contract-rate')
+        return
+      }
+    }
+
+    // No contract rate — fall back to prior claim value if one was loaded
+    const recent = [...(claims ?? [])]
+      .filter(c => c.clientId === clientIdValue)
+      .sort((a, b) => new Date(b.claimDate).getTime() - new Date(a.claimDate).getTime())[0]
+
+    if (recent) {
+      setValue('insuranceAmount', String(recent.insuranceAmount))
+      setInsuranceAmountSource('prior-claim')
+    } else {
+      setInsuranceAmountSource(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insurance, serviceCode, clientAmountRaw, contractRateRows])
 
   const onSubmit = async (values: FormValues) => {
     setSuppError(null)
@@ -365,8 +408,29 @@ export default function NewClaim() {
               </div>
               <div>
                 <label className={labelClass}>Insurance Amount</label>
-                <input type="number" step="0.01" min="0" {...register('insuranceAmount')} className={inputAutoClass('insuranceAmount')} placeholder="0.00" />
-                {autoLabel('insuranceAmount')}
+                <input
+                  type="number" step="0.01" min="0"
+                  {...register('insuranceAmount', {
+                    onChange: () => {
+                      insuranceManualRef.current = true
+                      setInsuranceAmountSource(null)
+                    },
+                  })}
+                  className={
+                    insuranceAmountSource === 'contract-rate'
+                      ? `${inputClass} bg-teal-pale`
+                      : insuranceAmountSource === 'prior-claim'
+                        ? `${inputClass} bg-blue-50`
+                        : inputClass
+                  }
+                  placeholder="0.00"
+                />
+                {insuranceAmountSource === 'contract-rate' && (
+                  <p className="text-xs text-teal font-ui mt-0.5">Contract rate</p>
+                )}
+                {insuranceAmountSource === 'prior-claim' && (
+                  <p className="text-xs text-blue-500 font-ui mt-0.5">Auto-filled</p>
+                )}
               </div>
             </div>
 
