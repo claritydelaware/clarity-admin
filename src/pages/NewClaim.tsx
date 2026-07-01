@@ -5,7 +5,7 @@ import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, SERVICE_CODES, SUBMISSION_METHODS, CLAIM_STATUSES } from '../types'
 import type { NewClaimInput, Clinician } from '../types'
 import { useCreateClaim, useCaseloads, useClaims } from '../hooks/useClaims'
-import { useContractRates, makeLookup } from '../hooks/useContractRates'
+import { useContractRates, PAYER_RATE_GROUP } from '../hooks/useContractRates'
 import { formatCurrency } from '../lib/utils'
 import PageHeader from '../components/layout/PageHeader'
 import Card from '../components/ui/Card'
@@ -54,7 +54,6 @@ export default function NewClaim() {
   const { data: claims } = useClaims()
 
   const { data: contractRateRows } = useContractRates()
-  const lookupRate = makeLookup(contractRateRows)
 
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
   const [showSupplemental, setShowSupplemental] = useState(false)
@@ -169,7 +168,7 @@ export default function NewClaim() {
     setAutoFilledFields(filled)
   }, [clientIdValue, caseloads, claims, setValue])
 
-  // Contract rate auto-fill: fires whenever payer, code, or client amount changes.
+  // Contract rate auto-fill: fires whenever payer, code, client amount, or rate data changes.
   // Skipped if the user has manually edited the insurance amount field.
   // When a contract rate is found: insuranceAmount = max(0, allowable - clientAmount).
   // Falls back to the prior claim's insuranceAmount when no rate exists for this payer.
@@ -178,13 +177,18 @@ export default function NewClaim() {
 
     const clientAmt = parseFloat(clientAmountRaw) || 0
 
-    if (insurance && serviceCode) {
-      const rate = lookupRate(insurance, serviceCode)
-      if (rate !== null) {
-        const insAmt = Math.max(0, rate - clientAmt)
-        setValue('insuranceAmount', insAmt.toFixed(2))
-        setInsuranceAmountSource('contract-rate')
-        return
+    if (insurance && serviceCode && contractRateRows?.length) {
+      const groupName = PAYER_RATE_GROUP[insurance]
+      if (groupName) {
+        const row = contractRateRows.find(
+          r => r.payer.trim().toLowerCase() === groupName.toLowerCase()
+        )
+        const rate = row?.rates[serviceCode] ?? null
+        if (rate !== null) {
+          setValue('insuranceAmount', Math.max(0, rate - clientAmt).toFixed(2))
+          setInsuranceAmountSource('contract-rate')
+          return
+        }
       }
     }
 
@@ -199,8 +203,7 @@ export default function NewClaim() {
     } else {
       setInsuranceAmountSource(null)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [insurance, serviceCode, clientAmountRaw, contractRateRows])
+  }, [insurance, serviceCode, clientAmountRaw, contractRateRows, claims, clientIdValue, setValue])
 
   const onSubmit = async (values: FormValues) => {
     setSuppError(null)
