@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react'
 import { CLINICIANS, KNOWN_PAYERS, SERVICE_CODES, SUBMISSION_METHODS, CLAIM_STATUSES } from '../../types'
 import type { NewClaimInput, Clinician } from '../../types'
 import { useCreateClaim, useCaseloads, useClaims } from '../../hooks/useClaims'
+import { useContractRates, PAYER_RATE_GROUP } from '../../hooks/useContractRates'
 import { formatCurrency } from '../../lib/utils'
 import Dialog from '../ui/Dialog'
 import Card from '../ui/Card'
@@ -106,6 +107,7 @@ export default function NewClaimModal({ open, onClose }: Props) {
   const { mutateAsync: mutateSupplemental, isPending: suppPending } = useCreateClaim()
   const { data: caseloads } = useCaseloads()
   const { data: claims } = useClaims()
+  const { data: contractRateRows } = useContractRates()
 
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set())
   const [showSupplemental, setShowSupplemental] = useState(false)
@@ -113,8 +115,11 @@ export default function NewClaimModal({ open, onClose }: Props) {
   const [comboOpen, setComboOpen] = useState(false)
   const [comboQuery, setComboQuery] = useState('')
   const [hasDraft, setHasDraft] = useState(false)
+  const [insuranceAmountSource, setInsuranceAmountSource] = useState<'contract-rate' | 'prior-claim' | null>(null)
   const comboRef = useRef<HTMLDivElement>(null)
   const skipAutoFillRef = useRef(false)
+  const skipContractRateRef = useRef(false)
+  const insuranceManualRef = useRef(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const { register, handleSubmit, watch, setValue, unregister, reset, getValues, formState: { errors } } = useForm<FormValues>({
@@ -130,6 +135,8 @@ export default function NewClaimModal({ open, onClose }: Props) {
     setSuppError(null)
     setComboQuery('')
     setHasDraft(false)
+    setInsuranceAmountSource(null)
+    insuranceManualRef.current = false
     resetMutation()
   }, [reset, resetMutation])
 
@@ -141,6 +148,7 @@ export default function NewClaimModal({ open, onClose }: Props) {
     const draft = loadDraft()
     if (draft && isDraftMeaningful(draft.values)) {
       skipAutoFillRef.current = true
+      skipContractRateRef.current = true
       reset(draft.values)
       setShowSupplemental(draft.showSupplemental)
       setComboQuery(draft.values.clientId || '')
@@ -224,6 +232,8 @@ export default function NewClaimModal({ open, onClose }: Props) {
     }
     if (!clientIdValue) {
       setAutoFilledFields(new Set())
+      setInsuranceAmountSource(null)
+      insuranceManualRef.current = false
       return
     }
     const filled = new Set<string>()
@@ -247,16 +257,60 @@ export default function NewClaimModal({ open, onClose }: Props) {
       filled.add('submissionMethod')
       setValue('clientAmount', String(recent.clientAmount))
       filled.add('clientAmount')
-      setValue('insuranceAmount', String(recent.insuranceAmount))
-      filled.add('insuranceAmount')
+      // insuranceAmount is intentionally omitted here — the contract rate effect
+      // below fills it (recalculating from the current rate minus client portion).
+      // If no contract rate exists, it falls back to this prior claim's value.
       if (!caseload) {
         setValue('clinician', recent.clinician as Clinician)
         filled.add('clinician')
       }
     }
 
+    insuranceManualRef.current = false
     setAutoFilledFields(filled)
   }, [clientIdValue, caseloads, claims, setValue])
+
+  // Contract rate auto-fill: fires whenever payer, code, client amount, or rate data changes.
+  // Skipped if the user has manually edited the insurance amount field, or immediately
+  // after a saved draft is restored (its insuranceAmount is treated as intentional).
+  // When a contract rate is found: insuranceAmount = max(0, allowable - clientAmount).
+  // Falls back to the prior claim's insuranceAmount when no rate exists for this payer.
+  useEffect(() => {
+    if (skipContractRateRef.current) {
+      skipContractRateRef.current = false
+      return
+    }
+    if (insuranceManualRef.current) return
+
+    const clientAmt = parseFloat(clientAmountRaw) || 0
+
+    if (insurance && serviceCode && contractRateRows?.length) {
+      const groupName = PAYER_RATE_GROUP[insurance]
+      if (groupName) {
+        const row = contractRateRows.find(
+          r => r.payer.trim().toLowerCase() === groupName.toLowerCase()
+        )
+        const rate = row?.rates[serviceCode] ?? null
+        if (rate !== null) {
+          setValue('insuranceAmount', Math.max(0, rate - clientAmt).toFixed(2))
+          setInsuranceAmountSource('contract-rate')
+          return
+        }
+      }
+    }
+
+    // No contract rate — fall back to prior claim value if one was loaded
+    const recent = [...(claims ?? [])]
+      .filter(c => c.clientId === clientIdValue)
+      .sort((a, b) => new Date(b.claimDate).getTime() - new Date(a.claimDate).getTime())[0]
+
+    if (recent) {
+      setValue('insuranceAmount', String(recent.insuranceAmount))
+      setInsuranceAmountSource('prior-claim')
+    } else {
+      setInsuranceAmountSource(null)
+    }
+  }, [insurance, serviceCode, clientAmountRaw, contractRateRows, claims, clientIdValue, setValue])
 
   const onSubmit = async (values: FormValues) => {
     setSuppError(null)
@@ -455,8 +509,29 @@ export default function NewClaimModal({ open, onClose }: Props) {
             </div>
             <div>
               <label className={labelClass}>Insurance Amount</label>
-              <input type="number" step="0.01" min="0" {...register('insuranceAmount')} className={inputAutoClass('insuranceAmount')} placeholder="0.00" />
-              {autoLabel('insuranceAmount')}
+              <input
+                type="number" step="0.01" min="0"
+                {...register('insuranceAmount', {
+                  onChange: () => {
+                    insuranceManualRef.current = true
+                    setInsuranceAmountSource(null)
+                  },
+                })}
+                className={
+                  insuranceAmountSource === 'contract-rate'
+                    ? `${inputClass} bg-teal-pale`
+                    : insuranceAmountSource === 'prior-claim'
+                      ? `${inputClass} bg-blue-50`
+                      : inputClass
+                }
+                placeholder="0.00"
+              />
+              {insuranceAmountSource === 'contract-rate' && (
+                <p className="text-xs text-teal font-ui mt-0.5">Contract rate</p>
+              )}
+              {insuranceAmountSource === 'prior-claim' && (
+                <p className="text-xs text-blue-500 font-ui mt-0.5">Auto-filled</p>
+              )}
             </div>
           </div>
 
