@@ -14,10 +14,11 @@ export type InlineEditField =
   | 'paymentDateReceived'
   | 'insurancePaidHHO'
 
-export function useClaims(filter?: ClaimsFilter) {
+export function useClaims(filter?: ClaimsFilter, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['claims', filter],
     queryFn: () => api.claims.list(filter),
+    enabled: options?.enabled,
   })
 }
 

@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { Menu, ChevronRight } from 'lucide-react'
+import { Menu, ChevronRight, Search } from 'lucide-react'
 import Avatar from '../ui/Avatar'
 
 const BREADCRUMBS: Record<string, { parent?: string; label: string }> = {
@@ -12,13 +12,16 @@ const BREADCRUMBS: Record<string, { parent?: string; label: string }> = {
   '/staff':       { label: 'Staff' },
   '/staff/new':   { parent: 'Staff', label: 'New Staff' },
   '/caseloads':   { label: 'Caseloads' },
+  '/qa':          { label: 'Data QA' },
+  '/valuation':   { label: 'Valuation' },
 }
 
 interface Props {
   onMenuClick: () => void
+  onSearchClick: () => void
 }
 
-export default function Topbar({ onMenuClick }: Props) {
+export default function Topbar({ onMenuClick, onSearchClick }: Props) {
   const { pathname } = useLocation()
 
   let crumb = BREADCRUMBS[pathname]
@@ -51,7 +54,17 @@ export default function Topbar({ onMenuClick }: Props) {
         </nav>
       )}
 
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onSearchClick}
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-muted hover:text-teal hover:border-teal/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+          aria-label="Open command palette"
+        >
+          <Search size={14} />
+          <span className="text-xs font-ui">Search…</span>
+          <kbd className="text-[10px] font-ui border border-border rounded px-1 py-0.5">⌘K</kbd>
+        </button>
         <Avatar name="Bruce Spadaccini" size="sm" />
       </div>
     </header>

@@ -456,6 +456,9 @@ export default function Overhead() {
   const [importError, setImportError] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
   const [editEntry, setEditEntry] = useState<OverheadEntry | null>(null)
+  const [pasteXeroOpen, setPasteXeroOpen] = useState(false)
+  const [pasteXeroText, setPasteXeroText] = useState('')
+  const [pasteXeroError, setPasteXeroError] = useState<string | null>(null)
 
   const [payrollPreview, setPayrollPreview] = useState<GustoPayrollPreview | null>(null)
   const [payrollImporting, setPayrollImporting] = useState<string | null>(null)
@@ -510,6 +513,41 @@ export default function Overhead() {
       notes: '',
     })
     setPreview(null)
+  }
+
+  const handlePasteXeroImport = () => {
+    setPasteXeroError(null)
+    try {
+      const data = JSON.parse(pasteXeroText.trim()) as XeroImportPreview & { otherIncome?: number }
+      if (!data.month || data.totalIncome == null) {
+        setPasteXeroError('JSON must include at least "month" and "totalIncome" fields')
+        return
+      }
+      // Normalize month to the canonical YYYY-MM-01 join key every downstream
+      // aggregate (quarterly summary, valuation snapshot, caseload trends) looks
+      // up by exact string match — a period-end date or ISO timestamp would
+      // otherwise silently fail those lookups.
+      const parsedMonth = new Date(data.month)
+      if (isNaN(parsedMonth.getTime())) {
+        setPasteXeroError(`Could not parse "month" as a date: "${data.month}"`)
+        return
+      }
+      data.month = `${parsedMonth.getUTCFullYear()}-${String(parsedMonth.getUTCMonth() + 1).padStart(2, '0')}-01`
+      if (!data.periodLabel) data.periodLabel = new Date(data.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+      if (!Array.isArray(data.lineItems)) data.lineItems = []
+      if (data.payrollExpenses == null) data.payrollExpenses = 0
+      if (data.operationalExpenses == null) data.operationalExpenses = 0
+      if (data.totalExpenses == null) data.totalExpenses = Math.round((data.payrollExpenses + data.operationalExpenses) * 100) / 100
+      // Matches parseXeroRows' formula (totalIncome - totalExpenses + otherIncome) —
+      // omitting otherIncome here would silently understate netIncome for any
+      // period with a non-zero Other Income/(Expense) line.
+      if (data.netIncome == null) data.netIncome = Math.round((data.totalIncome - data.totalExpenses + (data.otherIncome ?? 0)) * 100) / 100
+      setPreview(data)
+      setPasteXeroOpen(false)
+      setPasteXeroText('')
+    } catch {
+      setPasteXeroError('Invalid JSON — paste the block provided by Claude')
+    }
   }
 
   // ─── Gusto payroll CSV files ─────────────────────────────────────────────────
@@ -594,36 +632,51 @@ export default function Overhead() {
       <PageHeader title="Overhead" />
 
       {/* Import section */}
-      <Card title="Import from Xero" subtitle="Drop monthly P&L files from Xero into the reporting/ folder, then click a month to import.">
+      <Card title="Import from Xero" subtitle="Ask Claude to pull a period's P&L from Xero and paste the JSON, or drop monthly P&L files into the reporting/ folder.">
         {importError && <ErrorBanner message={importError} className="mb-4" />}
 
         {!preview && (
-          reportingFiles.length === 0 ? (
-            <p className="text-sm font-body text-muted italic">No P&amp;L files found in <code className="bg-gray-100 px-1 rounded">reporting/</code>.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {reportingFiles.map(file => {
-                const alreadyImported = existingMonths.has(labelToMonthKey(file.label))
-                return (
-                  <button
-                    key={file.url}
-                    onClick={() => handleImport(file)}
-                    disabled={importing !== null}
-                    className={[
-                      'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm font-body transition-colors',
-                      alreadyImported
-                        ? 'border-border text-muted hover:bg-surface-sunken'
-                        : 'border-border text-ink hover:border-teal/40 hover:bg-teal-pale/20',
-                      importing === file.label ? 'opacity-60 cursor-wait' : '',
-                    ].join(' ')}
-                  >
-                    <FileSpreadsheet size={14} className="shrink-0 text-teal" />
-                    <span>{file.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          )
+          <div className="space-y-3">
+            <Button
+              variant="secondary"
+              icon={<ClipboardPaste size={14} />}
+              onClick={() => { setPasteXeroOpen(true); setPasteXeroError(null) }}
+            >
+              Paste Xero Data
+            </Button>
+
+            {reportingFiles.length > 0 ? (
+              <details className="group">
+                <summary className="text-xs font-ui text-muted cursor-pointer hover:text-teal transition-colors">
+                  Or import from P&amp;L files ({reportingFiles.length} available)
+                </summary>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
+                  {reportingFiles.map(file => {
+                    const alreadyImported = existingMonths.has(labelToMonthKey(file.label))
+                    return (
+                      <button
+                        key={file.url}
+                        onClick={() => handleImport(file)}
+                        disabled={importing !== null}
+                        className={[
+                          'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm font-body transition-colors',
+                          alreadyImported
+                            ? 'border-border text-muted hover:bg-surface-sunken'
+                            : 'border-border text-ink hover:border-teal/40 hover:bg-teal-pale/20',
+                          importing === file.label ? 'opacity-60 cursor-wait' : '',
+                        ].join(' ')}
+                      >
+                        <FileSpreadsheet size={14} className="shrink-0 text-teal" />
+                        <span>{file.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </details>
+            ) : (
+              <p className="text-xs font-ui text-muted">No P&amp;L files found in <code className="bg-gray-100 px-1 rounded">reporting/</code>.</p>
+            )}
+          </div>
         )}
 
         {preview && (
@@ -635,6 +688,26 @@ export default function Overhead() {
           />
         )}
       </Card>
+
+      <Dialog open={pasteXeroOpen} onClose={() => setPasteXeroOpen(false)} title="Paste Xero P&L JSON" maxWidth="lg">
+        <div className="space-y-3">
+          <p className="text-xs font-body text-muted">
+            Ask Claude: <span className="font-medium text-ink">"Pull Xero P&amp;L for [month]"</span> — then paste the JSON block here.
+          </p>
+          {pasteXeroError && <ErrorBanner message={pasteXeroError} />}
+          <textarea
+            value={pasteXeroText}
+            onChange={e => setPasteXeroText(e.target.value)}
+            placeholder='{"month":"2026-06-01","periodLabel":"June 2026","totalIncome":50000,"payrollExpenses":20000,"operationalExpenses":8000,"otherIncome":0,...}'
+            rows={12}
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm font-mono text-ink bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-teal resize-y"
+          />
+          <div className="flex gap-3">
+            <Button onClick={handlePasteXeroImport} disabled={!pasteXeroText.trim()}>Import</Button>
+            <Button variant="secondary" onClick={() => { setPasteXeroOpen(false); setPasteXeroText('') }}>Cancel</Button>
+          </div>
+        </div>
+      </Dialog>
 
       {/* History table */}
       <Card

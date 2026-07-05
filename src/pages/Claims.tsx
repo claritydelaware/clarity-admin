@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Download, AlignJustify, List } from 'lucide-react'
 import type { Claim } from '../types'
 import { PAYER_GROUPS } from '../types'
 import { useClaims } from '../hooks/useClaims'
 import { api } from '../lib/api'
 import { downloadCsv, isArchived, hasOutstandingCollection } from '../lib/utils'
+import { useToast } from '../context/ToastContext'
 import ClaimsFilters, { useClaimFilters } from '../components/claims/ClaimsFilters'
 import ClaimsBoard from '../components/claims/ClaimsBoard'
 import StatusUpdateModal from '../components/claims/StatusUpdateModal'
@@ -41,6 +43,50 @@ export default function Claims() {
   }
 
   const { data: claims, isLoading, isError, error, refetch } = useClaims(apiFilter)
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const toast = useToast()
+
+  // Deep-link support: /claims?new=1 opens NewClaimModal, /claims?edit=<rowIndex>
+  // opens EditClaimModal for that row. Used by the command palette and Data QA
+  // page, which live outside this component and can't reach its modal state
+  // directly — there is no dedicated /claims/new or /claims/:rowIndex/edit route.
+  // Both params are handled in one effect (rather than two) so a URL carrying
+  // both at once can't race — two effects each stripping their own param from
+  // the same pre-update searchParams snapshot could otherwise re-introduce the
+  // other's param and reopen the wrong modal.
+  useEffect(() => {
+    const wantsNew = searchParams.get('new') === '1'
+    const editParam = searchParams.get('edit')
+    if (!wantsNew && !editParam) return
+
+    // rowIndex is a live Google Sheets row number that shifts when an earlier
+    // row is deleted — a cached deep link (Data QA's 5-minute staleTime, or the
+    // command palette) could point at a different claim by the time it's
+    // clicked. Cross-check against the claimId captured at link-build time
+    // rather than trusting rowIndex alone; claims without a claimId (self-pay)
+    // have no better identity signal, so those fall back to trusting rowIndex.
+    if (editParam) {
+      if (!claims) return // wait for claims to load before resolving/stripping `edit`
+      const rowIndex = parseInt(editParam, 10)
+      const expectedClaimId = searchParams.get('claimId') ?? ''
+      const match = claims.find(c => c.rowIndex === rowIndex)
+      if (match && (!expectedClaimId || match.claimId === expectedClaimId)) {
+        setEditingClaim(match)
+      } else if (match && expectedClaimId) {
+        toast.error('That claim may have moved — please search again')
+      }
+    }
+
+    if (wantsNew) setNewClaimOpen(true)
+
+    setSearchParams(prev => {
+      prev.delete('new')
+      prev.delete('edit')
+      prev.delete('claimId')
+      return prev
+    }, { replace: true })
+  }, [searchParams, claims, setSearchParams, toast])
 
   const search = (filters.search ?? '').toLowerCase().trim()
   const clientIdFilter = (filters.clientId ?? '').toLowerCase().trim()

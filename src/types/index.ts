@@ -478,3 +478,36 @@ export interface ContractRate {
   effectiveDate: string
   rates: Partial<Record<string, number>>
 }
+
+export interface QaAnomalyClaim {
+  rowIndex: number
+  claimId?: string
+  clientId: string
+  detail: string
+}
+
+export interface QaAnomalyRule {
+  rule: string
+  severity: 'error' | 'warning'
+  claims: QaAnomalyClaim[]
+}
+
+export interface ValuationPayerConcentration {
+  payer: string
+  revenue: number
+  pctOfTotal: number
+}
+
+export interface ValuationSnapshot {
+  trailingTwelveMonthsRevenue: number
+  payerConcentration: ValuationPayerConcentration[]
+  top1PayerPct: number | null
+  top3PayerPct: number | null
+  herfindahlIndex: number | null
+  overheadToRevenueTrend: { month: string; ratio: number | null }[]
+  cashConversionTrend: { month: string; ratio: number | null }[]
+  byClinicianRevenue: Record<string, number>
+  marginTrendDirection: 'improving' | 'declining' | 'flat' | null
+  marginTrendSlopePctPerMonth: number | null
+  dataComplete: boolean
+}

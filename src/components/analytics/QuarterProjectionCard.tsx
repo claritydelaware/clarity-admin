@@ -1,13 +1,15 @@
 import { useMemo } from 'react'
 import ReactApexChart from 'react-apexcharts'
 import type { ApexOptions } from 'apexcharts'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, FileDown } from 'lucide-react'
 import { mergeChartOptions } from '../charts/baseChartOptions'
 import ChartCard from '../charts/ChartCard'
 import Card from '../ui/Card'
+import Button from '../ui/Button'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import { useQuarterlySummary } from '../../hooks/useQuarterlySummary'
 import { useQuarterProjection } from '../../hooks/useQuarterProjection'
+import { usePayerPerformance } from '../../hooks/usePayerPerformance'
 import { formatCurrency } from '../../lib/utils'
 
 function pctChange(current: number, prior: number): string {
@@ -239,6 +241,32 @@ function QuarterProjection() {
 }
 
 export default function QuarterProjectionCard() {
+  const { data: quarters } = useQuarterlySummary()
+  const { data: proj } = useQuarterProjection()
+  const { data: payerPerformance } = usePayerPerformance()
+
+  const canExport = !!proj
+
+  // jsPDF pulls in html2canvas/dompurify (~600KB) that this export never uses —
+  // dynamic import keeps that weight out of the main bundle until actually needed.
+  const handleExport = async () => {
+    if (!proj) return
+    const { generateQuarterlyPDF } = await import('../../lib/generateQuarterlyPDF')
+    const matchingQuarter = quarters?.find(q => q.label === proj.quarterLabel)
+    generateQuarterlyPDF({
+      quarterLabel: proj.quarterLabel,
+      revenue: matchingQuarter?.revenue ?? proj.actualRevenue,
+      income: matchingQuarter?.income ?? proj.actualIncome,
+      totalOverhead: matchingQuarter?.totalOverhead ?? proj.actualOverhead,
+      profit: matchingQuarter?.profit ?? proj.actualProfit,
+      marginPct: matchingQuarter?.marginPct ?? null,
+      sessions: matchingQuarter?.sessions ?? null,
+      byClinicianRevenue: matchingQuarter?.byClinicianRevenue ?? null,
+      projection: proj,
+      payerPerformance: payerPerformance ?? [],
+    })
+  }
+
   return (
     <>
       <div>
@@ -246,7 +274,12 @@ export default function QuarterProjectionCard() {
         <QuarterlyPerformance />
       </div>
       <div>
-        <h2 className="font-heading text-base font-semibold text-ink mb-4">Quarter Projection</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-heading text-base font-semibold text-ink">Quarter Projection</h2>
+          <Button variant="secondary" size="sm" icon={<FileDown size={14} />} disabled={!canExport} onClick={handleExport}>
+            Export PDF
+          </Button>
+        </div>
         <QuarterProjection />
       </div>
     </>
