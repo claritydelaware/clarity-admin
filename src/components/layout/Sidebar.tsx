@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ClipboardList, ShieldAlert, Landmark, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export const NAV = [
   { to: '/dashboard',   label: 'Dashboard',       icon: LayoutDashboard },
@@ -10,7 +10,6 @@ export const NAV = [
   { to: '/overhead',    label: 'Overhead',         icon: Receipt },
   { to: '/staff',       label: 'Staff',            icon: Users },
   { to: '/caseloads',   label: 'Caseloads',        icon: ClipboardList },
-  { to: '/qa',          label: 'Data QA',          icon: ShieldAlert },
   { to: '/valuation',   label: 'Valuation',        icon: Landmark },
 ]
 

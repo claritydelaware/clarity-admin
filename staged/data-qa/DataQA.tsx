@@ -1,12 +1,12 @@
+// STAGED — not wired into the app. See README.md in this folder.
 import { Link } from 'react-router-dom'
 import { ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react'
-import { useDataQA } from '../hooks/useDataQA'
-import PageHeader from '../components/layout/PageHeader'
-import Card from '../components/ui/Card'
-import LoadingSpinner from '../components/ui/LoadingSpinner'
-import ErrorBanner from '../components/ui/ErrorBanner'
-import EmptyState from '../components/ui/EmptyState'
-import type { QaAnomalyRule } from '../types'
+import { useDataQA, type QaAnomalyRule } from './useDataQA'
+import PageHeader from '../../src/components/layout/PageHeader'
+import Card from '../../src/components/ui/Card'
+import LoadingSpinner from '../../src/components/ui/LoadingSpinner'
+import ErrorBanner from '../../src/components/ui/ErrorBanner'
+import EmptyState from '../../src/components/ui/EmptyState'
 
 function SeverityTag({ severity }: { severity: 'error' | 'warning' }) {
   const isError = severity === 'error'

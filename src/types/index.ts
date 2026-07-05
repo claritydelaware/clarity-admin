@@ -479,19 +479,6 @@ export interface ContractRate {
   rates: Partial<Record<string, number>>
 }
 
-export interface QaAnomalyClaim {
-  rowIndex: number
-  claimId?: string
-  clientId: string
-  detail: string
-}
-
-export interface QaAnomalyRule {
-  rule: string
-  severity: 'error' | 'warning'
-  claims: QaAnomalyClaim[]
-}
-
 export interface ValuationPayerConcentration {
   payer: string
   revenue: number

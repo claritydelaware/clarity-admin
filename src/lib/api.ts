@@ -4,7 +4,7 @@ import type {
   StaffMember, StaffLicense, OverheadEntry, PayrollEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
-  Clinician, ConfigData, ContractRate, QaAnomalyRule, ValuationSnapshot,
+  Clinician, ConfigData, ContractRate, ValuationSnapshot,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -114,9 +114,6 @@ export const api = {
     quarterProjection: (): Promise<QuarterProjection> => apiFetch<QuarterProjection>('/analytics/quarter-projection'),
     payerPerformance: (): Promise<PayerPerformance[]> => apiFetch<PayerPerformance[]>('/analytics/payer-performance'),
     valuationSnapshot: (): Promise<ValuationSnapshot> => apiFetch<ValuationSnapshot>('/analytics/valuation-snapshot'),
-  },
-  qa: {
-    anomalies: (): Promise<QaAnomalyRule[]> => apiFetch<QaAnomalyRule[]>('/qa/anomalies'),
   },
   staff: {
     list: (): Promise<StaffMember[]> => apiFetch<StaffMember[]>('/staff'),

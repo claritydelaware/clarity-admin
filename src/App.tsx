@@ -10,7 +10,6 @@ import Staff from './pages/Staff'
 import NewStaff from './pages/NewStaff'
 import StaffDetail from './pages/StaffDetail'
 import Caseloads from './pages/Caseloads'
-import DataQA from './pages/DataQA'
 import Valuation from './pages/Valuation'
 
 export default function App() {
@@ -29,7 +28,6 @@ export default function App() {
           <Route path="staff/new" element={<NewStaff />} />
           <Route path="staff/:id" element={<StaffDetail />} />
           <Route path="caseloads" element={<Caseloads />} />
-          <Route path="qa" element={<DataQA />} />
           <Route path="valuation" element={<Valuation />} />
         </Route>
       </Routes>

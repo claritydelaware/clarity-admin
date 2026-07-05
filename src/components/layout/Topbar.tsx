@@ -12,7 +12,6 @@ const BREADCRUMBS: Record<string, { parent?: string; label: string }> = {
   '/staff':       { label: 'Staff' },
   '/staff/new':   { parent: 'Staff', label: 'New Staff' },
   '/caseloads':   { label: 'Caseloads' },
-  '/qa':          { label: 'Data QA' },
   '/valuation':   { label: 'Valuation' },
 }
 
