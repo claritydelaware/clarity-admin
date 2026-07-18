@@ -305,13 +305,14 @@ function PayrollPreviewPanel({ preview, onConfirm, onDiscard, existing }: {
   )
 }
 
-function ImportBadge({ source }: { source: 'xero-import' | 'manual' }) {
+function ImportBadge({ source }: { source: 'xero-import' | 'qbo-import' | 'manual' }) {
+  const label = source === 'xero-import' ? 'Xero Import' : source === 'qbo-import' ? 'QBO Import' : 'Manual'
   return (
     <span className={[
       'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-ui',
-      source === 'xero-import' ? 'bg-teal-pale text-teal' : 'bg-gray-100 text-muted',
+      source !== 'manual' ? 'bg-teal-pale text-teal' : 'bg-gray-100 text-muted',
     ].join(' ')}>
-      {source === 'xero-import' ? 'Xero Import' : 'Manual'}
+      {label}
     </span>
   )
 }
@@ -509,7 +510,7 @@ export default function Overhead() {
       totalExpenses: preview.totalExpenses,
       netIncome: preview.netIncome,
       lineItems: preview.lineItems,
-      importSource: 'xero-import',
+      importSource: preview.importSource ?? 'xero-import',
       notes: '',
     })
     setPreview(null)
@@ -632,7 +633,7 @@ export default function Overhead() {
       <PageHeader title="Overhead" />
 
       {/* Import section */}
-      <Card title="Import from Xero" subtitle="Ask Claude to pull a period's P&L from Xero and paste the JSON, or drop monthly P&L files into the reporting/ folder.">
+      <Card title="Import Financials" subtitle="Ask Claude to pull a period's P&L from QuickBooks (or Xero) and paste the JSON, or drop monthly P&L files into the reporting/ folder.">
         {importError && <ErrorBanner message={importError} className="mb-4" />}
 
         {!preview && (
@@ -642,7 +643,7 @@ export default function Overhead() {
               icon={<ClipboardPaste size={14} />}
               onClick={() => { setPasteXeroOpen(true); setPasteXeroError(null) }}
             >
-              Paste Xero Data
+              Paste Financial Data
             </Button>
 
             {reportingFiles.length > 0 ? (
@@ -689,16 +690,16 @@ export default function Overhead() {
         )}
       </Card>
 
-      <Dialog open={pasteXeroOpen} onClose={() => setPasteXeroOpen(false)} title="Paste Xero P&L JSON" maxWidth="lg">
+      <Dialog open={pasteXeroOpen} onClose={() => setPasteXeroOpen(false)} title="Paste P&L JSON" maxWidth="lg">
         <div className="space-y-3">
           <p className="text-xs font-body text-muted">
-            Ask Claude: <span className="font-medium text-ink">"Pull Xero P&amp;L for [month]"</span> — then paste the JSON block here.
+            Ask Claude: <span className="font-medium text-ink">"Pull QuickBooks P&amp;L for [month]"</span> — then paste the JSON block here.
           </p>
           {pasteXeroError && <ErrorBanner message={pasteXeroError} />}
           <textarea
             value={pasteXeroText}
             onChange={e => setPasteXeroText(e.target.value)}
-            placeholder='{"month":"2026-06-01","periodLabel":"June 2026","totalIncome":50000,"payrollExpenses":20000,"operationalExpenses":8000,"otherIncome":0,...}'
+            placeholder='{"month":"2026-06-01","periodLabel":"June 2026","totalIncome":50000,"payrollExpenses":20000,"operationalExpenses":8000,"otherIncome":0,"importSource":"qbo-import",...}'
             rows={12}
             className="w-full rounded-lg border border-border px-3 py-2 text-sm font-mono text-ink bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-teal resize-y"
           />

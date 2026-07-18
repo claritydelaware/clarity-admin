@@ -238,6 +238,7 @@ export interface XeroImportPreview {
   totalExpenses: number
   netIncome: number
   lineItems: OverheadLineItem[]
+  importSource?: 'xero-import' | 'qbo-import'
 }
 
 export interface OverheadEntry {
@@ -248,7 +249,7 @@ export interface OverheadEntry {
   totalExpenses: number
   netIncome: number
   lineItems: OverheadLineItem[]
-  importSource: 'xero-import' | 'manual'
+  importSource: 'xero-import' | 'qbo-import' | 'manual'
   notes: string
 }
 
