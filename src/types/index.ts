@@ -12,7 +12,7 @@ export type ClaimStatus = typeof CLAIM_STATUSES[number]
 
 export const KNOWN_PAYERS = [
   'BCBS', 'BCBS-MA', 'Aetna', 'United', 'United-MA', 'United-Surest', 'UMR', 'Medicare',
-  'Health Options', 'Delaware First', 'Amerihealth VIP', 'Mutual of Omaha',
+  'Health Options', 'Delaware First', 'Amerihealth', 'Amerihealth VIP', 'Mutual of Omaha',
   'Self-Pay', 'Late Cancellation', 'Meritain',
 ] as const
 
