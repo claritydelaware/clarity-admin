@@ -1,7 +1,7 @@
 export const CLINICIANS = ['Shannon', 'Jen', 'Emily', 'Shana'] as const
 export type Clinician = typeof CLINICIANS[number]
 
-export const SERVICE_CODES = ['90837', '90832', '90834', '90847', '90791', '90785', '96127', '96136'] as const
+export const SERVICE_CODES = ['90837', '90832', '90834', '90847', '90846', '90791', '90785', '96127', '96136'] as const
 export type ServiceCode = typeof SERVICE_CODES[number]
 
 export const SUBMISSION_METHODS = ['Manual', 'Electronic', 'Cash', 'Secondary'] as const
