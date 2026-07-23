@@ -343,7 +343,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   min={0}
                   step={0.5}
                   placeholder={String(subMeetingH != null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)}
-                  value={meetingHours}
+                  value={isLocked ? String(effMeetingH) : meetingHours}
                   onChange={e => setMeetingHours(e.target.value)}
                   hint={sub ? `From submission: ${sub.adminHours.meeting + sub.adminHours.training}h` : undefined}
                   disabled={isLocked}
@@ -356,7 +356,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   min={0}
                   step={1}
                   placeholder={String(subConsults != null ? subConsults : savedConsults)}
-                  value={consultations}
+                  value={isLocked ? String(effConsults) : consultations}
                   onChange={e => setConsultations(e.target.value)}
                   hint={sub ? `From submission: ${sub.adminHours.consultations}` : undefined}
                   disabled={isLocked}
@@ -382,7 +382,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
               type="number"
               min={0}
               placeholder={String(savedBonusPay)}
-              value={bonusPay}
+              value={isLocked ? String(effBonusP) : bonusPay}
               onChange={e => setBonusPay(e.target.value)}
               disabled={isLocked}
               className="pt-1 w-48"
@@ -491,7 +491,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
 
           <Input
             label="Notes"
-            value={notes}
+            value={isLocked ? (summary.savedNotes ?? '') : notes}
             onChange={e => setNotes(e.target.value)}
             placeholder={summary.savedNotes || 'Optional period notes…'}
             className="mt-4"
