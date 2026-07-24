@@ -452,6 +452,8 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
   const selectedClaims = claims.filter(c => selectedRowIndices.includes(c.rowIndex))
   const selectedInsuranceSum = selectedClaims.reduce((sum, c) => sum + c.insuranceAmount, 0)
   const selectedTotalSum = selectedClaims.reduce((sum, c) => sum + c.totalPayment, 0)
+  const selectedHHOClaims = selectedClaims.filter(c => c.insurance === 'Health Options')
+  const selectedHHOPaidSum = selectedHHOClaims.reduce((sum, c) => sum + (c.insurancePaidHHO ?? 0), 0)
 
   async function handleBulkConfirm(update: { status: ClaimStatus; paymentDateReceived?: string }) {
     const success = await bulkUpdate.execute(selectedRowIndices, update)
@@ -475,6 +477,12 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
           <span className="text-muted">Total:</span>{' '}
           <span className="font-semibold text-teal tabular-nums">{formatCurrency(selectedTotalSum)}</span>
         </span>
+        {selectedHHOClaims.length > 0 && (
+          <span>
+            <span className="text-muted">HHO Paid:</span>{' '}
+            <span className="font-semibold text-teal tabular-nums">{formatCurrency(selectedHHOPaidSum)}</span>
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => setRowSelection({})} className="text-sm font-ui text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded">
