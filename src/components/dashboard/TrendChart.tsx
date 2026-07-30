@@ -3,8 +3,9 @@ import ChartCard from '../charts/ChartCard'
 import AreaChart from '../charts/AreaChart'
 import Tabs from '../ui/Tabs'
 import { useTrend } from '../../hooks/useAnalytics'
-import { formatCurrency } from '../../lib/utils'
-import type { TrendGranularity } from '../../types'
+import { formatCurrency, CLINICIAN_COLORS } from '../../lib/utils'
+import { CLINICIANS } from '../../types'
+import type { TrendGranularity, Clinician } from '../../types'
 
 const GRANULARITY_TABS = [
   { value: 'day', label: 'Daily' },
@@ -34,21 +35,28 @@ const inputClass =
 export default function TrendChart() {
   const [granularity, setGranularity] = useState<TrendGranularity>('month')
   const [metric, setMetric] = useState<Metric>('revenue')
+  const [clinician, setClinician] = useState<Clinician | ''>('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
 
-  const { data, isLoading, isError } = useTrend(granularity, from || undefined, to || undefined)
+  const { data, isLoading, isError } = useTrend(granularity, from || undefined, to || undefined, clinician || undefined)
 
   const isCurrency = metric !== 'sessions'
+  const color = clinician ? CLINICIAN_COLORS[clinician] : METRIC_COLOR[metric]
+  const seriesName = `${METRIC_TABS.find(m => m.value === metric)!.label}${clinician ? ` — ${clinician}` : ''}`
 
   return (
     <ChartCard
       title="Trend Explorer"
-      subtitle="Pick an aggregation level and date range"
+      subtitle="Pick a clinician, aggregation level, and date range"
       actions={
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <Tabs tabs={METRIC_TABS} value={metric} onChange={v => setMetric(v as Metric)} size="sm" />
           <Tabs tabs={GRANULARITY_TABS} value={granularity} onChange={v => setGranularity(v as TrendGranularity)} size="sm" />
+          <select value={clinician} onChange={e => setClinician(e.target.value as Clinician | '')} className={inputClass}>
+            <option value="">All Clinicians</option>
+            {CLINICIANS.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
           <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={inputClass} title="From date" />
           <input type="date" value={to} onChange={e => setTo(e.target.value)} className={inputClass} title="To date" />
         </div>
@@ -62,9 +70,9 @@ export default function TrendChart() {
         <div className="h-[260px] flex items-center justify-center text-sm text-muted font-body">No data for this range.</div>
       ) : (
         <AreaChart
-          series={[{ name: METRIC_TABS.find(m => m.value === metric)!.label, data: data.map(d => d[metric]) }]}
+          series={[{ name: seriesName, data: data.map(d => d[metric]) }]}
           categories={data.map(d => d.label)}
-          colors={[METRIC_COLOR[metric]]}
+          colors={[color]}
           height={260}
           yFormatter={
             isCurrency
