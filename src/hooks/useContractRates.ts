@@ -11,6 +11,7 @@ export const PAYER_RATE_GROUP: Record<string, string> = {
   'United':         'United',
   'United-MA':      'United-MA',
   'United-Surest':  'United',
+  'United-SR':      'United',
   'UMR':            'United',
   'Medicare':       'Medicare',
   'Health Options': 'HHO',

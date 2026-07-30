@@ -2,6 +2,9 @@
 
 This is the internal administrative portal for **Clarity Counseling of Delaware Inc.**, a Delaware S-Corp telehealth mental health practice. The portal is for use by Bruce Spadaccini Jr. (Administrative Partner) only. It is not public-facing.
 
+## Always Do First
+- **Invoke the `quarterly-review` skill** at the start of any quarterly report session. It contains the full data-pull sequence (Worker API, Xero, Gusto, BigQuery), all business calculations, the HTML section order, design tokens, and reconciliation checklist.
+
 ---
 
 ## Project Context
@@ -256,7 +259,7 @@ The workbook is named "Claim Tracking" and contains these sheets:
 | Z–AB | (empty overflow) | Ignore |
 
 **Known payers in data:**
-BCBS, Aetna, United, United-MA, United-Surest, Medicare, Health Options, Delaware First, Amerihealth VIP, Mutual of Omaha, Self-Pay, Late Cancellation, Meritain
+BCBS, Aetna, United, United-MA, United-Surest, United-SR, Medicare, Health Options, Delaware First, Amerihealth VIP, Mutual of Omaha, Self-Pay, Late Cancellation, Meritain
 
 **Known CPT codes:**
 90837 (53-min individual), 90832 (30-min individual), 90834 (45-min individual), 90847 (couples/family), 90791 (intake/eval), 90785 (interactive complexity add-on), 96127 (behavioral screening), 96136 (psych testing — stopped mid-Jan 2026)
