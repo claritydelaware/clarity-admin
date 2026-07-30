@@ -31,10 +31,12 @@ export default function AreaChart({
       gradient: { shadeIntensity: 1, opacityFrom: 0.15, opacityTo: 0.02, stops: [0, 100] },
     },
     ...(colors && { colors }),
-    xaxis: { categories },
     ...(yFormatter && { yaxis: { labels: { formatter: yFormatter } } }),
     ...(tooltipFormatter && { tooltip: { y: { formatter: tooltipFormatter } } }),
     ...overrides,
+    // Merged last so a caller-supplied `options.xaxis` (e.g. custom label styling)
+    // extends the categories instead of silently replacing them via object spread.
+    xaxis: { categories, ...overrides.xaxis },
   })
 
   return <ReactApexChart options={options} series={series} type="area" height={height} />

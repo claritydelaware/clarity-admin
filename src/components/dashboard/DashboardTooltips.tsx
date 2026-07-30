@@ -35,21 +35,40 @@ function TooltipTable({ children, priorLabel }: { children: React.ReactNode; pri
   )
 }
 
-export function SessionsTooltip({ cm, pp, priorLabel }: {
-  cm: DashboardPeriodMetrics; pp: DashboardPeriodMetrics; priorLabel: string
-}) {
+// Full-period context line — shown when the comparison is against a partial period
+// (mtd/qtd/ytd), so the user can see the complete prior month/quarter/year total
+// alongside the apples-to-apples MTD-equivalent figure already in the table above.
+function FullPeriodFooter({ label, value }: { label: string; value: string }) {
   return (
-    <TooltipTable priorLabel={priorLabel}>
-      <TooltipRow label="Total" current={String(cm.sessions)} prior={String(pp.sessions)} />
-      {CLINICIANS.map(c => (
-        <TooltipRow key={c} label={c} current={String(cm.sessionsByClinician[c])} prior={String(pp.sessionsByClinician[c])} />
-      ))}
-    </TooltipTable>
+    <div className="px-3 py-2 border-t border-gray-100 flex justify-between text-muted">
+      <span>{label} (full)</span>
+      <span className="tabular-nums text-ink font-medium">{value}</span>
+    </div>
   )
 }
 
-export function RevenueTooltip({ cm, pp, priorLabel }: {
+export function SessionsTooltip({ cm, pp, priorLabel, ppFull, ppFullLabel }: {
   cm: DashboardPeriodMetrics; pp: DashboardPeriodMetrics; priorLabel: string
+  ppFull?: DashboardPeriodMetrics; ppFullLabel?: string
+}) {
+  return (
+    <div className="text-xs font-body">
+      <TooltipTable priorLabel={priorLabel}>
+        <TooltipRow label="Total" current={String(cm.sessions)} prior={String(pp.sessions)} />
+        {CLINICIANS.map(c => (
+          <TooltipRow key={c} label={c} current={String(cm.sessionsByClinician[c])} prior={String(pp.sessionsByClinician[c])} />
+        ))}
+      </TooltipTable>
+      {ppFull && ppFullLabel && (
+        <FullPeriodFooter label={ppFullLabel} value={String(ppFull.sessions)} />
+      )}
+    </div>
+  )
+}
+
+export function RevenueTooltip({ cm, pp, priorLabel, ppFull, ppFullLabel }: {
+  cm: DashboardPeriodMetrics; pp: DashboardPeriodMetrics; priorLabel: string
+  ppFull?: DashboardPeriodMetrics; ppFullLabel?: string
 }) {
   const rps      = cm.sessions > 0 ? cm.revenue / cm.sessions : 0
   const priorRps = pp.sessions > 0 ? pp.revenue / pp.sessions : 0
@@ -67,6 +86,9 @@ export function RevenueTooltip({ cm, pp, priorLabel }: {
           {formatCurrency(rps)} <span className="text-muted font-normal">vs {formatCurrency(priorRps)}</span>
         </span>
       </div>
+      {ppFull && ppFullLabel && (
+        <FullPeriodFooter label={ppFullLabel} value={formatCurrency(ppFull.revenue)} />
+      )}
     </div>
   )
 }
@@ -105,8 +127,9 @@ export function PendingTooltip({ aging }: { aging: DashboardData['aging'] }) {
   )
 }
 
-export function ReceivedTooltip({ cm, pp, priorLabel }: {
+export function ReceivedTooltip({ cm, pp, priorLabel, ppFull, ppFullLabel }: {
   cm: DashboardPeriodMetrics; pp: DashboardPeriodMetrics; priorLabel: string
+  ppFull?: DashboardPeriodMetrics; ppFullLabel?: string
 }) {
   const diff = cm.receivedAmount - pp.receivedAmount
   const collectionRate      = cm.revenue > 0 ? (cm.receivedAmount / cm.revenue) * 100 : null
@@ -138,6 +161,9 @@ export function ReceivedTooltip({ cm, pp, priorLabel }: {
             <span className="text-muted font-normal">vs {priorCollectionRate.toFixed(1)}%</span>
           </span>
         </div>
+      )}
+      {ppFull && ppFullLabel && (
+        <FullPeriodFooter label={ppFullLabel} value={formatCurrency(ppFull.receivedAmount)} />
       )}
     </div>
   )

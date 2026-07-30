@@ -189,6 +189,8 @@ export interface DashboardPeriodMetrics {
 export interface DashboardData {
   currentMonth: DashboardPeriodMetrics
   priorPeriod?: DashboardPeriodMetrics
+  priorPeriodFull?: DashboardPeriodMetrics
+  priorPeriodFullLabel?: string
   sixMonthTrend: MonthlyAggregate[]
   aging: {
     bucket0_30: AgingBucket
@@ -200,6 +202,16 @@ export interface DashboardData {
   incomingPayments?: { count: number; amount: number }
   collectionRate?: number | null
   avgDaysToPayment?: number | null
+}
+
+export type TrendGranularity = 'day' | 'week' | 'month' | 'quarter' | 'year'
+
+export interface TrendPoint {
+  label: string
+  periodStart: string  // ISO date (YYYY-MM-DD)
+  sessions: number
+  revenue: number       // billed basis, by claim date
+  income: number        // cash basis, by payment date received
 }
 
 // ─── PHASE 4 TYPES ────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import type {
   StaffMember, StaffLicense, OverheadEntry, PayrollEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
-  Clinician, ConfigData, ContractRate, ValuationSnapshot,
+  Clinician, ConfigData, ContractRate, ValuationSnapshot, TrendGranularity, TrendPoint,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -114,6 +114,12 @@ export const api = {
     quarterProjection: (): Promise<QuarterProjection> => apiFetch<QuarterProjection>('/analytics/quarter-projection'),
     payerPerformance: (): Promise<PayerPerformance[]> => apiFetch<PayerPerformance[]>('/analytics/payer-performance'),
     valuationSnapshot: (): Promise<ValuationSnapshot> => apiFetch<ValuationSnapshot>('/analytics/valuation-snapshot'),
+    trend: (granularity: TrendGranularity, from?: string, to?: string): Promise<TrendPoint[]> => {
+      const p = new URLSearchParams({ granularity })
+      if (from) p.set('from', from)
+      if (to)   p.set('to', to)
+      return apiFetch<TrendPoint[]>(`/analytics/trend?${p.toString()}`)
+    },
   },
   staff: {
     list: (): Promise<StaffMember[]> => apiFetch<StaffMember[]>('/staff'),

@@ -14,6 +14,7 @@ import ChartCard from '../components/charts/ChartCard'
 import AreaChart from '../components/charts/AreaChart'
 import BarChart from '../components/charts/BarChart'
 import CapacityAlert from '../components/dashboard/CapacityAlert'
+import TrendChart from '../components/dashboard/TrendChart'
 import { SessionsTooltip, RevenueTooltip, PendingTooltip, ReceivedTooltip } from '../components/dashboard/DashboardTooltips'
 import type { Clinician, DateWindow } from '../types'
 
@@ -54,7 +55,7 @@ export default function Dashboard() {
   if (isError) return <ErrorBanner message={(error as Error).message} />
   if (!data) return null
 
-  const { currentMonth: cm, priorPeriod: pp, sixMonthTrend, aging, payerMix } = data
+  const { currentMonth: cm, priorPeriod: pp, priorPeriodFull: ppFull, priorPeriodFullLabel: ppFullLabel, sixMonthTrend, aging, payerMix } = data
 
   const agingRows = [
     { label: '0–30 days',  ...aging.bucket0_30,  danger: false },
@@ -84,7 +85,7 @@ export default function Dashboard() {
           value={String(cm.sessions)}
           sub={CLINICIANS.map(c => `${c}: ${cm.sessionsByClinician[c]}`).join(' · ')}
           delta={pp ? pctDelta(cm.sessions, pp.sessions) : null}
-          tooltipContent={pp ? <SessionsTooltip cm={cm} pp={pp} priorLabel={priorLabel} /> : undefined}
+          tooltipContent={pp ? <SessionsTooltip cm={cm} pp={pp} priorLabel={priorLabel} ppFull={ppFull} ppFullLabel={ppFullLabel} /> : undefined}
         />
         <MetricCard
           index={1}
@@ -93,7 +94,7 @@ export default function Dashboard() {
           value={formatCurrency(cm.revenue)}
           sub={CLINICIANS.map(c => `${c}: ${formatCurrency(cm.revenueByClinician[c])}`).join(' · ')}
           delta={pp ? pctDelta(cm.revenue, pp.revenue) : null}
-          tooltipContent={pp ? <RevenueTooltip cm={cm} pp={pp} priorLabel={priorLabel} /> : undefined}
+          tooltipContent={pp ? <RevenueTooltip cm={cm} pp={pp} priorLabel={priorLabel} ppFull={ppFull} ppFullLabel={ppFullLabel} /> : undefined}
         />
         <MetricCard
           index={2}
@@ -110,7 +111,7 @@ export default function Dashboard() {
           label={`Received — ${windowLabel}`}
           value={formatCurrency(cm.receivedAmount)}
           delta={pp ? pctDelta(cm.receivedAmount, pp.receivedAmount) : null}
-          tooltipContent={pp ? <ReceivedTooltip cm={cm} pp={pp} priorLabel={priorLabel} /> : undefined}
+          tooltipContent={pp ? <ReceivedTooltip cm={cm} pp={pp} priorLabel={priorLabel} ppFull={ppFull} ppFullLabel={ppFullLabel} /> : undefined}
         />
       </div>
 
@@ -189,6 +190,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Custom Trend Explorer */}
+      <TrendChart />
 
       {/* Payer Mix */}
       <ChartCard title="Payer Mix" subtitle="This month">

@@ -29,10 +29,12 @@ export default function LineChart({
     chart: { type: chartType },
     markers: { size: 3 },
     ...(colors && { colors }),
-    xaxis: { categories },
     ...(yFormatter && { yaxis: { labels: { formatter: yFormatter } } }),
     ...(tooltipFormatter && { tooltip: { y: { formatter: tooltipFormatter } } }),
     ...overrides,
+    // Merged last so a caller-supplied `options.xaxis` (e.g. custom label styling)
+    // extends the categories instead of silently replacing them via object spread.
+    xaxis: { categories, ...overrides.xaxis },
   })
 
   return <ReactApexChart options={options} series={series} type={chartType} height={height} />
