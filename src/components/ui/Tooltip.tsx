@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 interface TooltipProps {
@@ -9,32 +9,48 @@ interface TooltipProps {
   variant?: 'dark' | 'card'
 }
 
+const VIEWPORT_MARGIN = 8
+
 export default function Tooltip({ content, children, maxWidth = 280, disabled = false, variant = 'dark' }: TooltipProps) {
   const [visible, setVisible] = useState(false)
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
+  const [placement, setPlacement] = useState<{ top: number; left: number } | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const triggerRef = useRef<HTMLSpanElement>(null)
+  const bubbleRef = useRef<HTMLSpanElement>(null)
 
   const show = useCallback(() => {
     if (disabled) return
-    timerRef.current = setTimeout(() => {
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect()
-        setCoords({
-          top: rect.top + window.scrollY - 8,
-          left: rect.left + window.scrollX + rect.width / 2,
-        })
-      }
-      setVisible(true)
-    }, 300)
+    timerRef.current = setTimeout(() => setVisible(true), 300)
   }, [disabled])
 
   const hide = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     setVisible(false)
+    setPlacement(null)
   }, [])
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
+
+  // Measure the tooltip's actual rendered size before showing it, so it can be
+  // clamped to the viewport (and flipped below the trigger if there's no room
+  // above) instead of silently clipping off-screen.
+  useLayoutEffect(() => {
+    if (!visible || !triggerRef.current || !bubbleRef.current) return
+    const triggerRect = triggerRef.current.getBoundingClientRect()
+    const bubbleRect = bubbleRef.current.getBoundingClientRect()
+
+    const fitsAbove = triggerRect.top - bubbleRect.height - VIEWPORT_MARGIN >= 0
+    const top = fitsAbove
+      ? triggerRect.top + window.scrollY - bubbleRect.height - 8
+      : triggerRect.bottom + window.scrollY + 8
+
+    let left = triggerRect.left + window.scrollX + triggerRect.width / 2 - bubbleRect.width / 2
+    const minLeft = VIEWPORT_MARGIN
+    const maxLeft = window.scrollX + window.innerWidth - bubbleRect.width - VIEWPORT_MARGIN
+    left = Math.max(minLeft, Math.min(left, maxLeft))
+
+    setPlacement({ top, left })
+  }, [visible])
 
   return (
     <span
@@ -44,10 +60,16 @@ export default function Tooltip({ content, children, maxWidth = 280, disabled = 
       onMouseLeave={hide}
     >
       {children}
-      {visible && coords && createPortal(
+      {visible && createPortal(
         <span
-          className="fixed z-[9999] pointer-events-none -translate-x-1/2 -translate-y-full"
-          style={{ top: coords.top, left: coords.left, maxWidth: variant === 'card' ? undefined : maxWidth }}
+          ref={bubbleRef}
+          className="fixed z-[9999] pointer-events-none"
+          style={{
+            top: placement?.top ?? -9999,
+            left: placement?.left ?? -9999,
+            visibility: placement ? 'visible' : 'hidden',
+            maxWidth: variant === 'card' ? undefined : maxWidth,
+          }}
         >
           {variant === 'card' ? (
             <div

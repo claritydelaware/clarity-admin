@@ -60,7 +60,12 @@ export function useDateWindow() {
 
   const { startDate, endDate, label, priorLabel } = useMemo(() => getWindowDates(window), [window])
 
-  const toISO = (d: Date) => d.toISOString().slice(0, 10)
+  // Use local calendar components, not toISOString() (which converts to UTC).
+  // In US timezones, toISOString() rolls the date forward in the evening —
+  // e.g. 9pm EDT is already 1am UTC the next day — sending the Worker
+  // tomorrow's date and throwing off the MTD/QTD/YTD day-count clamp.
+  const toISO = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
   return { window, setWindow, startDate, endDate, label, priorLabel, fromISO: toISO(startDate), toISO: toISO(endDate) }
 }
