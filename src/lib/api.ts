@@ -114,11 +114,10 @@ export const api = {
     quarterProjection: (): Promise<QuarterProjection> => apiFetch<QuarterProjection>('/analytics/quarter-projection'),
     payerPerformance: (): Promise<PayerPerformance[]> => apiFetch<PayerPerformance[]>('/analytics/payer-performance'),
     valuationSnapshot: (): Promise<ValuationSnapshot> => apiFetch<ValuationSnapshot>('/analytics/valuation-snapshot'),
-    trend: (granularity: TrendGranularity, from?: string, to?: string, clinician?: Clinician): Promise<TrendPoint[]> => {
+    trend: (granularity: TrendGranularity, from?: string, to?: string): Promise<TrendPoint[]> => {
       const p = new URLSearchParams({ granularity })
-      if (from)      p.set('from', from)
-      if (to)        p.set('to', to)
-      if (clinician) p.set('clinician', clinician)
+      if (from) p.set('from', from)
+      if (to)   p.set('to', to)
       return apiFetch<TrendPoint[]>(`/analytics/trend?${p.toString()}`)
     },
   },

@@ -206,12 +206,16 @@ export interface DashboardData {
 
 export type TrendGranularity = 'day' | 'week' | 'month' | 'quarter' | 'year'
 
-export interface TrendPoint {
-  label: string
-  periodStart: string  // ISO date (YYYY-MM-DD)
+export interface TrendMetrics {
   sessions: number
   revenue: number       // billed basis, by claim date
   income: number        // cash basis, by payment date received
+}
+
+export interface TrendPoint extends TrendMetrics {
+  label: string
+  periodStart: string  // ISO date (YYYY-MM-DD)
+  byClinician: Record<Clinician, TrendMetrics>
 }
 
 // ─── PHASE 4 TYPES ────────────────────────────────────────────────────────────

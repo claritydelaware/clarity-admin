@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import type { TrendGranularity, Clinician } from '../types'
+import type { TrendGranularity } from '../types'
 
 export function useCaseloadTrends() {
   return useQuery({
@@ -18,10 +18,10 @@ export function useForecastAccuracy() {
   })
 }
 
-export function useTrend(granularity: TrendGranularity, from?: string, to?: string, clinician?: Clinician) {
+export function useTrend(granularity: TrendGranularity, from?: string, to?: string) {
   return useQuery({
-    queryKey: ['analytics', 'trend', granularity, from ?? '', to ?? '', clinician ?? ''],
-    queryFn: () => api.analytics.trend(granularity, from, to, clinician),
+    queryKey: ['analytics', 'trend', granularity, from ?? '', to ?? ''],
+    queryFn: () => api.analytics.trend(granularity, from, to),
     staleTime: 2 * 60 * 1000,
   })
 }
