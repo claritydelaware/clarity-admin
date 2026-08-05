@@ -189,6 +189,7 @@ export interface DashboardPeriodMetrics {
 export interface DashboardData {
   currentMonth: DashboardPeriodMetrics
   priorPeriod?: DashboardPeriodMetrics
+  priorPeriodLabel?: string
   priorPeriodFull?: DashboardPeriodMetrics
   priorPeriodFullLabel?: string
   sixMonthTrend: MonthlyAggregate[]

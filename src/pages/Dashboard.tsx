@@ -35,7 +35,7 @@ function pctDelta(current: number, prior: number): number | null {
 }
 
 export default function Dashboard() {
-  const { window: dateWindow, setWindow, label: windowLabel, priorLabel, fromISO, toISO } = useDateWindow()
+  const { window: dateWindow, setWindow, label: windowLabel, fromISO, toISO } = useDateWindow()
   const { data, isLoading, isError, error } = useDashboard(fromISO, toISO, dateWindow)
   const capacityAlerts = useCapacityAlerts()
   const [alertsDismissed, setAlertsDismissed] = useState(false)
@@ -55,7 +55,8 @@ export default function Dashboard() {
   if (isError) return <ErrorBanner message={(error as Error).message} />
   if (!data) return null
 
-  const { currentMonth: cm, priorPeriod: pp, priorPeriodFull: ppFull, priorPeriodFullLabel: ppFullLabel, sixMonthTrend, aging, payerMix } = data
+  const { currentMonth: cm, priorPeriod: pp, priorPeriodLabel, priorPeriodFull: ppFull, priorPeriodFullLabel: ppFullLabel, sixMonthTrend, aging, payerMix } = data
+  const priorLabel = priorPeriodLabel ?? ''
 
   const agingRows = [
     { label: '0–30 days',  ...aging.bucket0_30,  danger: false },
