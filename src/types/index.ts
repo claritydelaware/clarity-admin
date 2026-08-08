@@ -236,6 +236,8 @@ export interface QuarterlySummary {
   totalOverhead: number
   profit: number
   marginPct: number | null
+  payrollProfit: number
+  payrollMarginPct: number | null
   sessions: number
   byClinicianRevenue: Record<string, number>
   byClinicianSessions: Record<string, number>

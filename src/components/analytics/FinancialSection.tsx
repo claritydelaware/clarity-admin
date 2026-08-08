@@ -21,7 +21,7 @@ function monthLabel(iso: string): string {
 
 function pct(val: number | null | undefined): string {
   if (val == null) return '—'
-  return `${val.toFixed(1)}%`
+  return `${(val * 100).toFixed(1)}%`
 }
 
 export default function FinancialSection({ months }: { months: CaseloadTrendMonth[] }) {
@@ -91,6 +91,10 @@ export default function FinancialSection({ months }: { months: CaseloadTrendMont
           />
         </div>
       )}
+
+      <p className="text-xs text-muted font-body leading-relaxed">
+        <span className="font-medium text-ink">Gross Margin</span> = revenue minus all overhead (payroll + operational, e.g. rent, software). <span className="font-medium text-ink">Payroll Margin</span> = revenue minus payroll costs only, isolating how much margin labor costs alone are consuming. The two will read identically in months where operational overhead hasn't been imported yet (nothing to subtract beyond payroll) and diverge once it has.
+      </p>
     </div>
   )
 }

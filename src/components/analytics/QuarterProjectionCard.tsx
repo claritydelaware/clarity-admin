@@ -95,7 +95,7 @@ function QuarterlyPerformance() {
 
       <Card padding="none">
         <div className="overflow-x-auto">
-        <table className="w-full text-sm font-body min-w-[600px]">
+        <table className="w-full text-sm font-body min-w-180">
           <thead className="bg-surface-sunken border-b border-border">
             <tr>
               <th className="px-5 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Quarter</th>
@@ -104,6 +104,7 @@ function QuarterlyPerformance() {
               <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Overhead</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Profit</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Margin</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Payroll Margin</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Sessions</th>
             </tr>
           </thead>
@@ -119,6 +120,9 @@ function QuarterlyPerformance() {
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-muted">
                   {q.marginPct != null ? `${Math.round(q.marginPct * 100)}%` : '—'}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-muted">
+                  {q.payrollMarginPct != null ? `${Math.round(q.payrollMarginPct * 100)}%` : '—'}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-muted">{q.sessions}</td>
               </tr>
