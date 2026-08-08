@@ -161,6 +161,8 @@ export interface CaseloadTrendMonth {
   totalOverhead: number | null
   grossMargin: number | null
   grossMarginPct: number | null
+  payrollMargin: number | null
+  payrollMarginPct: number | null
   income: number | null
   incomePct: number | null
   collectionVariance: number | null

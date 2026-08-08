@@ -7,10 +7,11 @@ import { formatCurrency } from '../../lib/utils'
 import type { CaseloadTrendMonth } from '../../types'
 
 const COLORS = {
-  revenue:  '#254D54',
-  income:   '#3A7078',
-  overhead: '#9CA3AF',
-  margin:   '#F6C54D',
+  revenue:       '#254D54',
+  income:        '#3A7078',
+  overhead:      '#9CA3AF',
+  margin:        '#F6C54D',
+  payrollMargin: '#16A34A',
 }
 
 function monthLabel(iso: string): string {
@@ -26,29 +27,31 @@ function pct(val: number | null | undefined): string {
 export default function FinancialSection({ months }: { months: CaseloadTrendMonth[] }) {
   const chartData = months.map(m => ({
     month: monthLabel(m.month),
-    revenue:  m.totalRevenue,
-    income:   m.income,
-    overhead: m.totalOverhead,
-    margin:   m.grossMargin,
+    revenue:       m.totalRevenue,
+    income:        m.income,
+    overhead:      m.totalOverhead,
+    margin:        m.grossMargin,
+    payrollMargin: m.payrollMargin,
   }))
 
   const latest = months[months.length - 1]
 
   const series = [
-    { name: 'Revenue',      data: chartData.map(d => d.revenue  ?? null), type: 'area' as const },
-    { name: 'Income',       data: chartData.map(d => d.income   ?? null), type: 'area' as const },
-    { name: 'Overhead',     data: chartData.map(d => d.overhead ?? null), type: 'line' as const },
-    { name: 'Gross Margin', data: chartData.map(d => d.margin   ?? null), type: 'line' as const },
+    { name: 'Revenue',        data: chartData.map(d => d.revenue       ?? null), type: 'area' as const },
+    { name: 'Income',         data: chartData.map(d => d.income        ?? null), type: 'area' as const },
+    { name: 'Overhead',       data: chartData.map(d => d.overhead      ?? null), type: 'line' as const },
+    { name: 'Gross Margin',   data: chartData.map(d => d.margin        ?? null), type: 'line' as const },
+    { name: 'Payroll Margin', data: chartData.map(d => d.payrollMargin ?? null), type: 'line' as const },
   ]
 
   const options: ApexOptions = mergeChartOptions({
     chart: { type: 'line' },
-    stroke: { curve: 'smooth', width: [2, 2, 1.5, 2], dashArray: [0, 0, 4, 0] },
+    stroke: { curve: 'smooth', width: [2, 2, 1.5, 2, 1.5], dashArray: [0, 0, 4, 0, 4] },
     fill: {
-      type: ['gradient', 'gradient', 'solid', 'solid'],
+      type: ['gradient', 'gradient', 'solid', 'solid', 'solid'],
       gradient: { shadeIntensity: 1, opacityFrom: 0.12, opacityTo: 0.01 },
     },
-    colors: [COLORS.revenue, COLORS.income, COLORS.overhead, COLORS.margin],
+    colors: [COLORS.revenue, COLORS.income, COLORS.overhead, COLORS.margin, COLORS.payrollMargin],
     xaxis: { categories: chartData.map(d => d.month) },
     yaxis: {
       labels: {
@@ -68,13 +71,18 @@ export default function FinancialSection({ months }: { months: CaseloadTrendMont
       </ChartCard>
 
       {latest && (
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
           <MetricCard label="Revenue" value={formatCurrency(latest.totalRevenue ?? 0)} />
           <MetricCard label="Income" value={formatCurrency(latest.income ?? 0)} />
           <MetricCard
             label="Gross Margin"
             value={formatCurrency(latest.grossMargin ?? 0)}
             sub={pct(latest.grossMarginPct)}
+          />
+          <MetricCard
+            label="Payroll Margin"
+            value={formatCurrency(latest.payrollMargin ?? 0)}
+            sub={pct(latest.payrollMarginPct)}
           />
           <MetricCard
             label="Net Collections"
