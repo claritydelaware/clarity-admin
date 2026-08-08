@@ -19,6 +19,7 @@ export function useSaveOverhead() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['overhead'] })
       qc.invalidateQueries({ queryKey: ['analytics-quarterly'] })
+      qc.invalidateQueries({ queryKey: ['analytics', 'caseload-trends'] })
       toast.success('Overhead saved')
     },
     onError: () => toast.error('Save failed — please try again'),
@@ -34,6 +35,7 @@ export function useUpdateOverhead() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['overhead'] })
       qc.invalidateQueries({ queryKey: ['analytics-quarterly'] })
+      qc.invalidateQueries({ queryKey: ['analytics', 'caseload-trends'] })
       toast.success('Overhead saved')
     },
     onError: () => toast.error('Save failed — please try again'),

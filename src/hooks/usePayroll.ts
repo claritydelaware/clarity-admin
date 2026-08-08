@@ -18,7 +18,7 @@ export function useSavePayroll() {
     mutationFn: (data: PayrollEntry) => api.payroll.save(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payroll'] })
-      qc.invalidateQueries({ queryKey: ['caseload-trends'] })
+      qc.invalidateQueries({ queryKey: ['analytics', 'caseload-trends'] })
       toast.success('Payroll saved')
     },
     onError: () => toast.error('Save failed — please try again'),
