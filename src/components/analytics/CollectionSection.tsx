@@ -39,7 +39,7 @@ function CollectionVarianceChart({ months }: { months: CaseloadTrendMonth[] }) {
   return (
     <ChartCard title="Collection Variance">
       <p className="text-xs text-muted font-body mb-3">
-        Positive = under-collected vs billed; negative = over-collected. Red bars exceed ±$2,000.
+        Positive = collected more than billed this month; negative = collected less. Red bars exceed ±$2,000.
       </p>
       <BarChart
         series={[{ name: 'Variance', data: chartData.map(d => d.variance ?? null) }]}
