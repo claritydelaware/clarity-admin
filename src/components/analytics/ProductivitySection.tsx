@@ -9,15 +9,17 @@ function monthLabel(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
 }
 
+// utilPct fields from the API are decimal fractions (0.94 = 94%), per the
+// documented /api/analytics/caseload-trends convention.
 function pct(val: number | null | undefined): string {
   if (val == null) return '—'
-  return `${val.toFixed(1)}%`
+  return `${(val * 100).toFixed(1)}%`
 }
 
 function utilColor(val: number | null | undefined): string {
   if (val == null) return 'text-muted'
-  if (val >= 100) return 'text-error font-semibold'
-  if (val >= 95)  return 'text-amber-600 font-semibold'
+  if (val >= 1)    return 'text-error font-semibold'
+  if (val >= 0.95) return 'text-amber-600 font-semibold'
   return 'text-ink'
 }
 

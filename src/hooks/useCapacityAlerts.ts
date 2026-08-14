@@ -30,11 +30,13 @@ export function useCapacityAlerts(): CapacityAlert[] {
       { name: 'Emily',   getter: m => m.emilyUtilPct   },
       { name: 'Shana',   getter: m => m.shanaUtilPct   },
     ]
+    // utilPct fields are decimal fractions (0.94 = 94%); compare against
+    // fraction thresholds and convert to a 0-100 display value separately.
     for (const { name, getter } of checks) {
       const a = avg(last2.map(getter))
       if (a === null) continue
-      if (a >= 100) alerts.push({ name, pct: a, level: 'danger' })
-      else if (a >= 95) alerts.push({ name, pct: a, level: 'warning' })
+      if (a >= 1) alerts.push({ name, pct: a * 100, level: 'danger' })
+      else if (a >= 0.95) alerts.push({ name, pct: a * 100, level: 'warning' })
     }
     return alerts
   }, [trends])
