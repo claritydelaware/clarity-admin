@@ -353,6 +353,7 @@ export interface EmilyPayPeriodSummary {
   overheadFixedAmount: number
   overheadSource: 'formula' | 'gusto'
   gustoEmployerTaxes?: number
+  stripeFeesCost: number
   totalExpenses: number
   claimsPerCode: Record<string, number>
   priorPeriodAvgSessions: number
@@ -389,6 +390,7 @@ export interface HourlyPeriodHistoryEntry {
   bonusPay: number
   totalPay: number
   overheadCosts: number
+  stripeFeesCost: number
   totalExpenses: number
   profit: number
   profitMargin: number

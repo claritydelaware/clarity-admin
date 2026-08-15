@@ -20,7 +20,7 @@ export default function HourlyHistoryTable({ history }: { history: HourlyPerform
 
   const headers = [
     'Period', 'Clinician', 'Sessions', 'Revenue', 'Received', '% by Pay Date',
-    'Session Pay', 'Admin Pay', 'Bonus', 'Overhead', 'Total Exp.', 'Profit', 'Margin',
+    'Session Pay', 'Admin Pay', 'Bonus', 'Overhead', 'Stripe Fees', 'Total Exp.', 'Profit', 'Margin',
   ]
 
   return (
@@ -53,6 +53,7 @@ export default function HourlyHistoryTable({ history }: { history: HourlyPerform
                   <td className="py-1.5 pr-3 tabular-nums text-ink">{formatCurrency(r.adminPay)}</td>
                   <td className="py-1.5 pr-3 tabular-nums text-ink">{formatCurrency(r.bonusPay)}</td>
                   <td className="py-1.5 pr-3 tabular-nums text-muted">{formatCurrency(r.overheadCosts)}</td>
+                  <td className="py-1.5 pr-3 tabular-nums text-muted">{formatCurrency(r.stripeFeesCost)}</td>
                   <td className="py-1.5 pr-3 tabular-nums text-muted">{formatCurrency(r.totalExpenses)}</td>
                   <td className={`py-1.5 pr-3 tabular-nums font-medium ${r.profit >= 0 ? 'text-success' : 'text-error'}`}>{formatCurrency(r.profit)}</td>
                   <td className={`py-1.5 pr-3 tabular-nums ${r.profit >= 0 ? 'text-success' : 'text-error'}`}>{pct(r.profitMargin)}</td>

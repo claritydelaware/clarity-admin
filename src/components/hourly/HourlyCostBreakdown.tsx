@@ -16,6 +16,7 @@ const COST_ROWS: Array<{ label: string; pick: (e: HourlyPeriodHistoryEntry) => n
   { label: 'Admin Pay',     pick: e => e.adminPay },
   { label: 'Bonus Pay',     pick: e => e.bonusPay },
   { label: 'Overhead',      pick: e => e.overheadCosts },
+  { label: 'Stripe Fees',   pick: e => e.stripeFeesCost },
 ]
 
 export default function HourlyCostBreakdown({ history }: { history: HourlyPerformanceHistory }) {

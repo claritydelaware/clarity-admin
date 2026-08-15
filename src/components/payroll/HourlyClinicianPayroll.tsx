@@ -128,7 +128,8 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   // Gusto only reports employer payroll-tax costs, not per-seat tool costs
   // (SimplePractice/Voice/Workspace) — the fixed amount is added either way.
   const effOverhead     = (hasGustoActuals ? summary!.gustoEmployerTaxes! : effTotalPay * taxRate) + fixedOverhead
-  const effTotalExp     = effTotalPay + effOverhead
+  const effStripeFees   = summary?.stripeFeesCost ?? 0
+  const effTotalExp     = effTotalPay + effOverhead + effStripeFees
   const effPaymentsRcv  = summary?.paymentsReceived ?? 0
   const effProfit       = effPaymentsRcv - effTotalExp
   const effMargin       = effPaymentsRcv > 0 ? effProfit / effPaymentsRcv : 0
@@ -146,6 +147,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     effBonusP > 0 ? `Bonus: ${formatCurrency(effBonusP)}` : null,
     `Total Pay: ${formatCurrency(effTotalPay)}`,
     `Overhead: ${formatCurrency(effOverhead)}`,
+    effStripeFees > 0 ? `Stripe Fees: ${formatCurrency(effStripeFees)}` : null,
     `Profit: ${formatCurrency(effProfit)} (${Math.round(effMargin * 100)}% margin)`,
   ].filter(Boolean).join('\n') : ''
 
@@ -415,6 +417,12 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
               </span>
               <span className="tabular-nums">{formatCurrency(effOverhead)}</span>
             </div>
+            {effStripeFees > 0 && (
+              <div className="flex justify-between text-muted text-xs">
+                <span>Stripe Fees (on client-collected payments)</span>
+                <span className="tabular-nums">{formatCurrency(effStripeFees)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs font-medium">
               <span>Total Expenses</span>
               <span className="tabular-nums">{formatCurrency(effTotalExp)}</span>
