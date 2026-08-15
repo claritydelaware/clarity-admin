@@ -114,7 +114,7 @@ function OverheadSettingsDialog({ open, onClose }: { open: boolean; onClose: () 
   const [fixedAmt, setFixedAmt] = useState('')
 
   const currentPct = config ? (config.w2PayrollTaxRate * 100).toFixed(2) : '9.56'
-  const currentFixed = config ? config.w2FixedOverheadPerPeriod.toFixed(2) : '110.80'
+  const currentFixed = config ? config.w2FixedOverheadPerPeriod.toFixed(2) : '55.40'
 
   const handleSave = () => {
     const rate = taxPct !== '' ? parseFloat(taxPct) / 100 : undefined

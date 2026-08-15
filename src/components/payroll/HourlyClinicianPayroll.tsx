@@ -123,9 +123,11 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const effAdminPay     = effMeetingH * adminHourlyRate + effConsultPay
   const effTotalPay     = effSessionPay + effAdminPay + effBonusP
   const taxRate         = summary?.overheadTaxRate ?? 0.0956
-  const fixedOverhead   = summary?.overheadFixedAmount ?? 110.80
+  const fixedOverhead   = summary?.overheadFixedAmount ?? 55.40
   const hasGustoActuals = summary?.overheadSource === 'gusto' && summary.gustoEmployerTaxes != null
-  const effOverhead     = hasGustoActuals ? summary!.gustoEmployerTaxes! : (effTotalPay * taxRate + fixedOverhead)
+  // Gusto only reports employer payroll-tax costs, not per-seat tool costs
+  // (SimplePractice/Voice/Workspace) — the fixed amount is added either way.
+  const effOverhead     = (hasGustoActuals ? summary!.gustoEmployerTaxes! : effTotalPay * taxRate) + fixedOverhead
   const effTotalExp     = effTotalPay + effOverhead
   const effPaymentsRcv  = summary?.paymentsReceived ?? 0
   const effProfit       = effPaymentsRcv - effTotalExp
