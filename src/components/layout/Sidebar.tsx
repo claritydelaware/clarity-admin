@@ -1,16 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, Activity, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export const NAV = [
-  { to: '/dashboard',   label: 'Dashboard',       icon: LayoutDashboard },
-  { to: '/analytics',   label: 'Analytics',        icon: BarChart2 },
-  { to: '/claims',      label: 'Claims',           icon: FileText },
-  { to: '/pay-periods', label: 'Pay Periods',      icon: Calendar },
-  { to: '/forecast',    label: 'Revenue Forecast', icon: TrendingUp },
-  { to: '/overhead',    label: 'Overhead',         icon: Receipt },
-  { to: '/staff',       label: 'Staff',            icon: Users },
-  { to: '/caseloads',   label: 'Caseloads',        icon: ClipboardList },
-  { to: '/valuation',   label: 'Valuation',        icon: Landmark },
+  { to: '/dashboard',          label: 'Dashboard',          icon: LayoutDashboard },
+  { to: '/analytics',          label: 'Analytics',          icon: BarChart2 },
+  { to: '/claims',             label: 'Claims',             icon: FileText },
+  { to: '/pay-periods',        label: 'Pay Periods',        icon: Calendar },
+  { to: '/hourly-performance', label: 'Hourly Performance', icon: Activity },
+  { to: '/forecast',           label: 'Revenue Forecast',   icon: TrendingUp },
+  { to: '/overhead',           label: 'Overhead',           icon: Receipt },
+  { to: '/staff',              label: 'Staff',              icon: Users },
+  { to: '/caseloads',          label: 'Caseloads',          icon: ClipboardList },
+  { to: '/valuation',          label: 'Valuation',          icon: Landmark },
 ]
 
 interface Props {

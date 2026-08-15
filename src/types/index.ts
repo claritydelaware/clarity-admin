@@ -370,6 +370,35 @@ export interface EmilyPayPeriodSummary {
   priorPeriodMargins: number[]
 }
 
+export interface HourlyPeriodHistoryEntry {
+  periodStart: string
+  periodEnd: string
+  payDate: string
+  sessions: number
+  revenue: number
+  paymentsReceived: number
+  pctReceivedToDate: number
+  paymentsReceivedByPayDate: number
+  pctReceivedByPayDate: number
+  therapyPay: number
+  otherPay: number
+  noShowPay: number
+  consultPay: number
+  adminPay: number
+  sessionPay: number
+  bonusPay: number
+  totalPay: number
+  overheadCosts: number
+  totalExpenses: number
+  profit: number
+  profitMargin: number
+}
+
+export interface HourlyPerformanceHistory {
+  Emily: HourlyPeriodHistoryEntry[]
+  Shana: HourlyPeriodHistoryEntry[]
+}
+
 export interface PayerPerformance {
   payer: string
   totalClaims: number

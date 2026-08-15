@@ -5,6 +5,7 @@ import type {
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
   Clinician, ConfigData, ContractRate, ValuationSnapshot, TrendGranularity, TrendPoint,
+  HourlyPerformanceHistory,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -120,6 +121,8 @@ export const api = {
       if (to)   p.set('to', to)
       return apiFetch<TrendPoint[]>(`/analytics/trend?${p.toString()}`)
     },
+    hourlyPerformance: (): Promise<HourlyPerformanceHistory> =>
+      apiFetch<HourlyPerformanceHistory>('/analytics/hourly-performance'),
   },
   staff: {
     list: (): Promise<StaffMember[]> => apiFetch<StaffMember[]>('/staff'),

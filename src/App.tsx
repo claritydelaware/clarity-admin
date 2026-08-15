@@ -6,6 +6,7 @@ import Claims from './pages/Claims'
 import Forecast from './pages/Forecast'
 import Overhead from './pages/Overhead'
 import PayPeriodSummary from './pages/PayPeriodSummary'
+import HourlyPerformance from './pages/HourlyPerformance'
 import Staff from './pages/Staff'
 import NewStaff from './pages/NewStaff'
 import StaffDetail from './pages/StaffDetail'
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="forecast" element={<Forecast />} />
           <Route path="overhead" element={<Overhead />} />
           <Route path="pay-periods" element={<PayPeriodSummary />} />
+          <Route path="hourly-performance" element={<HourlyPerformance />} />
           <Route path="staff" element={<Staff />} />
           <Route path="staff/new" element={<NewStaff />} />
           <Route path="staff/:id" element={<StaffDetail />} />

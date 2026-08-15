@@ -25,3 +25,11 @@ export function useTrend(granularity: TrendGranularity, from?: string, to?: stri
     staleTime: 2 * 60 * 1000,
   })
 }
+
+export function useHourlyPerformance() {
+  return useQuery({
+    queryKey: ['analytics', 'hourly-performance'],
+    queryFn: () => api.analytics.hourlyPerformance(),
+    staleTime: 5 * 60 * 1000,
+  })
+}
