@@ -300,6 +300,9 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60 disabled:bg-gray-50"
                 />
                 × ${summary.therapySessionRate})
+                {effTherapySessions !== summary.claimsTherapySessions && (
+                  <span className="text-[10px] text-amber-600 italic whitespace-nowrap">claims: {summary.claimsTherapySessions}</span>
+                )}
               </span>
               <span className="tabular-nums text-ink shrink-0">{formatCurrency(effTherapyPay)}</span>
             </div>
@@ -317,6 +320,9 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60 disabled:bg-gray-50"
                 />
                 × ${summary.otherSessionRate})
+                {effOtherSessions !== summary.claimsOtherSessions && (
+                  <span className="text-[10px] text-amber-600 italic whitespace-nowrap">claims: {summary.claimsOtherSessions}</span>
+                )}
               </span>
               <span className="tabular-nums text-ink shrink-0">{formatCurrency(effOtherPay)}</span>
             </div>
@@ -332,6 +338,9 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60 disabled:bg-gray-50"
                 />
                 × ${summary.noShowRate})
+                {effNoShows !== summary.claimsNoShows && (
+                  <span className="text-[10px] text-amber-600 italic whitespace-nowrap">claims: {summary.claimsNoShows}</span>
+                )}
               </span>
               <span className="tabular-nums text-ink shrink-0">{formatCurrency(effNoShowPay)}</span>
             </div>
