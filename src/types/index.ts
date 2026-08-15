@@ -316,6 +316,12 @@ export interface PartnerPeriodSummary {
   pendingRevenue: number
   annualSalary: number
   periodSalary: number
+  overheadCosts: number
+  overheadSource: 'formula' | 'gusto'
+  stripeFeesCost: number
+  totalExpenses: number
+  profit: number
+  profitMargin: number
 }
 
 export interface EmilyPayPeriodSummary {

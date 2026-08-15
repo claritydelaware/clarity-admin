@@ -56,7 +56,10 @@ function PartnerTab({ periods }: { periods: SalaryPayPeriod[] }) {
         `  Revenue: ${formatCurrency(s.revenue)}`,
         `  Received: ${formatCurrency(s.receivedRevenue)} | Pending: ${formatCurrency(s.pendingRevenue)}`,
         `  Period Salary: ${formatCurrency(s.periodSalary)}`,
-      ].join('\n')),
+        `  Overhead: ${formatCurrency(s.overheadCosts)}`,
+        s.stripeFeesCost > 0 ? `  Stripe Fees: ${formatCurrency(s.stripeFeesCost)}` : null,
+        `  Profit: ${formatCurrency(s.profit)} (${Math.round(s.profitMargin * 100)}% margin)`,
+      ].filter(Boolean).join('\n')),
     ]
     return lines.join('\n')
   }, [summaries, selectedPeriod, periods])
