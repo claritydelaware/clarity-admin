@@ -326,6 +326,8 @@ export interface EmilyPayPeriodSummary {
   sessions: number
   revenue: number
   paymentsReceived: number
+  pctReceivedToDate: number
+  paymentsReceivedByPayDate: number
   pctReceivedByPayDate: number
   unreceivedPayments: number
   // multi-rate fields (Phase 5.5)

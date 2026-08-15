@@ -276,7 +276,10 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
             <div>
               <p className="text-xs font-ui text-muted uppercase tracking-wide">Received</p>
               <p className="font-heading text-xl font-semibold text-success tabular-nums">{formatCurrency(summary.paymentsReceived)}</p>
-              <p className="text-xs text-muted font-body">{Math.round(summary.pctReceivedByPayDate * 100)}% collected</p>
+              <p className="text-xs text-muted font-body">{Math.round(summary.pctReceivedToDate * 100)}% collected to date</p>
+              <p className="text-xs text-muted font-body">
+                {Math.round(summary.pctReceivedByPayDate * 100)}% by pay date ({formatCurrency(summary.paymentsReceivedByPayDate)})
+              </p>
             </div>
           </div>
 
