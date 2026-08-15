@@ -255,7 +255,6 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
           claimDate={row.original.claimDate}
           forecastPaymentDate={row.original.forecastPaymentDate}
           paymentDateReceived={row.original.paymentDateReceived}
-          status={row.original.status}
         />
       ),
     }),

@@ -2,7 +2,6 @@ interface Props {
   claimDate: string
   forecastPaymentDate: string
   paymentDateReceived?: string
-  status: string
 }
 
 function daysBetween(a: Date, b: Date): number {
@@ -11,13 +10,13 @@ function daysBetween(a: Date, b: Date): number {
 
 const FALLBACK_SPAN = 30
 
-export default function TimelineCell({ claimDate, forecastPaymentDate, paymentDateReceived, status }: Props) {
+export default function TimelineCell({ claimDate, forecastPaymentDate, paymentDateReceived }: Props) {
   if (!claimDate) return <span className="text-muted italic text-xs">—</span>
 
   const claim = new Date(claimDate)
   if (isNaN(claim.getTime())) return <span className="text-muted italic text-xs">—</span>
 
-  const isReceived = status === 'Payment Received' || status === 'Finalized'
+  const isReceived = !!paymentDateReceived
   const received = paymentDateReceived ? new Date(paymentDateReceived) : null
 
   const forecast = forecastPaymentDate ? new Date(forecastPaymentDate) : null
