@@ -1,10 +1,12 @@
-const WORKER_URL = 'https://clarity-admin-api.bruce-5f2.workers.dev'
+interface Env {
+  API: Fetcher
+}
 
-export const onRequest: PagesFunction = async (context) => {
+export const onRequest: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url)
-  const target = `${WORKER_URL}${url.pathname}${url.search}`
+  const target = `https://clarity-admin-api${url.pathname}${url.search}`
 
-  return fetch(target, {
+  return context.env.API.fetch(target, {
     method: context.request.method,
     headers: context.request.headers,
     body: context.request.method !== 'GET' && context.request.method !== 'HEAD'
