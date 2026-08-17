@@ -1,6 +1,6 @@
 import type {
   Claim, NewClaimInput, ClaimUpdateInput, ClaimFullEditInput, PayPeriod, CaseloadEntry, CaseloadClientStat,
-  DashboardData, CaseloadTrendMonth, ForecastAccuracyWeek,
+  DashboardData, CaseloadTrendMonth, ForecastAccuracyWeek, CapacityWeek,
   StaffMember, StaffLicense, OverheadEntry, PayrollEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
@@ -111,6 +111,7 @@ export const api = {
   analytics: {
     caseloadTrends: (): Promise<CaseloadTrendMonth[]> => apiFetch<CaseloadTrendMonth[]>('/analytics/caseload-trends'),
     forecastAccuracy: (): Promise<ForecastAccuracyWeek[]> => apiFetch<ForecastAccuracyWeek[]>('/analytics/forecast-accuracy'),
+    capacityRecentWeeks: (): Promise<CapacityWeek[]> => apiFetch<CapacityWeek[]>('/analytics/capacity-recent-weeks'),
     quarterlySummary: (): Promise<QuarterlySummary[]> => apiFetch<QuarterlySummary[]>('/analytics/quarterly-summary'),
     quarterProjection: (): Promise<QuarterProjection> => apiFetch<QuarterProjection>('/analytics/quarter-projection'),
     payerPerformance: (): Promise<PayerPerformance[]> => apiFetch<PayerPerformance[]>('/analytics/payer-performance'),

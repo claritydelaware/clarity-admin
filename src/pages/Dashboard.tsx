@@ -1,8 +1,7 @@
-import { useState } from 'react'
 import { Activity, DollarSign, Clock, TrendingUp, ArrowDownToLine, Percent, CalendarClock } from 'lucide-react'
 import { useDashboard } from '../hooks/useDashboard'
 import { useDateWindow } from '../hooks/useDateWindow'
-import { useCapacityAlerts } from '../hooks/useCapacityAlerts'
+import { useCapacityAlerts, useCapacityAlertCollapse } from '../hooks/useCapacityAlerts'
 import { formatCurrency, getPayerStyle, CLINICIAN_COLORS } from '../lib/utils'
 import { SkeletonMetricCards } from '../components/ui/Skeleton'
 import MetricCard from '../components/ui/MetricCard'
@@ -38,7 +37,7 @@ export default function Dashboard() {
   const { window: dateWindow, setWindow, label: windowLabel, fromISO, toISO } = useDateWindow()
   const { data, isLoading, isError, error } = useDashboard(fromISO, toISO, dateWindow)
   const capacityAlerts = useCapacityAlerts()
-  const [alertsDismissed, setAlertsDismissed] = useState(false)
+  const { collapsed: alertsCollapsed, toggleCollapsed: toggleAlertsCollapsed } = useCapacityAlertCollapse(capacityAlerts)
 
   if (isLoading) {
     return (
@@ -73,8 +72,8 @@ export default function Dashboard() {
         actions={<Tabs tabs={DATE_WINDOW_TABS} value={dateWindow} onChange={v => setWindow(v as DateWindow)} size="sm" />}
       />
 
-      {!alertsDismissed && capacityAlerts.length > 0 && (
-        <CapacityAlert alerts={capacityAlerts} onDismiss={() => setAlertsDismissed(true)} />
+      {capacityAlerts.length > 0 && (
+        <CapacityAlert alerts={capacityAlerts} collapsed={alertsCollapsed} onToggleCollapsed={toggleAlertsCollapsed} />
       )}
 
       {/* Primary metric cards */}

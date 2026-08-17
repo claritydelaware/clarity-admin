@@ -18,6 +18,14 @@ export function useForecastAccuracy() {
   })
 }
 
+export function useCapacityRecentWeeks() {
+  return useQuery({
+    queryKey: ['analytics', 'capacity-recent-weeks'],
+    queryFn: () => api.analytics.capacityRecentWeeks(),
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 export function useTrend(granularity: TrendGranularity, from?: string, to?: string) {
   return useQuery({
     queryKey: ['analytics', 'trend', granularity, from ?? '', to ?? ''],

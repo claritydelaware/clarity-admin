@@ -169,6 +169,18 @@ export interface CaseloadTrendMonth {
   weeks: number | null
 }
 
+export interface CapacityWeek {
+  weekStart: string
+  emilySessions: number
+  shannonSessions: number
+  jenSessions: number
+  shanaSessions: number
+  emilyUtilPct: number | null
+  shannonUtilPct: number | null
+  jenUtilPct: number | null
+  shanaUtilPct: number | null
+}
+
 export interface ForecastAccuracyWeek {
   weekStart: string
   forecast: number | null
