@@ -33,8 +33,10 @@ are scoped below but not started.
 - Commits: `clarity-admin-api` — `ddcd6a0` (workers_dev disabled), `6fd0685`
   (Ops Sheet setup + Credentialing CRUD). `clarity-admin` — `accff6c`
   (service binding, resolved in a parallel session, not part of this
-  phase), `a4fd963` (Credentialing page), `a0be21b` (this doc). Step 2's
-  commits aren't cut yet as of this doc update — see build notes below.
+  phase), `a4fd963` (Credentialing page), `a0be21b` (this doc). Step 2:
+  `clarity-admin-api` `ef7934d` (CE endpoints, deployed via `wrangler
+  deploy`), `clarity-admin` `fa3eeaf` (CE tracker page, pushed to `main` —
+  Cloudflare Pages auto-deploys from there).
 - Key design decision: the new tabs key off **clinician name**
   (`Shannon`/`Jen`/`Emily`/`Shana` — the existing `Clinician` union type
   used throughout the Worker for Claims), not a Staff-row UUID. Simpler,
