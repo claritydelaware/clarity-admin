@@ -2,9 +2,11 @@
 
 ## Where this stands (2026-08-17) — read this first in a new session
 
-**Steps 0 and 1 are live in production and confirmed working** — Bruce ran
-the setup call and has verified real data on the `/credentialing` page.
-Steps 2–5 are scoped below but not started.
+**Steps 0, 1, and 2 are built.** Steps 0–1 are live in production and
+confirmed working by Bruce. Step 2 (CE tracker) was built this session —
+code is done and typechecks/builds clean, but **not yet deployed or
+verified against live data** (see "Step 2 build notes" below). Steps 3–5
+are scoped below but not started.
 
 **Live now:**
 - Spreadsheet: `Clarity Ops & Compliance` —
@@ -13,8 +15,10 @@ Steps 2–5 are scoped below but not started.
 - All 8 tabs exist with headers. `ClinicianCompliance`, `Licenses_CE`,
   `Credentialing`, and `BusinessCompliance` are seeded with verified data
   (see schema section below for exact values and sourcing). `Vendors`,
-  `CE_Log`, `Onboarding`, `HR_Documents` exist with headers only — empty by
-  design, not an oversight (see "Open items" below).
+  `Onboarding`, `HR_Documents` exist with headers only — empty by design,
+  not an oversight (see "Open items" below). `CE_Log` exists with headers
+  only too — empty until Bruce or a clinician logs the first activity via
+  the new `/ce-tracker` page.
 - `/credentialing` page is live in the portal — board view grouped by
   clinician, click a payer's status pill to edit, "Add Payer" to add a row.
 - Worker: `GET/POST /api/credentialing`, `PATCH /api/credentialing/:rowIndex`,
@@ -29,45 +33,157 @@ Steps 2–5 are scoped below but not started.
 - Commits: `clarity-admin-api` — `ddcd6a0` (workers_dev disabled), `6fd0685`
   (Ops Sheet setup + Credentialing CRUD). `clarity-admin` — `accff6c`
   (service binding, resolved in a parallel session, not part of this
-  phase), `a4fd963` (Credentialing page), `a0be21b` (this doc).
+  phase), `a4fd963` (Credentialing page), `a0be21b` (this doc). Step 2's
+  commits aren't cut yet as of this doc update — see build notes below.
 - Key design decision: the new tabs key off **clinician name**
   (`Shannon`/`Jen`/`Emily`/`Shana` — the existing `Clinician` union type
   used throughout the Worker for Claims), not a Staff-row UUID. Simpler,
   and avoids needing to read the live Staff sheet to cross-reference IDs.
 
-**Not started:** Step 2 (CE/CEU tracker), Step 3 (Vendor & business
-compliance pages), Step 4 (HR documents + onboarding checklist), Step 5
-(Dashboard compliance digest card). See "Rollout sequence" below for what
-each needs.
+### Step 2 build notes (2026-08-17, this session)
 
-## Open items to resolve before continuing
+Built end-to-end but **not deployed** (Worker deploy + Pages deploy both
+still needed) and **not tested against live data** — dev server smoke-test
+only confirmed the route serves and modules compile; the Worker's
+`workers.dev` is disabled so local dev can't reach real Sheets data (see
+security note above). Verify in the browser at `admin.claritydelaware.com`
+after deploying both repos.
 
-- **Which step next?** No strong signal yet from Bruce on Step 2 (CE
-  tracker) vs. Step 3 (vendors/compliance) vs. Step 4 (HR docs) — ask.
-- **Malpractice policy per clinician** — `ClinicianCompliance`'s
-  `malpracticePolicyNumber`/`malpracticeExpiration` columns are blank for
-  all four. AR439977 (Master Doc) reads as the practice's *group* liability
-  policy, not individual malpractice coverage — confirm with Bruce whether
-  each clinician also carries their own policy, or the group policy is what
-  belongs in these fields.
-- **Out-of-state CE requirements** — Shannon (PA, FL) and Jen (VA) have
-  license dates seeded in `Licenses_CE` but no hour requirements
-  researched. Lower priority since DE is the primary practice license for
-  all four clinicians.
-- **Vendor data sourcing, when Step 3 starts** — per Bruce, in priority
-  order: `Receipts & Invoices/` Drive folder (has separate 2025 and 2026
-  subfolders — only the 2026 one was briefly scanned so far, found GoDaddy,
-  SiteGround, Northwest Registered Agent, OpenAI, Envato, Psychology Today,
-  Identogo, and a Gusto invoice with real confirmed figures: $141.94 total
-  = $49 base + $30 employee fees [5 @ $6] + $39.99 background check +
-  $19.95 Gusto Learning + $3 workers comp), then QBO expense categories,
-  then Gusto (which also holds personnel documents worth indexing into
-  `HR_Documents` eventually — extract links only, never raw SSN/DOB fields,
-  per "What NOT to store" below). This is a deliberate scaffold-then-fill
-  approach — Bruce wants the tab built but isn't in a hurry to populate it.
-- **CAQH last-attestation dates** — Bruce doesn't currently track whether
-  these are up to date, so `ClinicianCompliance.caqhLastAttestation` starts
-  blank for everyone. First fill-in requires a manual check, not an import.
+- **Worker** (`clarity-admin-api/src/index.ts`): `GET/POST /api/ce/log`,
+  `PATCH /api/ce/log/:rowIndex`, `GET /api/ce/status`. Status is a computed
+  rollup (never stored) — for each clinician's **DE license row only** in
+  `Licenses_CE` (DE is the primary practice license; out-of-state CE
+  requirement columns for Shannon/PA+FL and Jen/VA are still blank, see
+  "Open items" below), it sums `CE_Log` hours within `[cycleStart,
+  cycleEnd]`, splits out an Ethics-category subtotal and an
+  otherSubRequirementLabel-category subtotal, and derives a status of `On
+  Track` / `Behind Pace` / `At Risk` by comparing % of the cycle elapsed
+  against % of hours completed (10% gap tolerance for "On Track", 30% for
+  "Behind Pace", anything worse or a cycle that's already ended without
+  meeting the requirement is "At Risk"). One known gap: `CE_Log` doesn't
+  capture whether an activity was self-directed, so `selfDirectedCapHours`
+  is surfaced for display only — not enforced against actual logged hours.
+- **Frontend:** new `/ce-tracker` page (`src/pages/CETracker.tsx`), one
+  card per clinician mirroring the `/credentialing` layout — overall
+  progress bar (reuses the existing `ProgressBar` component from the
+  Dashboard utilization bars), Ethics + other-sub-requirement bars,
+  `CEStatusBadge` (new, added to `Badge.tsx`), a "Log Activity" button
+  opening `CELogModal` (new, mirrors `CredentialingModal`'s form pattern),
+  and a click-to-edit activity list below. Category dropdown in the modal
+  is scoped per clinician (`General` + `Ethics` + that clinician's
+  `otherSubRequirementLabel` — LPCMH vs. LCSW have different sub-requirement
+  shapes, so this isn't a global enum). New hook file `src/hooks/useCE.ts`.
+  Nav item added to `Sidebar.tsx` (GraduationCap icon) and route to
+  `App.tsx`.
+- Both `tsc --noEmit` (Worker) and `npm run build` (frontend, `tsc -b &&
+  vite build`) pass clean.
+
+**Not started:** Step 3 (Vendor & business compliance pages), Step 4 (HR
+documents + onboarding checklist), Step 5 (Dashboard compliance digest
+card). See "Rollout sequence" below for what each needs.
+
+## Open items — status as of 2026-08-17 session
+
+- **Which step next?** Still open — Bruce chose to resolve the items below
+  before picking Step 2/3/4. Ask again next session if not already decided.
+- **Malpractice policy — RESOLVED.** Bruce downloaded individual
+  certificates-of-insurance for all five people (Bruce + 4 clinicians) from
+  CPH Insurance. All five certs show the *same* Policy # AR439977, Policy
+  Term 06/14/2026–06/14/2027, issued by Philadelphia Indemnity Insurance
+  Company — confirming this is one group policy, not per-clinician
+  coverage. Seed `ClinicianCompliance.malpracticePolicyNumber = AR439977`
+  and `malpracticeExpiration = 6/14/2027` for all four clinicians once the
+  write path exists (no PATCH endpoint yet — see below). Coverage:
+  Professional Liability $1M/$3M, Supplemental Liability $1M/$3M, Licensing
+  Board Defense $35K, Cyber Liability $15K (retroactive date 6/14/2025).
+  Annual premium confirmed via a separate CPH receipt in Drive: $906.00
+  ($707 professional liability + $87 separate limits + $87 cyber + $25
+  admin fee), paid 6/6/2026 by card ending 9844.
+  **Unresolved sub-item:** the 5 cert PDFs are sitting in Bruce's local
+  Downloads folder (`Certificate_{Name} N.pdf`, downloaded 2026-08-17).
+  Precedent in Drive (`HR Files/Emily/Insurance_Certificate_Emily
+  Bryant.pdf`) is one cert per person, filed directly in that person's `HR
+  Files/{Name}/` folder — Bruce should upload the new ones there,
+  replacing/dating the old ones, once he has a moment.
+- **CAQH last-attestation dates — confirmed still blank, not a blocker.**
+  Bruce confirmed he doesn't currently have access to each clinician's last
+  CAQH attestation date. `ClinicianCompliance.caqhLastAttestation` stays
+  unpopulated until he has a workflow for checking CAQH ProView directly —
+  don't build tooling around this until then.
+- **Out-of-state CE requirements — RESOLVED via state board research
+  (2026-08-17, web search, not primary-source-verified against the actual
+  board regulations — spot-check before publishing to a clinician-facing
+  view):**
+  - **Shannon / PA (LPC, license PC020405):** 30 CE hours per 2-year
+    cycle (biennial renewal Feb 28, even years) — different total from her
+    DE requirement (40 hrs). Required sub-topics: 3 hrs ethics, 2 hrs
+    Child Abuse Recognition & Reporting (Act 31), 1 hr Suicide
+    Prevention/Assessment (Act 74). Up to 20 hrs may be home study. First
+    renewal after initial licensure is exempt from the full 30 (Act 31
+    still required). Source: [PA Code 49 Pa. Code § 49.32](https://www.pacodeandbulletin.gov/Display/pacode?file=/secure/pacode/data/049/chapter49/s49.32.html&d=reduce), [Triad PA LPC CE Requirements](https://www.triadhq.com/ce-requirements/pennsylvania/lpc).
+  - **Shannon / FL (LMHC, license MH27670):** 30 CE hours per biennium
+    (due March 31, odd years), broken down as 25 general + 3 ethics &
+    boundaries + 2 medical errors. Periodic add-ons: 3 hrs FL laws/rules
+    every 3rd renewal, 2 hrs domestic violence every 6 years. All hours
+    must be reported to CE Broker. First renewal is CE-exempt. Source:
+    [Program Services — FL CE Requirements](https://programservices.org/news-highlights/recent-changes-in-the-florida-mental-health-continuing-education-requirements), [CE4Less FL Counselor Requirements](https://ce4less.com/counseling-ce/florida-counselor-requirements/).
+  - **Jen / VA (LCSW, license 0904020782):** 30 contact hours per 2-year
+    cycle, minimum 6 of those hours in ethics/standards-of-practice/VA
+    social work law. Up to 10 of the 30 hours may be Category II
+    activities. Source: [VA Board of Social Work — Continuing Education](https://www.dhp.virginia.gov/Boards/SocialWork/PractitionerResources/ContinuingEducation/), [Agents of Change — VA Social Work CE](https://agentsofchangeprep.com/blog/virginia-social-work-licensure-renewal-dates-and-ce-requirements/).
+  - Not yet added as columns/rows in `Licenses_CE` — this is reference
+    data for whoever builds Step 2, not yet written to the Sheet.
+- **Vendor data sourcing — first pass done, not yet seeded to the
+  `Vendors` tab (still deliberately empty per Bruce's scaffold-then-fill
+  call).** Scanned `Receipts & Invoices/Business Expenses 2026/` (Drive
+  folder ID `1HX2lDErmhoEZ-GTcUj4rjWjSdhheE9NR`) across its
+  category-subfolders. Real recurring vendors found, with actual 2026
+  costs (several diverge meaningfully from the stale Master-Doc estimates
+  — do not reuse those old numbers):
+  - **Traktion Accounting** (bookkeeping + payroll processing + tax) —
+    this *is* the "CPA (~$750/mo)" line from the Master Doc, but it's a
+    bookkeeping firm, not a traditional CPA. ~$750/mo base (Done-for-You
+    Bookkeeping + Stress Free Payroll), fluctuates with credits/discounts
+    and add-ons (e.g. a $1,400 business tax return line in July 2026, a
+    retroactive fee adjustment down to $600/mo).
+  - **SimplePractice** (EHR) — NOT flat $212/mo as the Master Doc said;
+    actual invoices climbed from $247/mo (Jan 2026) to $396.75 (July
+    2026), scales with usage/clinician count.
+  - **Google Workspace** — $50.40/mo (Jan) rising to $84/mo (Aug) as
+    headcount grew; separate from Google Voice telecom billing (~$75–125/mo,
+    its own line, found under `Utility/`).
+  - **Paubox** (HIPAA email) — $82.85 charge found (June 2026); doesn't
+    cleanly match the Master Doc's "$29/mo billed yearly" — could be an
+    annual renewal or an add-on, needs a closer look before seeding.
+  - **Northwest Registered Agent** — three separate services, not one
+    line: DE Registered Agent Service $125/yr (renews 4/28), DE Virtual
+    Office Mail Forwarding $39/mo, Phone Service (302) 204-4800 $9/mo.
+  - **Gusto** — payroll base $49–80/mo + $6–12/employee + occasional
+    Background Check ($39.99) and Gusto Learning ($19.95) line items;
+    varies month to month, not a flat fee.
+  - **NEXT Insurance** (workers comp, billed via Gusto) — Policy
+    QWC1484326, effective 2025-08-05 to 2026-08-05, ~$0–30/mo depending on
+    payroll that period.
+  - **CPH Insurance** — see malpractice section above; $906/yr.
+  - **Anthropic (Claude)** — $20/mo flat.
+  - **OpenAI (ChatGPT)** — $20/mo flat (Jan–Feb 2026 invoices; check if
+    still active).
+  - **SiteGround** — $24/mo Domain Protect + a $539.88 annual web hosting
+    charge (4/19/2026).
+  - **WP Engine** — $49/mo (ACF Pro).
+  - **Cloudflare** — one-time $10.46 domain transfer, not recurring.
+  - **Meta (Facebook/Instagram Ads)** — settled around $92/mo since
+    ~April 2026, was ramping up before that (marketing spend, not really a
+    "vendor" in the BAA/renewal sense, but flagged in case Vendors ends up
+    tracking ad spend too).
+  - **Psychology Today** — $29.95/mo profile listing.
+  - **Amazon** — one-off equipment (laptops $1,049.99 and $1,699.98,
+    office furniture) — not a recurring vendor line.
+  - Not yet checked: QBO expense categories, Gusto's own document store
+    (per Bruce's stated priority order this was step 2 and 3 of sourcing —
+    still pending). GoDaddy, Envato, Identogo (mentioned in an earlier
+    partial scan) weren't seen in this pass — may be in the 2025 folder or
+    a different category subfolder not yet opened.
 
 ## Context
 
@@ -238,11 +354,13 @@ status will want to read from this).
 | malpracticePolicyNumber | Blank — see "Open items" above (group vs. individual policy question) |
 | malpracticeExpiration | Blank |
 
-### Tab: `Licenses_CE` — seeded, no CRUD endpoint yet
+### Tab: `Licenses_CE` — seeded, no CRUD endpoint (by design — see below)
 Extends the existing `Staff_Licenses` tab (in the Claims workbook, which
 keeps tracking licenseType/number/state/expiration) with the CE dimension.
-Seeded for all DE licenses; out-of-state (Shannon/PA+FL, Jen/VA) have dates
-only, no hour requirements researched yet.
+Seeded for all DE licenses; out-of-state (Shannon/PA+FL, Jen/VA) still have
+dates only — their hour requirements were researched 2026-08-17 (see "Open
+items" above) but not yet written into this tab, since `/api/ce/status`
+(Step 2) only reads the DE row per clinician.
 
 | Column | Notes |
 |---|---|
@@ -251,19 +369,25 @@ only, no hour requirements researched yet.
 | ethicsHoursRequired, otherSubRequirementLabel, otherSubRequirementHours | LCSW: 6 ethics + 1 "Mandatory Reporting". LPCMH: 3 ethics + 3 "Cultural Inclusion, Equity & Diversity". Not the same shape — don't assume one and copy to the other |
 | selfDirectedCapHours | LCSW: 10. LPCMH: not verified |
 | cycleStart, cycleEnd | LCSW: Feb 1–Jan 31, odd years. LPCMH: Oct 1–Sept 30, even years |
-| *(not yet a column)* hoursCompleted | Planned for Step 2 — **computed by the Worker** from `CE_Log`, not manually maintained, same pattern as derived Claims fields |
-| *(not yet a column)* status | Planned for Step 2 — On Track / Behind Pace / At Risk, computed from hours-completed vs. time-elapsed-in-cycle |
 
-### Tab: `CE_Log` — headers only, empty
-One row per completed CE/CEU activity, added going forward — this *is* the
-"Professional Development" Drive folder, indexed instead of just filed.
+**Built in Step 2**, computed by the Worker from `CE_Log` on every
+`GET /api/ce/status` call, never stored:
+- `hoursCompleted`, `ethicsHoursCompleted`, `otherSubRequirementHoursCompleted`
+- `status` — On Track / Behind Pace / At Risk, computed from hours-completed
+  vs. time-elapsed-in-cycle (10%/30% pace-gap thresholds; see Step 2 build
+  notes up top for the exact rule)
+
+### Tab: `CE_Log` — headers only, empty; CRUD live via Step 2
+One row per completed CE/CEU activity, added going forward via the
+`/ce-tracker` page — this *is* the "Professional Development" Drive folder,
+indexed instead of just filed.
 
 | Column | Notes |
 |---|---|
 | clinician | |
 | activityTitle, provider | |
 | dateCompleted, hours | |
-| category | General / Ethics / Mandatory Reporting / Cultural Inclusion Equity & Diversity, etc. — match whatever sub-requirement it counts toward |
+| category | General / Ethics / Mandatory Reporting / Cultural Inclusion Equity & Diversity, etc. — match whatever sub-requirement it counts toward. No `isSelfDirected` flag exists, so `selfDirectedCapHours` (above) isn't enforced against real entries yet. |
 | certificateLink | Drive URL into `Professional Development/` |
 
 ### Tab: `Vendors` — headers only, empty (deliberately)
@@ -324,8 +448,8 @@ change.
 ```
 ✅ GET/POST/PATCH  /api/credentialing
 ⬜ GET             /api/clinician-compliance
-⬜ GET/POST/PATCH  /api/ce/log
-⬜ GET             /api/ce/status          — computed rollup: hours completed vs. required vs. cycle end, per clinician
+✅ GET/POST/PATCH  /api/ce/log             — built, not yet deployed (see Step 2 build notes up top)
+✅ GET             /api/ce/status          — computed rollup: hours completed vs. required vs. cycle end, per clinician; built, not yet deployed
 ⬜ GET/POST/PATCH  /api/vendors
 ⬜ GET/POST/PATCH  /api/business-compliance
 ⬜ GET/POST/PATCH  /api/onboarding
@@ -342,7 +466,7 @@ that's how the sidebar already works, see Sidebar.tsx):
 | Route | Page | Status | Notes |
 |---|---|---|---|
 | `/credentialing` | Board view grouped by clinician, colored status pills | ✅ Live | Reuses the monday.com-style board patterns from Phase 14 |
-| `/ce-tracker` | Per-clinician progress bars (hours completed / required) | ⬜ Not started | Same visual pattern as the existing Dashboard utilization bars |
+| `/ce-tracker` | Per-clinician progress bars (hours completed / required) | ✅ Built, not deployed | Reuses the Dashboard `ProgressBar` component; new `CEStatusBadge` + `CELogModal` + `useCE.ts` hook — see Step 2 build notes up top |
 | `/vendors` | Table with renewal countdown badges | ⬜ Not started | Same expiry-badge pattern already built for Staff license warnings |
 | `/compliance` | Business compliance list/calendar with countdown badges | ⬜ Not started | |
 | `/staff/:id` | **Extend**, not new | ⬜ Not started | Add Credentialing / CE / HR Documents / Onboarding sections to the existing StaffDetail page — keeps this attached to the profile a user already knows, instead of scattering it across five disconnected pages |
@@ -360,13 +484,12 @@ compliance deadlines) in one place.
 1. ~~**Step 0 — Infrastructure.**~~ **Done.** Spreadsheet created, shared,
    secret added, tabs created and seeded.
 2. ~~**Step 1 — Credentialing tracker.**~~ **Done.** Live at `/credentialing`.
-3. **Step 2 — CE/CEU tracker** (not started). `Licenses_CE` (seeded) +
-   `CE_Log` (empty, ready for entries) already exist. Needs:
-   `GET/POST /api/ce/log`, `GET /api/ce/status` (computed rollup — hours
-   completed vs. required vs. cycle end, per clinician, from `CE_Log`
-   entries — same "computed, not manually maintained" pattern as Claims
-   derived fields), and a `/ce-tracker` page with per-clinician progress
-   bars (same visual pattern as the Dashboard utilization bars).
+3. ~~**Step 2 — CE/CEU tracker.**~~ **Code done, not yet deployed or
+   verified live** (2026-08-17). See "Step 2 build notes" up top before
+   deploying — needs `npx wrangler deploy` in `clarity-admin-api/` and a
+   Pages deploy for `clarity-admin/`, then a real browser check at
+   `admin.claritydelaware.com/ce-tracker` since local dev can't reach live
+   Sheets data.
 4. **Step 3 — Vendor & business compliance register** (not started).
    `Vendors` exists but deliberately unseeded (see "Vendor data sourcing"
    above). `BusinessCompliance` has 2 seeded rows already. Needs CRUD

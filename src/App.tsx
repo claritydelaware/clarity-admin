@@ -13,6 +13,7 @@ import StaffDetail from './pages/StaffDetail'
 import Caseloads from './pages/Caseloads'
 import Valuation from './pages/Valuation'
 import Credentialing from './pages/Credentialing'
+import CETracker from './pages/CETracker'
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="caseloads" element={<Caseloads />} />
           <Route path="valuation" element={<Valuation />} />
           <Route path="credentialing" element={<Credentialing />} />
+          <Route path="ce-tracker" element={<CETracker />} />
         </Route>
       </Routes>
     </BrowserRouter>

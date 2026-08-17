@@ -6,6 +6,7 @@ import type {
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
   Clinician, ConfigData, ContractRate, ValuationSnapshot, TrendGranularity, TrendPoint,
   HourlyPerformanceHistory, CredentialingRecord, CredentialingInput,
+  CELogRecord, CELogInput, CEStatusRecord,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -197,5 +198,15 @@ export const api = {
       apiFetch<CredentialingRecord>('/credentialing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
     update: (rowIndex: number, data: Partial<CredentialingRecord>): Promise<CredentialingRecord> =>
       apiFetch<CredentialingRecord>(`/credentialing/${rowIndex}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  },
+  ceLog: {
+    list: (): Promise<CELogRecord[]> => apiFetch<CELogRecord[]>('/ce/log'),
+    create: (data: CELogInput): Promise<CELogRecord> =>
+      apiFetch<CELogRecord>('/ce/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+    update: (rowIndex: number, data: Partial<CELogRecord>): Promise<CELogRecord> =>
+      apiFetch<CELogRecord>(`/ce/log/${rowIndex}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  },
+  ceStatus: {
+    list: (): Promise<CEStatusRecord[]> => apiFetch<CEStatusRecord[]>('/ce/status'),
   },
 }

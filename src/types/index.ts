@@ -95,6 +95,39 @@ export interface CredentialingRecord {
 
 export type CredentialingInput = Omit<CredentialingRecord, 'rowIndex'>
 
+export interface CELogRecord {
+  rowIndex: number
+  clinician: Clinician
+  activityTitle: string
+  provider?: string
+  dateCompleted: string
+  hours: number
+  category?: string
+  certificateLink?: string
+}
+
+export type CELogInput = Omit<CELogRecord, 'rowIndex'>
+
+export const CE_STATUSES = ['On Track', 'Behind Pace', 'At Risk'] as const
+export type CEStatusValue = typeof CE_STATUSES[number]
+
+export interface CEStatusRecord {
+  clinician: Clinician
+  licenseType: string
+  licenseState: string
+  ceHoursRequired: number
+  hoursCompleted: number
+  ethicsHoursRequired: number
+  ethicsHoursCompleted: number
+  otherSubRequirementLabel?: string
+  otherSubRequirementHours: number
+  otherSubRequirementHoursCompleted: number
+  selfDirectedCapHours?: number
+  cycleStart: string
+  cycleEnd: string
+  status: CEStatusValue
+}
+
 export interface ClaimFullEditInput {
   claimDate?: string
   clinician?: Clinician

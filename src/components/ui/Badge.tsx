@@ -1,4 +1,4 @@
-import type { ClaimStatus, CredentialingStatus } from '../../types'
+import type { ClaimStatus, CredentialingStatus, CEStatusValue } from '../../types'
 import { getPayerStyle } from '../../lib/utils'
 
 const STATUS_COLORS: Record<ClaimStatus, string> = {
@@ -76,6 +76,20 @@ export function CredentialingStatusBadge({ status, onClick }: CredentialingBadge
 
   return (
     <span className={`${BASE} text-white`} style={{ backgroundColor: bg }}>
+      {status}
+    </span>
+  )
+}
+
+const CE_STATUS_COLORS: Record<CEStatusValue, string> = {
+  'On Track':    'var(--color-status-green)',
+  'Behind Pace': 'var(--color-status-orange)',
+  'At Risk':     'var(--color-status-red)',
+}
+
+export function CEStatusBadge({ status }: { status: CEStatusValue }) {
+  return (
+    <span className={`${BASE} text-white`} style={{ backgroundColor: CE_STATUS_COLORS[status] ?? 'var(--color-status-gray)' }}>
       {status}
     </span>
   )
