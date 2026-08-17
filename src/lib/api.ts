@@ -5,7 +5,7 @@ import type {
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
   Clinician, ConfigData, ContractRate, ValuationSnapshot, TrendGranularity, TrendPoint,
-  HourlyPerformanceHistory,
+  HourlyPerformanceHistory, CredentialingRecord, CredentialingInput,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -190,5 +190,12 @@ export const api = {
   },
   contractRates: {
     list: (): Promise<ContractRate[]> => apiFetch<ContractRate[]>('/contract-rates'),
+  },
+  credentialing: {
+    list: (): Promise<CredentialingRecord[]> => apiFetch<CredentialingRecord[]>('/credentialing'),
+    create: (data: CredentialingInput): Promise<CredentialingRecord> =>
+      apiFetch<CredentialingRecord>('/credentialing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+    update: (rowIndex: number, data: Partial<CredentialingRecord>): Promise<CredentialingRecord> =>
+      apiFetch<CredentialingRecord>(`/credentialing/${rowIndex}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   },
 }

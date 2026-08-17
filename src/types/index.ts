@@ -73,6 +73,28 @@ export interface ClaimUpdateInput {
   notes?: string
 }
 
+// ─── Phase 16: Credentialing, HR & CE Tracker (separate Ops workbook) ─────────
+
+export const CREDENTIALING_STATUSES = [
+  'Not Started', 'Submitted', 'Additional Info Requested', 'Confirmed', 'Effective', 'Denied', 'Terminated',
+] as const
+export type CredentialingStatus = typeof CREDENTIALING_STATUSES[number]
+
+export interface CredentialingRecord {
+  rowIndex: number
+  clinician: Clinician
+  payer: string
+  status: CredentialingStatus
+  dateSubmitted?: string
+  dateEffective?: string
+  providerIdentifier?: string
+  caqhLinked: boolean
+  contractLink?: string
+  notes?: string
+}
+
+export type CredentialingInput = Omit<CredentialingRecord, 'rowIndex'>
+
 export interface ClaimFullEditInput {
   claimDate?: string
   clinician?: Clinician

@@ -12,6 +12,7 @@ import NewStaff from './pages/NewStaff'
 import StaffDetail from './pages/StaffDetail'
 import Caseloads from './pages/Caseloads'
 import Valuation from './pages/Valuation'
+import Credentialing from './pages/Credentialing'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="staff/:id" element={<StaffDetail />} />
           <Route path="caseloads" element={<Caseloads />} />
           <Route path="valuation" element={<Valuation />} />
+          <Route path="credentialing" element={<Credentialing />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,4 +1,4 @@
-import type { ClaimStatus } from '../../types'
+import type { ClaimStatus, CredentialingStatus } from '../../types'
 import { getPayerStyle } from '../../lib/utils'
 
 const STATUS_COLORS: Record<ClaimStatus, string> = {
@@ -20,6 +20,45 @@ const BASE = 'inline-flex items-center justify-center px-3 py-1 rounded-full tex
 
 export default function Badge({ status, onClick }: Props) {
   const bg = STATUS_COLORS[status] ?? 'var(--color-status-gray)'
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${BASE} text-white cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal`}
+        style={{ backgroundColor: bg }}
+        title="Click to update status"
+      >
+        {status}
+      </button>
+    )
+  }
+
+  return (
+    <span className={`${BASE} text-white`} style={{ backgroundColor: bg }}>
+      {status}
+    </span>
+  )
+}
+
+const CREDENTIALING_STATUS_COLORS: Record<CredentialingStatus, string> = {
+  'Not Started':               'var(--color-status-gray)',
+  'Submitted':                 'var(--color-status-blue)',
+  'Additional Info Requested': 'var(--color-status-orange)',
+  'Confirmed':                 'var(--color-status-purple)',
+  'Effective':                 'var(--color-status-green)',
+  'Denied':                    'var(--color-status-red)',
+  'Terminated':                'var(--color-status-gray)',
+}
+
+interface CredentialingBadgeProps {
+  status: CredentialingStatus
+  onClick?: React.MouseEventHandler<HTMLButtonElement>
+}
+
+export function CredentialingStatusBadge({ status, onClick }: CredentialingBadgeProps) {
+  const bg = CREDENTIALING_STATUS_COLORS[status] ?? 'var(--color-status-gray)'
 
   if (onClick) {
     return (
