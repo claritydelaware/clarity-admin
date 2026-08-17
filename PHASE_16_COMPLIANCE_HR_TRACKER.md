@@ -1,114 +1,73 @@
 # Phase 16 — Credentialing, HR & CE Tracker
 
-## Status (2026-08-17)
+## Where this stands (2026-08-17) — read this first in a new session
 
-- **Spreadsheet created:** `Clarity Ops & Compliance` —
+**Steps 0 and 1 are live in production and confirmed working** — Bruce ran
+the setup call and has verified real data on the `/credentialing` page.
+Steps 2–5 are scoped below but not started.
+
+**Live now:**
+- Spreadsheet: `Clarity Ops & Compliance` —
   https://docs.google.com/spreadsheets/d/1aDk_skyvMs_CKQUjj1wUMuMhQVleczh2aUSx9kPnkzs/edit
-- **Shared with the service account and `OPS_SPREADSHEET_ID` Worker secret
-  added — both done by Bruce.**
-- **`POST /api/maintenance/setup-ops-sheet` is written** in
-  `clarity-admin-api/src/index.ts` — creates all 8 tabs with headers
-  (idempotent — checks existing tab titles first) and seeds verified
-  reference data into `ClinicianCompliance`, `Licenses_CE`, `Credentialing`,
-  and `BusinessCompliance` (idempotent there too — only seeds a tab if it's
-  still header-only). `Vendors`, `CE_Log`, `Onboarding`, `HR_Documents` are
-  created with headers only, no seed rows, per the sourcing notes below.
-  Type-checks clean, existing 29-test Vitest suite still passes.
-- **Deployed (2026-08-17):**
-  - `clarity-admin-api` — `ddcd6a0` (workers_dev disabled) + `6fd0685`
-    (Ops Sheet setup + Credentialing CRUD), deployed via `wrangler deploy`.
-    Current Worker version `6f0e6fec-0bbf-4e81-9a76-6a9bd4a4236b`.
-  - `clarity-admin` — `a4fd963` (Credentialing page, Step 1), pushed to
-    `origin/main`. Cloudflare Pages auto-deploys from this branch.
-- **One manual step left, and it has to be you, not me.** Now that
-  `WORKER_API_SECURITY_FIX.md` Part A is live (see below), the Worker has
-  no public URL — the only path in is through the Access-gated Pages
-  Function. I can't authenticate through Cloudflare Access from here, so I
-  can't call the one-time setup endpoint myself anymore (this is the
-  security fix working as intended, not a bug). Once you're logged into
-  `admin.claritydelaware.com`, open the browser console and run:
-  ```js
-  fetch('/api/maintenance/setup-ops-sheet', { method: 'POST' })
-    .then(r => r.json()).then(console.log)
-  ```
-  That builds all 8 tabs with headers and seeds the verified reference data
-  in one call — safe to run more than once (idempotent). You should see
-  `{ tabsCreated: [...8 names], dataSeeded: [...4 names] }` on first run,
-  and `{ tabsCreated: [], dataSeeded: [] }` on any re-run.
-- Key design decision made while writing this: the new tabs key off
-  **clinician name** (`Shannon`/`Jen`/`Emily`/`Shana` — the same `Clinician`
-  union type already used throughout the Worker for Claims), not a Staff-row
-  UUID. Simpler, and avoids needing to read the live Staff sheet to
-  cross-reference IDs.
-- `WORKER_API_SECURITY_FIX.md` Part A is now fully resolved — Bruce applied
-  it in a parallel session (`clarity-admin` commit `accff6c`, service
-  binding) while this phase's `clarity-admin-api` commit `ddcd6a0` disabled
-  the `workers_dev` route on this side. The Worker has zero public entry
-  points now.
-- **Step 1 (Credentialing) is built and deployed**, not just scoped: board
-  view at `/credentialing`, one card per clinician, click a payer's status
-  pill to edit, "Add Payer" to create a new row. `Worker: GET/POST
-  /api/credentialing`, `PATCH /api/credentialing/:rowIndex`.
+  — shared with the service account; `OPS_SPREADSHEET_ID` is a Worker secret.
+- All 8 tabs exist with headers. `ClinicianCompliance`, `Licenses_CE`,
+  `Credentialing`, and `BusinessCompliance` are seeded with verified data
+  (see schema section below for exact values and sourcing). `Vendors`,
+  `CE_Log`, `Onboarding`, `HR_Documents` exist with headers only — empty by
+  design, not an oversight (see "Open items" below).
+- `/credentialing` page is live in the portal — board view grouped by
+  clinician, click a payer's status pill to edit, "Add Payer" to add a row.
+- Worker: `GET/POST /api/credentialing`, `PATCH /api/credentialing/:rowIndex`,
+  `POST /api/maintenance/setup-ops-sheet` (idempotent — safe to rerun if
+  ever needed, but shouldn't be).
+- **Security note that affects how any future one-time/maintenance endpoint
+  gets triggered:** the Worker has zero public entry points (workers.dev
+  disabled + Cloudflare Pages service binding). The only way in is through
+  the Access-gated app — Claude cannot call Worker endpoints directly
+  anymore. Anything needing a one-off manual trigger has to be run from the
+  browser console while logged into `admin.claritydelaware.com`, by Bruce.
+- Commits: `clarity-admin-api` — `ddcd6a0` (workers_dev disabled), `6fd0685`
+  (Ops Sheet setup + Credentialing CRUD). `clarity-admin` — `accff6c`
+  (service binding, resolved in a parallel session, not part of this
+  phase), `a4fd963` (Credentialing page), `a0be21b` (this doc).
+- Key design decision: the new tabs key off **clinician name**
+  (`Shannon`/`Jen`/`Emily`/`Shana` — the existing `Clinician` union type
+  used throughout the Worker for Claims), not a Staff-row UUID. Simpler,
+  and avoids needing to read the live Staff sheet to cross-reference IDs.
 
-## Corrections from Bruce (2026-08-17)
+**Not started:** Step 2 (CE/CEU tracker), Step 3 (Vendor & business
+compliance pages), Step 4 (HR documents + onboarding checklist), Step 5
+(Dashboard compliance digest card). See "Rollout sequence" below for what
+each needs.
 
-- **CE hours — Master Doc's "45 hrs" for LCSW is wrong.** Delaware's Board
-  of Social Work Examiners page (dpr.delaware.gov) confirms **40 CE hours
-  per 2-year renewal cycle (Feb 1–Jan 31, odd years) for LCSW**, with a
-  minimum of 6 ethics hours and 1 mandatory-reporting hour inside that 40,
-  and a cap of 10 self-directed/independent-study hours. Since Emily and
-  Shana are also LCSW (confirmed by Bruce), **all three (Jen, Emily, Shana)
-  get 40 hrs / 6 ethics / 1 mandatory-reporting / ≤10 self-directed** — not
-  45. Shannon's LPCMH figure (40 hrs, from the Master Doc) was not
-  independently re-verified this session — different board
-  (Board of Mental Health & Chemical Dependency Professionals), not
-  Social Work.
-- **Credentialing status corrected for Shana and Emily.** Both are fully
-  credentialed with **BCBS, United, Aetna/Meritain, and Medicare** —
-  explicitly **NOT Health Options**. The Master Doc's snapshot of Shana's
-  applications (dated May 2026, "Submitted"/"Confirmed" language) is
-  stale — current status for both is Effective across all four. Shannon
-  and Jen's current per-payer status (as the original 2025 credentialing
-  cohort, plausibly including Health Options) was **not** confirmed this
-  session — need to ask before seeding their Credentialing rows.
-- **Vendor data must come from `Receipts & Invoices` + QBO, not the Master
-  Doc.** Bruce flagged the Doc's cost table as a stale startup-phase
-  estimate. A scan of the `Receipts & Invoices/New Receipts` Drive folder
-  found real invoices for: Gusto (verified — July 2026 invoice: $141.94
-  total = $49 base + $30 employee fees [5 @ $6] + $39.99 background check
-  + $19.95 Gusto Learning + $3 workers comp), GoDaddy, SiteGround, Northwest
-  Registered Agent, OpenAI, Envato, Psychology Today, and Identogo
-  (background checks), plus a receipt tied to the CPH Insurance policy
-  (AR439977) referenced in the Master Doc. Only Gusto's amount was actually
-  read this session — the rest are named but unconfirmed. See open
-  questions.
+## Open items to resolve before continuing
 
-## Corrections from Bruce, round 2 (2026-08-17)
-
-- **Shannon and Jen are credentialed on the same 4 payers as Shana/Emily
-  (BCBS, United, Aetna/Meritain, Medicare) *plus* Health Options** — they
-  are Health Options providers, Shana/Emily are not. Seeded accordingly.
-- **Shannon is LPCMH, not LCSW — different board, different CE structure.**
-  Checked Delaware's Board of Mental Health & Chemical Dependency
-  Professionals: LPCMH is also 40 hrs / 2-yr cycle, but the sub-requirement
-  split is different from LCSW's — **3 ethics hrs + 3 cultural inclusion/
-  equity/diversity hrs** (vs. LCSW's 6 ethics + 1 mandatory-reporting), and
-  the cycle runs Oct 1–Sept 30 on even years rather than LCSW's Feb 1–Jan 31
-  odd years. This confirms the original instinct to not assume LPCMH and
-  LCSW share a form — they're structurally different, not just different
-  numbers.
-- **Vendor sourcing, expanded:** in addition to `Receipts & Invoices`
-  (which has separate 2025 and 2026 subfolders — only briefly checked this
-  session) and QBO, **Gusto also holds personnel documents** worth indexing
-  into `HR_Documents` eventually (I-9s, offer letters, etc. — Bruce
-  mentioned storing docs there). Not pulled this session — Gusto employee
-  records include SSN/DOB-adjacent fields, and per the "don't store raw
-  PII" boundary above, any future pull from Gusto should extract document
-  *links*, not the underlying personnel data fields.
-- **Vendor tab is intentionally a scaffold, not a launch deliverable.**
-  Bruce wants to keep developing it but isn't in a hurry to populate it
-  accurately right now — headers exist in the sheet, no seed rows. Revisit
-  once there's time to do a proper receipts/QBO reconciliation pass.
+- **Which step next?** No strong signal yet from Bruce on Step 2 (CE
+  tracker) vs. Step 3 (vendors/compliance) vs. Step 4 (HR docs) — ask.
+- **Malpractice policy per clinician** — `ClinicianCompliance`'s
+  `malpracticePolicyNumber`/`malpracticeExpiration` columns are blank for
+  all four. AR439977 (Master Doc) reads as the practice's *group* liability
+  policy, not individual malpractice coverage — confirm with Bruce whether
+  each clinician also carries their own policy, or the group policy is what
+  belongs in these fields.
+- **Out-of-state CE requirements** — Shannon (PA, FL) and Jen (VA) have
+  license dates seeded in `Licenses_CE` but no hour requirements
+  researched. Lower priority since DE is the primary practice license for
+  all four clinicians.
+- **Vendor data sourcing, when Step 3 starts** — per Bruce, in priority
+  order: `Receipts & Invoices/` Drive folder (has separate 2025 and 2026
+  subfolders — only the 2026 one was briefly scanned so far, found GoDaddy,
+  SiteGround, Northwest Registered Agent, OpenAI, Envato, Psychology Today,
+  Identogo, and a Gusto invoice with real confirmed figures: $141.94 total
+  = $49 base + $30 employee fees [5 @ $6] + $39.99 background check +
+  $19.95 Gusto Learning + $3 workers comp), then QBO expense categories,
+  then Gusto (which also holds personnel documents worth indexing into
+  `HR_Documents` eventually — extract links only, never raw SSN/DOB fields,
+  per "What NOT to store" below). This is a deliberate scaffold-then-fill
+  approach — Bruce wants the tab built but isn't in a hurry to populate it.
+- **CAQH last-attestation dates** — Bruce doesn't currently track whether
+  these are up to date, so `ClinicianCompliance.caqhLastAttestation` starts
+  blank for everyone. First fill-in requires a manual check, not an import.
 
 ## Context
 
@@ -132,11 +91,12 @@ Per-clinician data that has no home in the portal today:
   2/28/2027), FL (MH27670, exp. 3/31/2027). **CE requirement: 40 hrs per
   renewal period.**
 - **Jennifer Meehan (LCSW):** NPI 1245746825, CAQH 14373164. Two states — DE
-  (Q1-0001672, exp. 1/31/2027), VA (0904020782, exp. 6/30/2027). **CE
-  requirement: 45 hrs per renewal period.**
+  (Q1-0001672, exp. 1/31/2027), VA (0904020782, exp. 6/30/2027). Doc said
+  **"45 hrs per renewal period" — this is wrong**, corrected to 40 (see
+  `Licenses_CE` schema below for the verified figure and sourcing).
 - **Emily Bryant / Shana Petruccelli (LCSW, employees):** NPI/CAQH/license
-  data present, but **no CE hour requirement recorded for either** — open
-  question below.
+  data present. Doc had no CE hour requirement for either — resolved as 40
+  hrs, same as Jen, since all three are LCSW (see `Licenses_CE` below).
 - **Per-payer credentialing is mid-flight right now for Shana**, tracked as
   loose notes in the doc: Aetna (submitted 5/9, confirmed 5/20, effective
   6/4/26), Blue Shield (submitted 5/11, "Add Provider" form 5/11, appeared in
@@ -239,104 +199,118 @@ authoritative document for everything else.
 
 ## Sheet schema — `Clarity Ops & Compliance` workbook
 
-### Tab: `Credentialing`
+**Note on keying:** the original scoping below assumed a `StaffId` FK into
+the Claims workbook's Staff tab. What actually got built for `Credentialing`
+uses **clinician name** instead (see "Key design decision" up top) — the
+column tables below are updated to match for `Credentialing`. Steps 2–5
+haven't been built yet; when they are, follow the same clinician-name
+convention for consistency, not the `StaffId`/`LicenseId` FK columns shown
+below for the still-unbuilt tabs — update those tables at build time.
+
+### Tab: `Credentialing` — ✅ built, matches this
 One row per clinician × payer. Models the real multi-step lifecycle seen in
 Shana's in-flight applications, not just a single status.
 
 | Column | Notes |
 |---|---|
-| StaffId | FK to Staff tab in the Claims workbook |
-| Clinician | Denormalized for readability |
-| Payer | Aetna, Highmark BCBS, Health Options, UnitedHealthcare, Medicare, etc. |
-| Status | Not Started / Submitted / Additional Info Requested / Confirmed / Effective / Denied / Terminated |
-| DateSubmitted | |
-| DateEffective | |
-| ProviderIdentifier | PIN / Blue Shield ID / PTAN — whatever that payer issues |
-| CAQH Linked | Y/N |
-| ContractLink | Drive URL, points into the existing per-payer `Insurance Contracts/` folders |
-| Notes | Free text — the log-style notes already being kept in the Master Doc move here |
-| LastUpdated | |
+| clinician | `Shannon` / `Jen` / `Emily` / `Shana` — not a Staff-row FK |
+| payer | Aetna, Meritain, BCBS, United, Medicare, Health Options, etc. |
+| status | Not Started / Submitted / Additional Info Requested / Confirmed / Effective / Denied / Terminated |
+| dateSubmitted | |
+| dateEffective | |
+| providerIdentifier | PIN / Blue Shield ID / PTAN — whatever that payer issues |
+| caqhLinked | Y/N |
+| contractLink | Drive URL, points into the existing per-payer `Insurance Contracts/` folders |
+| notes | Free text — the log-style notes already being kept in the Master Doc move here |
 
-### Tab: `ClinicianCompliance`
+### Tab: `ClinicianCompliance` — seeded, no CRUD endpoint yet
 One row per clinician — the CAQH/malpractice layer that sits above
-per-license, per-payer detail.
+per-license, per-payer detail. Currently write-only via the setup script;
+no `GET/PATCH /api/clinician-compliance` yet (Step 2 territory, since CE
+status will want to read from this).
 
 | Column | Notes |
 |---|---|
-| StaffId | FK |
-| NPI, CAQH ID, Taxonomy | From Master Doc |
-| CAQH Last Attestation | |
-| CAQH Next Due | Computed: last attestation + ~120 days (industry-standard cycle — confirm actual payer requirement) |
-| Malpractice Policy # | |
-| Malpractice Expiration | |
+| clinician | Same keying as Credentialing |
+| npi, caqhId, taxonomy | From Master Doc — seeded |
+| caqhLastAttestation | Blank for all — not tracked by Bruce currently |
+| caqhNextDue | Computed: last attestation + ~120 days (industry-standard cycle — confirm actual payer requirement) |
+| malpracticePolicyNumber | Blank — see "Open items" above (group vs. individual policy question) |
+| malpracticeExpiration | Blank |
 
-### Tab: `Licenses_CE` (extends existing Staff_Licenses, doesn't replace it)
-Staff_Licenses (in the Claims workbook) already tracks licenseType/number/
-state/expiration — that stays put. This tab adds the CE dimension per
-license:
-
-| Column | Notes |
-|---|---|
-| LicenseId | FK to Staff_Licenses row |
-| CE Hours Required | 40 for all three LCSWs (Jen, Emily, Shana), confirmed via DE Board of Social Work Examiners. Shannon (LPCMH) carries the Master Doc's 40-hr figure, not independently re-verified. |
-| Ethics Hours Required | LCSW: 6 hrs minimum (of the 40). Also 1 hr mandatory-reporting minimum, and a 10-hr cap on self-directed/independent study — worth their own columns rather than folding into "ethics." Shannon/LPCMH sub-requirements not yet checked. |
-| Cycle Start / Cycle End | LCSW cycle is fixed (Feb 1–Jan 31, odd years) regardless of hire date — not a rolling window from license-issue date |
-| Hours Completed | **Computed by the Worker** from `CE_Log`, not manually maintained — same pattern as derived Claims fields |
-| Status | On Track / Behind Pace / At Risk — computed from hours-completed vs. time-elapsed-in-cycle |
-
-### Tab: `CE_Log`
-One row per completed CE/CEU activity — this *is* the "Professional
-Development" folder, indexed.
+### Tab: `Licenses_CE` — seeded, no CRUD endpoint yet
+Extends the existing `Staff_Licenses` tab (in the Claims workbook, which
+keeps tracking licenseType/number/state/expiration) with the CE dimension.
+Seeded for all DE licenses; out-of-state (Shannon/PA+FL, Jen/VA) have dates
+only, no hour requirements researched yet.
 
 | Column | Notes |
 |---|---|
-| StaffId, LicenseId | |
-| ActivityTitle, Provider/Sponsor | |
-| DateCompleted, Hours | |
-| Category | General / Ethics / Suicide Prevention / Cultural Competency, etc. |
-| CertificateLink | Drive URL into `Professional Development/` |
+| clinician, licenseType, licenseState | |
+| ceHoursRequired | 40 for all four (LCSW: Jen/Emily/Shana; LPCMH: Shannon) — both confirmed against Delaware DPR, but via *different* sub-requirement structures, see next column |
+| ethicsHoursRequired, otherSubRequirementLabel, otherSubRequirementHours | LCSW: 6 ethics + 1 "Mandatory Reporting". LPCMH: 3 ethics + 3 "Cultural Inclusion, Equity & Diversity". Not the same shape — don't assume one and copy to the other |
+| selfDirectedCapHours | LCSW: 10. LPCMH: not verified |
+| cycleStart, cycleEnd | LCSW: Feb 1–Jan 31, odd years. LPCMH: Oct 1–Sept 30, even years |
+| *(not yet a column)* hoursCompleted | Planned for Step 2 — **computed by the Worker** from `CE_Log`, not manually maintained, same pattern as derived Claims fields |
+| *(not yet a column)* status | Planned for Step 2 — On Track / Behind Pace / At Risk, computed from hours-completed vs. time-elapsed-in-cycle |
 
-### Tab: `Vendors`
-| Column | Notes |
-|---|---|
-| VendorName, Category | EHR / Payroll / Accounting / Insurance / Legal / Tech / Marketing |
-| MonthlyCost, AnnualCost | Seeded from Master Doc's cost table |
-| RenewalDate | |
-| BAA_OnFile | Y/N — flags HIPAA-relevant vendors (Paubox, Google Workspace, SimplePractice all need this) |
-| ContractLink, ContactName/Email, Notes, Status | |
-
-### Tab: `BusinessCompliance`
-Recurring business obligations — currently exist only as memory/the Master
-Doc.
+### Tab: `CE_Log` — headers only, empty
+One row per completed CE/CEU activity, added going forward — this *is* the
+"Professional Development" Drive folder, indexed instead of just filed.
 
 | Column | Notes |
 |---|---|
-| Item | "Delaware Business License Renewal," "Delaware Annual Report," "Professional Liability Renewal," etc. |
-| RecurrenceRule | Annual on Dec 31 / Annual on Mar 1 / etc. |
-| LastCompleted, NextDue | NextDue computed from recurrence + LastCompleted |
-| DocumentLink, ResponsibleParty, Status | |
+| clinician | |
+| activityTitle, provider | |
+| dateCompleted, hours | |
+| category | General / Ethics / Mandatory Reporting / Cultural Inclusion Equity & Diversity, etc. — match whatever sub-requirement it counts toward |
+| certificateLink | Drive URL into `Professional Development/` |
 
-### Tab: `Onboarding`
+### Tab: `Vendors` — headers only, empty (deliberately)
+| Column | Notes |
+|---|---|
+| vendorName, category | EHR / Payroll / Accounting / Insurance / Legal / Tech / Marketing |
+| monthlyCost, annualCost | **Do not seed from the Master Doc** — Bruce flagged those as stale startup estimates. Source from `Receipts & Invoices/` + QBO + Gusto instead, see "Open items" above |
+| renewalDate | |
+| baaOnFile | Y/N — flags HIPAA-relevant vendors (Paubox, Google Workspace, SimplePractice all need this) |
+| contractLink, notes | |
+
+### Tab: `BusinessCompliance` — seeded (2 rows), no CRUD endpoint yet
+Recurring business obligations — regulatory due-dates, not cost estimates,
+so these were safe to seed directly from the Master Doc.
+
+| Column | Notes |
+|---|---|
+| item | "Delaware Business License Renewal," "Delaware Annual Report" — 2 rows seeded |
+| recurrenceRule | Annual on Dec 31 / Annual on Mar 1 |
+| lastCompleted, nextDue | Blank — NextDue computation not built yet |
+| documentLink, notes | |
+
+### Tab: `Onboarding` — headers only, empty
 One-time checklist per new hire, templated from what's already implied by
 Emily's folder structure (Onboarding Materials, Identity Docs, HIPAA cert,
 Mandatory Reporter cert, Computer Use Policy) plus the "New Hire Onboarding
-Form" example already sitting in Drive.
+Form" example already sitting in Drive. No current new hire in progress, so
+nothing to seed yet — the checklist item list itself should probably live
+as a constant in code (mirroring how `CLAIM_STATUSES` is a fixed array),
+not as template rows in the sheet.
 
 | Column | Notes |
 |---|---|
-| StaffId, ChecklistItem | Offer letter signed / I-9 collected / W-4 collected / direct deposit setup / laptop provisioned / Google Voice assigned / EHR seat created / HIPAA training / Mandatory Reporter training / Computer Use Policy signed / NPI obtained / CAQH profile created / credentialing kicked off |
-| DueDate, CompletedDate, Status | |
-| DocumentLink | Where applicable |
+| clinician, checklistItem | Offer letter signed / I-9 collected / W-4 collected / direct deposit setup / laptop provisioned / Google Voice assigned / EHR seat created / HIPAA training / Mandatory Reporter training / Computer Use Policy signed / NPI obtained / CAQH profile created / credentialing kicked off |
+| dueDate, completedDate, status | |
+| documentLink | Where applicable |
 
-### Tab: `HR_Documents`
+### Tab: `HR_Documents` — headers only, empty
 Ongoing document index (separate from the one-time Onboarding checklist,
 since some docs recur — e.g. HIPAA cert appears to be annual: "HIPAA
-Certificate 2026").
+Certificate 2026"). Future source includes Gusto, not just Drive — links
+only, per "What NOT to store."
 
 | Column | Notes |
 |---|---|
-| StaffId, DocumentType | Offer Letter / I-9 / W-4 / HIPAA Cert / Mandatory Reporter Cert / Computer Use Policy / Insurance Certificate / Job Description / Other |
-| DriveLink, DateOnFile, ExpirationDate | ExpirationDate nullable — most are one-time, HIPAA/Mandatory Reporter recur |
+| clinician, documentType | Offer Letter / I-9 / W-4 / HIPAA Cert / Mandatory Reporter Cert / Computer Use Policy / Insurance Certificate / Job Description / Other |
+| driveLink, dateOnFile, expirationDate | expirationDate nullable — most are one-time, HIPAA/Mandatory Reporter recur |
 
 ---
 
@@ -348,28 +322,30 @@ target spreadsheet — no new external dependency, no CORS/security-policy
 change.
 
 ```
-GET/POST/PATCH  /api/credentialing
-GET             /api/clinician-compliance
-GET/POST/PATCH  /api/ce/log
-GET             /api/ce/status          — computed rollup: hours completed vs. required vs. cycle end, per clinician
-GET/POST/PATCH  /api/vendors
-GET/POST/PATCH  /api/business-compliance
-GET/POST/PATCH  /api/onboarding
-GET/POST/PATCH  /api/hr-documents
-GET             /api/compliance-digest  — cross-tab rollup: everything due in the next 30/60/90 days, for the Dashboard alert card
+✅ GET/POST/PATCH  /api/credentialing
+⬜ GET             /api/clinician-compliance
+⬜ GET/POST/PATCH  /api/ce/log
+⬜ GET             /api/ce/status          — computed rollup: hours completed vs. required vs. cycle end, per clinician
+⬜ GET/POST/PATCH  /api/vendors
+⬜ GET/POST/PATCH  /api/business-compliance
+⬜ GET/POST/PATCH  /api/onboarding
+⬜ GET/POST/PATCH  /api/hr-documents
+⬜ GET             /api/compliance-digest  — cross-tab rollup: everything due in the next 30/60/90 days, for the Dashboard alert card
+✅ POST            /api/maintenance/setup-ops-sheet  — one-time tab/seed setup, already run
 ```
 
 ## Frontend
 
-New nav section, "Compliance & HR," alongside the existing sidebar groups:
+Nav item(s) added to the existing flat sidebar list (not a grouped section —
+that's how the sidebar already works, see Sidebar.tsx):
 
-| Route | Page | Notes |
-|---|---|---|
-| `/credentialing` | Board view grouped by clinician, colored status pills | Reuses the monday.com-style board patterns from Phase 14 — same visual language as Claims, new data |
-| `/ce-tracker` | Per-clinician progress bars (hours completed / required) | Same visual pattern as the existing Dashboard utilization bars |
-| `/vendors` | Table with renewal countdown badges | Same expiry-badge pattern already built for Staff license warnings |
-| `/compliance` | Business compliance list/calendar with countdown badges | |
-| `/staff/:id` | **Extended**, not new | Add Credentialing / CE / HR Documents / Onboarding sections to the existing StaffDetail page — keeps this attached to the profile a user already knows, instead of scattering it across five disconnected pages |
+| Route | Page | Status | Notes |
+|---|---|---|---|
+| `/credentialing` | Board view grouped by clinician, colored status pills | ✅ Live | Reuses the monday.com-style board patterns from Phase 14 |
+| `/ce-tracker` | Per-clinician progress bars (hours completed / required) | ⬜ Not started | Same visual pattern as the existing Dashboard utilization bars |
+| `/vendors` | Table with renewal countdown badges | ⬜ Not started | Same expiry-badge pattern already built for Staff license warnings |
+| `/compliance` | Business compliance list/calendar with countdown badges | ⬜ Not started | |
+| `/staff/:id` | **Extend**, not new | ⬜ Not started | Add Credentialing / CE / HR Documents / Onboarding sections to the existing StaffDetail page — keeps this attached to the profile a user already knows, instead of scattering it across five disconnected pages |
 
 **Dashboard:** one new "Compliance Alerts" card next to the existing
 capacity-alert banner — everything from `/api/compliance-digest` due in the
@@ -381,59 +357,25 @@ compliance deadlines) in one place.
 
 ## Rollout sequence
 
-1. **Step 0 — Infrastructure.** Create the `Clarity Ops & Compliance`
-   spreadsheet, share with the existing service account, add
-   `OPS_SPREADSHEET_ID` Worker secret. Seed initial rows directly from the
-   Master Doc and Drive folder scan already done above — this is real data
-   I can draft as a starting import rather than have you re-key it.
-2. **Step 1 — Credentialing tracker.** Given Shana's applications are
-   actively mid-flight right now, this is the most immediately useful piece.
-3. **Step 2 — CE/CEU tracker.** `Licenses_CE` + `CE_Log` + rollup endpoint +
-   `/ce-tracker` page.
-4. **Step 3 — Vendor & business compliance register.**
-5. **Step 4 — HR documents + onboarding checklist**, wired into
-   `StaffDetail.tsx`.
-6. **Step 5 — Dashboard compliance digest card**, once tabs 1–4 exist to
-   pull from.
+1. ~~**Step 0 — Infrastructure.**~~ **Done.** Spreadsheet created, shared,
+   secret added, tabs created and seeded.
+2. ~~**Step 1 — Credentialing tracker.**~~ **Done.** Live at `/credentialing`.
+3. **Step 2 — CE/CEU tracker** (not started). `Licenses_CE` (seeded) +
+   `CE_Log` (empty, ready for entries) already exist. Needs:
+   `GET/POST /api/ce/log`, `GET /api/ce/status` (computed rollup — hours
+   completed vs. required vs. cycle end, per clinician, from `CE_Log`
+   entries — same "computed, not manually maintained" pattern as Claims
+   derived fields), and a `/ce-tracker` page with per-clinician progress
+   bars (same visual pattern as the Dashboard utilization bars).
+4. **Step 3 — Vendor & business compliance register** (not started).
+   `Vendors` exists but deliberately unseeded (see "Vendor data sourcing"
+   above). `BusinessCompliance` has 2 seeded rows already. Needs CRUD
+   endpoints + `/vendors` and `/compliance` pages with renewal countdown
+   badges (reuse the expiry-badge pattern from Staff license warnings).
+5. **Step 4 — HR documents + onboarding checklist** (not started). Wire
+   into the existing `StaffDetail.tsx` page rather than a new route.
+6. **Step 5 — Dashboard compliance digest card** (not started). Needs at
+   least 2–3 of Steps 2–4 built first to have something to roll up.
 
-Each step ships a working app, same incremental-rollout discipline as
-Phase 14.
-
----
-
-## Open questions — remaining
-
-1. ~~New spreadsheet name/approach OK?~~ **Resolved** — new spreadsheet,
-   created, see Status above.
-2. ~~CE hour requirements for Emily and Shana~~ **Resolved** — 40 hrs, same
-   as Jen, per Delaware DPR (see Corrections above).
-3. ~~CAQH re-attestation cadence~~ **Resolved** — standard ~120-day cycle
-   confirmed acceptable; Bruce doesn't currently track whether existing
-   attestations are up to date, so the `ClinicianCompliance` tab's
-   `CAQH Last Attestation` field starts blank for everyone rather than
-   guessing — first fill-in has to be a manual check, not an import.
-4. ~~Shana/Emily credentialing status~~ **Resolved** — BCBS, United,
-   Aetna/Meritain, Medicare, all Effective; NOT Health Options.
-5. ~~Shannon and Jen's current per-payer credentialing status~~ **Resolved**
-   — same 4 as Shana/Emily plus Health Options. Seeded.
-6. ~~Vendor tab accuracy~~ **Resolved as "scaffold now, populate later"** —
-   tab exists with headers, deliberately left unseeded.
-7. ~~Service account sharing~~ **Done.**
-8. ~~Nav structure~~ **Resolved** — single "Compliance & HR" sidebar group
-   with sub-pages, per Bruce's agreement.
-
-## Remaining open items
-
-- **Deploy sign-off.** `setup-ops-sheet` is written and tested locally but
-  not deployed or run. Say the word.
-- **Malpractice policy numbers per clinician** — AR439977 in the Master Doc
-  reads as the practice's group liability policy, not seeded as individual
-  malpractice coverage on `ClinicianCompliance`. Worth clarifying whether
-  each clinician also carries their own tail/individual malpractice policy,
-  or whether the group policy is what should populate those fields.
-- **Out-of-state CE requirements** (Shannon/PA+FL, Jen/VA) — dates are
-  seeded, hour requirements are not. Lower priority since DE is the primary
-  practice license for all four clinicians.
-- **Step 1 (Credentialing page) vs. Step 2 (CE tracker page)** — which to
-  build first is still open. The sheet now has real seed data for both, so
-  either is unblocked.
+Each step should ship a working app, same incremental-rollout discipline
+as Phase 14.
