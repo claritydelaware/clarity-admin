@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, Activity, ShieldCheck, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -16,6 +17,8 @@ export const NAV = [
   { to: '/valuation',          label: 'Valuation',          icon: Landmark },
 ]
 
+const HOVER_COLLAPSE_DELAY_MS = 200
+
 interface Props {
   isOpen: boolean
   onClose: () => void
@@ -25,6 +28,31 @@ interface Props {
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Props) {
   const location = useLocation()
+  const [isHovering, setIsHovering] = useState(false)
+  const collapseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (collapseTimeoutRef.current) clearTimeout(collapseTimeoutRef.current)
+    }
+  }, [])
+
+  function handleMouseEnter() {
+    if (!isCollapsed) return
+    if (collapseTimeoutRef.current) {
+      clearTimeout(collapseTimeoutRef.current)
+      collapseTimeoutRef.current = null
+    }
+    setIsHovering(true)
+  }
+
+  function handleMouseLeave() {
+    if (!isCollapsed) return
+    collapseTimeoutRef.current = setTimeout(() => setIsHovering(false), HOVER_COLLAPSE_DELAY_MS)
+  }
+
+  // Visually expanded — either pinned open, or temporarily hover-expanded while pinned collapsed.
+  const expanded = !isCollapsed || isHovering
 
   return (
     <>
@@ -37,10 +65,13 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       )}
 
       <aside
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className={[
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-teal',
-          'transition-[width,transform] duration-300 ease-in-out',
-          isCollapsed ? 'w-16' : 'w-60',
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-teal overflow-hidden',
+          'transition-[width,transform,box-shadow] duration-300 ease-in-out',
+          expanded ? 'w-60' : 'w-16',
+          isHovering && isCollapsed ? 'shadow-2xl' : '',
           'md:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
@@ -48,22 +79,22 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         {/* Brand */}
         <div className={[
           'flex items-center overflow-hidden transition-[padding] duration-300',
-          isCollapsed ? 'px-0 py-4 justify-center' : 'px-5 py-4',
+          expanded ? 'px-5 py-4' : 'px-0 py-4 justify-center',
         ].join(' ')}>
           <img
-            src={isCollapsed ? '/clarity-logo-white_icon.png' : '/clarity-logo-white.png'}
+            src={expanded ? '/clarity-logo-white.png' : '/clarity-logo-white_icon.png'}
             alt="Clarity Counseling"
             className={[
               'object-contain transition-[height,width] duration-300',
-              isCollapsed ? 'h-9 w-9' : 'h-12 w-auto',
+              expanded ? 'h-12 w-auto' : 'h-9 w-9',
             ].join(' ')}
           />
         </div>
 
         {/* Workspace label */}
-        {!isCollapsed && (
+        {expanded && (
           <div className="px-5 pb-2">
-            <span className="text-[10px] font-ui font-semibold uppercase tracking-widest text-white/40">
+            <span className="text-[10px] font-ui font-semibold uppercase tracking-widest text-white/40 whitespace-nowrap">
               Clarity Counseling
             </span>
           </div>
@@ -78,18 +109,17 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                 key={to}
                 to={to}
                 onClick={onClose}
-                title={isCollapsed ? label : undefined}
+                title={!expanded ? label : undefined}
                 className={[
-                  'flex items-center rounded-lg transition-colors duration-150',
-                  isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150',
                   isActive
                     ? 'bg-white/15 text-white'
                     : 'text-white/60 hover:bg-white/8 hover:text-white/90',
                 ].join(' ')}
               >
-                <Icon size={17} strokeWidth={1.75} />
-                {!isCollapsed && (
-                  <span className={`text-sm ${isActive ? 'font-medium' : ''}`}>{label}</span>
+                <Icon size={17} strokeWidth={1.75} className="shrink-0" />
+                {expanded && (
+                  <span className={`text-sm whitespace-nowrap ${isActive ? 'font-medium' : ''}`}>{label}</span>
                 )}
               </NavLink>
             )
@@ -98,28 +128,25 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
 
         {/* Footer + collapse toggle */}
         <div className="border-t border-white/10">
-          {!isCollapsed && (
-            <p className="px-5 py-3 text-[11px] text-white/30 font-body">
+          {expanded && (
+            <p className="px-5 py-3 text-[11px] text-white/30 font-body whitespace-nowrap">
               Clarity Counseling of Delaware
             </p>
           )}
           <button
             type="button"
             onClick={onToggleCollapse}
-            className={[
-              'w-full flex items-center py-3 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border-t border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-inset',
-              isCollapsed ? 'justify-center px-0' : 'gap-2 px-5',
-            ].join(' ')}
+            className="w-full flex items-center gap-2 px-5 py-3 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border-t border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-inset"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed
               ? <ChevronRight size={15} />
-              : <>
-                  <ChevronLeft size={15} />
-                  <span className="text-xs font-body">Collapse</span>
-                </>
+              : <ChevronLeft size={15} />
             }
+            {expanded && (
+              <span className="text-xs font-body whitespace-nowrap">{isCollapsed ? 'Expand' : 'Collapse'}</span>
+            )}
           </button>
         </div>
       </aside>
