@@ -70,8 +70,9 @@ const PAYER_EXACT_COLORS: Record<string, string> = {
   'United':         '#f9cb9c',
   'UMR':            '#f9cb9c',
   'Meritain':       '#d5a6bd',
-  'Health Options': '#a2c4c9',
-  'Medicare':       '#b7e1cd',
+  'Health Options':       '#a2c4c9',
+  'Health Options Duals': '#c2d9db',
+  'Medicare':             '#b7e1cd',
 }
 
 export function getPayerStyle(payer: string): { backgroundColor: string; color: string } {

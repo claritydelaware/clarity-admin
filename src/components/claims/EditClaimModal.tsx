@@ -33,7 +33,7 @@ interface FormValues {
 
 const DISCONTINUED_CODES = ['96127', '96136']
 const DISCONTINUED_AFTER = new Date('2026-01-15')
-const HHO_PAYERS = ['health options']
+const HHO_PAYERS = ['health options', 'health options duals']
 
 function mapClaimToFormValues(claim: Claim): FormValues {
   return {

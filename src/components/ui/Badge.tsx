@@ -99,6 +99,7 @@ const PILL = 'inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium
 
 const PAYER_SHORT: Record<string, string> = {
   'Health Options': 'HHO',
+  'Health Options Duals': 'HHO Duals',
 }
 
 export function PayerBadge({ payer }: { payer: string }) {
