@@ -50,6 +50,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const [otherSessions, setOtherSessions] = useState('')
   const [noShows, setNoShows] = useState('')
   const [meetingHours, setMeetingHours] = useState('')
+  const [trainingHours, setTrainingHours] = useState('')
   const [consultations, setConsultations] = useState('')
   const [bonusPay, setBonusPay] = useState('')
   const [notes, setNotes] = useState('')
@@ -72,6 +73,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     setOtherSessions('')
     setNoShows('')
     setMeetingHours('')
+    setTrainingHours('')
     setConsultations('')
     setBonusPay('')
     setNotes('')
@@ -80,7 +82,8 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
 
   const period = periods.find(p => p.periodStart === selectedPeriod)
 
-  const savedMeetingH    = (summary?.meetingHours ?? 0) + (summary?.trainingHours ?? 0)
+  const savedMeetingH    = summary?.meetingHours    ?? 0
+  const savedTrainingH   = summary?.trainingHours   ?? 0
   const savedConsults    = summary?.consultations   ?? 0
   const savedBonusPay    = summary?.bonusPay        ?? 0
 
@@ -106,7 +109,10 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     : noShows !== '' ? (parseInt(noShows) || 0) : (subNoShows ?? summary?.claimsNoShows ?? 0)
   const effMeetingH = isLocked
     ? savedMeetingH
-    : meetingHours !== '' ? (parseFloat(meetingHours) || 0) : (subMeetingH !== null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)
+    : meetingHours !== '' ? (parseFloat(meetingHours) || 0) : (subMeetingH ?? savedMeetingH)
+  const effTrainingH = isLocked
+    ? savedTrainingH
+    : trainingHours !== '' ? (parseFloat(trainingHours) || 0) : (subTrainingH ?? savedTrainingH)
   const effConsults = isLocked
     ? savedConsults
     : consultations !== '' ? (parseInt(consultations) || 0) : (subConsults ?? savedConsults)
@@ -117,8 +123,10 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const adminHourlyRate = summary?.adminHourlyRate ?? 25
   const effTherapyPay   = effTherapySessions * (summary?.therapySessionRate ?? 50)
   const effOtherPay     = effOtherSessions   * (summary?.otherSessionRate   ?? 40)
+  // No-show pay is reference only — actually paid only after Bruce manually verifies
+  // the no-show fee was collected, so it's excluded from sessionPay/totalPay here.
   const effNoShowPay    = effNoShows         * (summary?.noShowRate         ?? 40)
-  const effSessionPay   = effTherapyPay + effOtherPay + effNoShowPay
+  const effSessionPay   = effTherapyPay + effOtherPay
   const effConsultPay   = effConsults * (adminHourlyRate / 4)
   const effAdminPay     = effMeetingH * adminHourlyRate + effConsultPay
   const effTotalPay     = effSessionPay + effAdminPay + effBonusP
@@ -141,8 +149,8 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     '',
     `Therapy Sessions (${effTherapySessions} × $${summary.therapySessionRate}): ${formatCurrency(effTherapyPay)}`,
     `Other Sessions   (${effOtherSessions} × $${summary.otherSessionRate}): ${formatCurrency(effOtherPay)}`,
-    `No-Shows         (${effNoShows} × $${summary.noShowRate}): ${formatCurrency(effNoShowPay)}`,
     `Session Pay subtotal: ${formatCurrency(effSessionPay)}`,
+    `No-Shows (${effNoShows} × $${summary.noShowRate}, pending collection verification): ${formatCurrency(effNoShowPay)}`,
     `Admin Pay: ${formatCurrency(effAdminPay)}`,
     effBonusP > 0 ? `Bonus: ${formatCurrency(effBonusP)}` : null,
     `Total Pay: ${formatCurrency(effTotalPay)}`,
@@ -163,7 +171,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
       noShows: effNoShows,
       consultations: effConsults,
       meetingHours: effMeetingH,
-      trainingHours: 0,
+      trainingHours: effTrainingH,
       bonusPay: effBonusP,
       notes: notes || summary.savedNotes || '',
     }, {
@@ -172,6 +180,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
         setOtherSessions('')
         setNoShows('')
         setMeetingHours('')
+        setTrainingHours('')
         setConsultations('')
         setBonusPay('')
         setNotes('')
@@ -328,7 +337,11 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
               </span>
               <span className="tabular-nums text-ink shrink-0">{formatCurrency(effOtherPay)}</span>
             </div>
-            <div className="flex items-center justify-between text-muted text-xs gap-2">
+            <div className="flex justify-between font-medium border-t border-dashed border-border pt-1.5 text-xs">
+              <span>Session Pay subtotal</span>
+              <span className="tabular-nums">{formatCurrency(effSessionPay)}</span>
+            </div>
+            <div className="flex items-center justify-between text-muted text-xs gap-2 pt-1">
               <span className="flex items-center gap-1 min-w-0">
                 No-shows (
                 <input
@@ -339,29 +352,38 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   disabled={isLocked}
                   className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60 disabled:bg-gray-50"
                 />
-                × ${summary.noShowRate})
+                × ${summary.noShowRate} — pending collection verification)
                 {effNoShows !== summary.claimsNoShows && (
                   <span className="text-[10px] text-amber-600 italic whitespace-nowrap">claims: {summary.claimsNoShows}</span>
                 )}
               </span>
               <span className="tabular-nums text-ink shrink-0">{formatCurrency(effNoShowPay)}</span>
             </div>
-            <div className="flex justify-between font-medium border-t border-dashed border-border pt-1.5 text-xs">
-              <span>Session Pay subtotal</span>
-              <span className="tabular-nums">{formatCurrency(effSessionPay)}</span>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-3 gap-3 pt-2">
               <div>
                 <Input
-                  label="Meeting / Training Hours"
+                  label="Meeting Hours"
                   type="number"
                   min={0}
                   step={0.5}
-                  placeholder={String(subMeetingH != null ? subMeetingH + (subTrainingH ?? 0) : savedMeetingH)}
+                  placeholder={String(subMeetingH != null ? subMeetingH : savedMeetingH)}
                   value={isLocked ? String(effMeetingH) : meetingHours}
                   onChange={e => setMeetingHours(e.target.value)}
-                  hint={sub ? `From submission: ${sub.adminHours.meeting + sub.adminHours.training}h` : undefined}
+                  hint={sub ? `From submission: ${sub.adminHours.meeting}h` : undefined}
+                  disabled={isLocked}
+                />
+              </div>
+              <div>
+                <Input
+                  label="Required Training Hours"
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  placeholder={String(subTrainingH != null ? subTrainingH : savedTrainingH)}
+                  value={isLocked ? String(effTrainingH) : trainingHours}
+                  onChange={e => setTrainingHours(e.target.value)}
+                  hint={sub ? `From submission: ${sub.adminHours.training}h` : undefined}
                   disabled={isLocked}
                 />
               </div>
@@ -385,8 +407,12 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
               <span className="tabular-nums text-ink">{formatCurrency(effConsultPay)}</span>
             </div>
             <div className="flex justify-between text-muted text-xs">
-              <span>Meeting / Training ({effMeetingH}h × ${adminHourlyRate}/hr)</span>
+              <span>Meeting Hours ({effMeetingH}h × ${adminHourlyRate}/hr)</span>
               <span className="tabular-nums text-ink">{formatCurrency(effMeetingH * adminHourlyRate)}</span>
+            </div>
+            <div className="flex justify-between text-muted text-xs">
+              <span>Required Training Hours ({effTrainingH}h)</span>
+              <span className="tabular-nums text-ink">{formatCurrency(0)}</span>
             </div>
             <div className="flex justify-between font-medium border-t border-dashed border-border pt-1.5 text-xs">
               <span>Admin Pay subtotal</span>
