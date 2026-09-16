@@ -231,14 +231,14 @@ function StepsChecklist({ pursuitId }: { pursuitId: string }) {
 
   const moveStep = async (index: number, direction: -1 | 1) => {
     if (!steps) return
-    const other = steps[index + direction]
-    const current = steps[index]
-    if (!other) return
+    const otherIndex = index + direction
+    if (otherIndex < 0 || otherIndex >= steps.length) return
+    // Re-number the whole list on every move (not just the two swapped steps) so
+    // legacy rows sharing sortOrder 0 (from before this field existed) get fixed too.
+    const reordered = [...steps]
+    ;[reordered[index], reordered[otherIndex]] = [reordered[otherIndex], reordered[index]]
     try {
-      await Promise.all([
-        api.pursuitSteps.update(pursuitId, current.id, { sortOrder: other.sortOrder }),
-        api.pursuitSteps.update(pursuitId, other.id, { sortOrder: current.sortOrder }),
-      ])
+      await Promise.all(reordered.map((s, i) => api.pursuitSteps.update(pursuitId, s.id, { sortOrder: i })))
       await qc.invalidateQueries({ queryKey: ['pursuit-steps', pursuitId] })
     } catch {
       toast.error('Failed to reorder steps')
