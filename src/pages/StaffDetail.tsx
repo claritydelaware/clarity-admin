@@ -9,6 +9,8 @@ import Button from '../components/ui/Button'
 import Avatar from '../components/ui/Avatar'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import Tabs from '../components/ui/Tabs'
+import LicensurePursuitsSection from '../components/staff/LicensurePursuitsSection'
 import type { StaffMember, StaffLicense } from '../types'
 
 function licenseStatus(exp: string | null): 'ok' | 'warning' | 'expired' | null {
@@ -274,6 +276,8 @@ export default function StaffDetail() {
   const [targetCapacity, setTargetCapacity] = useState('')
   const [notes, setNotes] = useState('')
 
+  const [detailTab, setDetailTab] = useState<'licenses' | 'pursuits'>('licenses')
+
   useEffect(() => {
     if (member) {
       setName(member.name)
@@ -422,7 +426,20 @@ export default function StaffDetail() {
         Save Changes
       </Button>
 
-      <LicensesSection staffId={member.id} />
+      <div>
+        <Tabs
+          className="mb-4"
+          value={detailTab}
+          onChange={v => setDetailTab(v as 'licenses' | 'pursuits')}
+          tabs={[
+            { value: 'licenses', label: 'Licenses' },
+            { value: 'pursuits', label: 'Licensure Pursuits' },
+          ]}
+        />
+        {detailTab === 'licenses'
+          ? <LicensesSection staffId={member.id} />
+          : <LicensurePursuitsSection staffId={member.id} />}
+      </div>
     </div>
   )
 }

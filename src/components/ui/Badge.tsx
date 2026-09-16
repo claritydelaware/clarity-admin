@@ -1,4 +1,4 @@
-import type { ClaimStatus, CredentialingStatus, CEStatusValue } from '../../types'
+import type { ClaimStatus, CredentialingStatus, CEStatusValue, PursuitStatus, StepStatus } from '../../types'
 import { getPayerStyle } from '../../lib/utils'
 
 const STATUS_COLORS: Record<ClaimStatus, string> = {
@@ -90,6 +90,38 @@ const CE_STATUS_COLORS: Record<CEStatusValue, string> = {
 export function CEStatusBadge({ status }: { status: CEStatusValue }) {
   return (
     <span className={`${BASE} text-white`} style={{ backgroundColor: CE_STATUS_COLORS[status] ?? 'var(--color-status-gray)' }}>
+      {status}
+    </span>
+  )
+}
+
+const PURSUIT_STATUS_COLORS: Record<PursuitStatus, string> = {
+  'Not Started': 'var(--color-status-gray)',
+  'In Progress': 'var(--color-status-blue)',
+  'Submitted':   'var(--color-status-orange)',
+  'Approved':    'var(--color-status-green)',
+  'Denied':      'var(--color-status-red)',
+  'On Hold':     'var(--color-status-gray)',
+}
+
+export function PursuitStatusBadge({ status }: { status: PursuitStatus }) {
+  return (
+    <span className={`${BASE} text-white`} style={{ backgroundColor: PURSUIT_STATUS_COLORS[status] ?? 'var(--color-status-gray)' }}>
+      {status}
+    </span>
+  )
+}
+
+const STEP_STATUS_COLORS: Record<StepStatus, string> = {
+  'Not Started': 'var(--color-status-gray)',
+  'In Progress': 'var(--color-status-blue)',
+  'Done':        'var(--color-status-green)',
+  'Blocked':     'var(--color-status-red)',
+}
+
+export function StepStatusBadge({ status }: { status: StepStatus }) {
+  return (
+    <span className={`${BASE} text-white`} style={{ backgroundColor: STEP_STATUS_COLORS[status] ?? 'var(--color-status-gray)' }}>
       {status}
     </span>
   )

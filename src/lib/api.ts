@@ -1,7 +1,7 @@
 import type {
   Claim, NewClaimInput, ClaimUpdateInput, ClaimFullEditInput, PayPeriod, CaseloadEntry, CaseloadClientStat,
   DashboardData, CaseloadTrendMonth, ForecastAccuracyWeek, CapacityWeek,
-  StaffMember, StaffLicense, OverheadEntry, PayrollEntry, QuarterlySummary, PayerPerformance,
+  StaffMember, StaffLicense, LicensurePursuit, PursuitStep, OverheadEntry, PayrollEntry, QuarterlySummary, PayerPerformance,
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
   Clinician, ConfigData, ContractRate, ValuationSnapshot, TrendGranularity, TrendPoint,
@@ -144,6 +144,26 @@ export const api = {
       remove: (staffId: string, licenseId: string): Promise<{ ok: boolean }> =>
         apiFetch<{ ok: boolean }>(`/staff/${staffId}/licenses/${licenseId}`, { method: 'DELETE' }),
     },
+    pursuits: {
+      list: (staffId: string): Promise<LicensurePursuit[]> =>
+        apiFetch<LicensurePursuit[]>(`/staff/${staffId}/pursuits`),
+      create: (staffId: string, data: Omit<LicensurePursuit, 'id' | 'staffId' | 'active'>): Promise<LicensurePursuit> =>
+        apiFetch<LicensurePursuit>(`/staff/${staffId}/pursuits`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+      update: (staffId: string, pursuitId: string, data: Partial<LicensurePursuit>): Promise<LicensurePursuit> =>
+        apiFetch<LicensurePursuit>(`/staff/${staffId}/pursuits/${pursuitId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+      remove: (staffId: string, pursuitId: string): Promise<{ ok: boolean }> =>
+        apiFetch<{ ok: boolean }>(`/staff/${staffId}/pursuits/${pursuitId}`, { method: 'DELETE' }),
+    },
+  },
+  pursuitSteps: {
+    list: (pursuitId: string): Promise<PursuitStep[]> =>
+      apiFetch<PursuitStep[]>(`/pursuits/${pursuitId}/steps`),
+    create: (pursuitId: string, data: Omit<PursuitStep, 'id' | 'pursuitId' | 'active'>): Promise<PursuitStep> =>
+      apiFetch<PursuitStep>(`/pursuits/${pursuitId}/steps`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+    update: (pursuitId: string, stepId: string, data: Partial<PursuitStep>): Promise<PursuitStep> =>
+      apiFetch<PursuitStep>(`/pursuits/${pursuitId}/steps/${stepId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+    remove: (pursuitId: string, stepId: string): Promise<{ ok: boolean }> =>
+      apiFetch<{ ok: boolean }>(`/pursuits/${pursuitId}/steps/${stepId}`, { method: 'DELETE' }),
   },
   emily: {
     submission: (periodStart: string): Promise<EmilySubmission | null> =>

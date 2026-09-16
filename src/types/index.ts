@@ -548,6 +548,34 @@ export interface StaffLicense {
   active: boolean
 }
 
+export const PURSUIT_STATUSES = ['Not Started', 'In Progress', 'Submitted', 'Approved', 'Denied', 'On Hold'] as const
+export type PursuitStatus = typeof PURSUIT_STATUSES[number]
+
+export interface LicensurePursuit {
+  id: string
+  staffId: string
+  state: string
+  credential: string
+  status: PursuitStatus
+  targetDate: string | null
+  notes: string
+  active: boolean
+}
+
+export const STEP_STATUSES = ['Not Started', 'In Progress', 'Done', 'Blocked'] as const
+export type StepStatus = typeof STEP_STATUSES[number]
+
+export interface PursuitStep {
+  id: string
+  pursuitId: string
+  label: string
+  status: StepStatus
+  dueDate: string | null
+  link: string | null
+  notes: string
+  active: boolean
+}
+
 export interface EmilySubmission {
   periodStart: string
   periodEnd: string
