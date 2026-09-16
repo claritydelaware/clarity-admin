@@ -19,7 +19,7 @@ export const NAV = [
   { to: '/valuation',          label: 'Valuation',          icon: Landmark },
 ]
 
-const HOVER_COLLAPSE_DELAY_MS = 200
+const HOVER_COLLAPSE_DELAY_MS = 400
 
 interface Props {
   isOpen: boolean
@@ -84,12 +84,9 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           expanded ? 'px-5 py-4' : 'px-0 py-4 justify-center',
         ].join(' ')}>
           <img
-            src={expanded ? '/clarity-logo-white.png' : '/clarity-logo-white_icon.png'}
+            src="/clarity-logo-white_icon.png"
             alt="Clarity Counseling"
-            className={[
-              'object-contain transition-[height,width] duration-300',
-              expanded ? 'h-12 w-auto' : 'h-9 w-9',
-            ].join(' ')}
+            className="object-contain h-9 w-9 shrink-0"
           />
         </div>
 
