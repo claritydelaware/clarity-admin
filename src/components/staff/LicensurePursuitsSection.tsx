@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2, Check, X, Loader2, ChevronDown, ChevronRight, ExternalLink, Sparkles } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, Loader2, ChevronDown, ChevronRight, ExternalLink, Sparkles, ArrowUp, ArrowDown } from 'lucide-react'
 import {
   useLicensurePursuits, useCreatePursuit, useUpdatePursuit, useDeletePursuit,
   usePursuitSteps, useCreateStep, useUpdateStep, useDeleteStep,
@@ -129,10 +129,33 @@ function stepFormFields(form: StepFormState, setForm: (f: StepFormState) => void
   )
 }
 
-function StepRow({ step, onEdit, onDelete }: { step: PursuitStep; onEdit: () => void; onDelete: () => void }) {
+function StepRow({ step, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDelete }: {
+  step: PursuitStep; isFirst: boolean; isLast: boolean
+  onMoveUp: () => void; onMoveDown: () => void; onEdit: () => void; onDelete: () => void
+}) {
   const [confirming, setConfirming] = useState(false)
   return (
     <tr className="border-t border-border">
+      <td className="py-2 pr-2 whitespace-nowrap">
+        <span className="inline-flex flex-col -my-1">
+          <button
+            onClick={onMoveUp}
+            disabled={isFirst}
+            className="p-0.5 text-muted hover:text-teal disabled:opacity-30 disabled:pointer-events-none"
+            title="Move up"
+          >
+            <ArrowUp size={12} />
+          </button>
+          <button
+            onClick={onMoveDown}
+            disabled={isLast}
+            className="p-0.5 text-muted hover:text-teal disabled:opacity-30 disabled:pointer-events-none"
+            title="Move down"
+          >
+            <ArrowDown size={12} />
+          </button>
+        </span>
+      </td>
       <td className="py-2 pr-3 text-sm font-body text-ink">{step.label}</td>
       <td className="py-2 pr-3"><StepStatusBadge status={step.status} /></td>
       <td className="py-2 pr-3 text-xs font-body text-muted">{step.dueDate ?? '—'}</td>
@@ -206,6 +229,22 @@ function StepsChecklist({ pursuitId }: { pursuitId: string }) {
     }, { onSuccess: () => setEditingId(null) })
   }
 
+  const moveStep = async (index: number, direction: -1 | 1) => {
+    if (!steps) return
+    const other = steps[index + direction]
+    const current = steps[index]
+    if (!other) return
+    try {
+      await Promise.all([
+        api.pursuitSteps.update(pursuitId, current.id, { sortOrder: other.sortOrder }),
+        api.pursuitSteps.update(pursuitId, other.id, { sortOrder: current.sortOrder }),
+      ])
+      await qc.invalidateQueries({ queryKey: ['pursuit-steps', pursuitId] })
+    } catch {
+      toast.error('Failed to reorder steps')
+    }
+  }
+
   const seedStarterChecklist = async () => {
     setSeeding(true)
     try {
@@ -266,15 +305,15 @@ function StepsChecklist({ pursuitId }: { pursuitId: string }) {
           <table className="w-full min-w-150 px-2">
             <thead>
               <tr>
-                {['Step', 'Status', 'Due', 'Link', 'Notes', ''].map(h => (
-                  <th key={h} className="text-left text-xs font-ui font-medium text-muted uppercase tracking-wide pb-2 pr-3">{h}</th>
+                {['', 'Step', 'Status', 'Due', 'Link', 'Notes', ''].map((h, i) => (
+                  <th key={i} className="text-left text-xs font-ui font-medium text-muted uppercase tracking-wide pb-2 pr-3">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {steps.map(s => editingId === s.id ? (
+              {steps.map((s, i) => editingId === s.id ? (
                 <tr key={s.id} className="border-t border-border">
-                  <td colSpan={5} className="py-2 pr-3">
+                  <td colSpan={6} className="py-2 pr-3">
                     {stepFormFields(editForm, setEditForm)}
                   </td>
                   <td className="py-2 whitespace-nowrap">
@@ -293,7 +332,16 @@ function StepsChecklist({ pursuitId }: { pursuitId: string }) {
                   </td>
                 </tr>
               ) : (
-                <StepRow key={s.id} step={s} onEdit={() => startEdit(s)} onDelete={() => deleteStep(s.id)} />
+                <StepRow
+                  key={s.id}
+                  step={s}
+                  isFirst={i === 0}
+                  isLast={i === steps.length - 1}
+                  onMoveUp={() => moveStep(i, -1)}
+                  onMoveDown={() => moveStep(i, 1)}
+                  onEdit={() => startEdit(s)}
+                  onDelete={() => deleteStep(s.id)}
+                />
               ))}
             </tbody>
           </table>

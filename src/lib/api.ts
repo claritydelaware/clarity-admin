@@ -158,7 +158,7 @@ export const api = {
   pursuitSteps: {
     list: (pursuitId: string): Promise<PursuitStep[]> =>
       apiFetch<PursuitStep[]>(`/pursuits/${pursuitId}/steps`),
-    create: (pursuitId: string, data: Omit<PursuitStep, 'id' | 'pursuitId' | 'active'>): Promise<PursuitStep> =>
+    create: (pursuitId: string, data: Omit<PursuitStep, 'id' | 'pursuitId' | 'active' | 'sortOrder'>): Promise<PursuitStep> =>
       apiFetch<PursuitStep>(`/pursuits/${pursuitId}/steps`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
     update: (pursuitId: string, stepId: string, data: Partial<PursuitStep>): Promise<PursuitStep> =>
       apiFetch<PursuitStep>(`/pursuits/${pursuitId}/steps/${stepId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),

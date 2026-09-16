@@ -163,7 +163,7 @@ export function useCreateStep(pursuitId: string) {
   const qc = useQueryClient()
   const toast = useToast()
   return useMutation({
-    mutationFn: (data: Omit<PursuitStep, 'id' | 'pursuitId' | 'active'>) =>
+    mutationFn: (data: Omit<PursuitStep, 'id' | 'pursuitId' | 'active' | 'sortOrder'>) =>
       api.pursuitSteps.create(pursuitId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pursuit-steps', pursuitId] })

@@ -574,6 +574,7 @@ export interface PursuitStep {
   link: string | null
   notes: string
   active: boolean
+  sortOrder: number
 }
 
 export interface EmilySubmission {
