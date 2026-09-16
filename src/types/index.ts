@@ -47,6 +47,7 @@ export interface Claim {
   forecastWeek: string
   receivedWeek?: string
   notes?: string
+  hhoEraReference?: string   // HHO-specific, col Z — most recent ERA that touched this claim
 }
 
 export interface NewClaimInput {
@@ -71,6 +72,7 @@ export interface ClaimUpdateInput {
   insuranceAmount?: number
   clientAmount?: number
   notes?: string
+  hhoEraReference?: string
 }
 
 // ─── Phase 16: Credentialing, HR & CE Tracker (separate Ops workbook) ─────────
@@ -142,6 +144,35 @@ export interface ClaimFullEditInput {
   insurancePaidHHO?: number
   paymentDateReceived?: string
   totalPayment?: number
+  notes?: string
+  hhoEraReference?: string
+}
+
+export type HhoEraDirection = 'to-savings' | 'to-checking' | 'none'
+
+export interface HhoEraLogEntry {
+  rowIndex: number
+  eraDate: string
+  eraReference: string
+  actualDeposited: number
+  trueRateTotal: number
+  netTransfer: number
+  direction: HhoEraDirection
+  runningReserveBalance: number
+  residualDueToHHO?: number
+  openingBalance?: number
+  notes?: string
+  // Cross-check figures returned only on create, never persisted as ledger columns.
+  claimCount?: number
+  actualPaidTotal?: number
+}
+
+export interface HhoEraLogInput {
+  eraDate: string
+  eraReference: string
+  actualDeposited: number
+  residualDueToHHO?: number
+  openingBalance?: number   // required only when no prior log entries exist
   notes?: string
 }
 

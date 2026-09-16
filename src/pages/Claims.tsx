@@ -90,6 +90,7 @@ export default function Claims() {
 
   const search = (filters.search ?? '').toLowerCase().trim()
   const clientIdFilter = (filters.clientId ?? '').toLowerCase().trim()
+  const eraReferenceFilter = (filters.hhoEraReference ?? '').toLowerCase().trim()
   const selectedStatuses = (filters.status ?? '').split(',').filter(Boolean)
   const selectedClinicians = (filters.clinician ?? '').split(',').filter(Boolean)
 
@@ -101,6 +102,9 @@ export default function Claims() {
   )
   if (clientIdFilter) displayed = displayed.filter(c =>
     (c.clientId ?? '').toLowerCase().includes(clientIdFilter)
+  )
+  if (eraReferenceFilter) displayed = displayed.filter(c =>
+    (c.hhoEraReference ?? '').toLowerCase().includes(eraReferenceFilter)
   )
   if (selectedStatuses.length > 0) displayed = displayed.filter(c => selectedStatuses.includes(c.status))
   if (selectedClinicians.length > 0) displayed = displayed.filter(c => selectedClinicians.includes(c.clinician))

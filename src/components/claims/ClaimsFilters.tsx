@@ -17,6 +17,7 @@ export interface ActiveFilters {
   to: string
   search: string
   clientId: string
+  hhoEraReference: string
   dateField: 'claimDate' | 'paymentDate'
   pendingCollection: boolean
 }
@@ -32,6 +33,7 @@ export function useClaimFilters(): ActiveFilters {
     to:          sp.get('to')          ?? '',
     search:      sp.get('search')      ?? '',
     clientId:    sp.get('clientId')    ?? '',
+    hhoEraReference: sp.get('hhoEraReference') ?? '',
     dateField:   (sp.get('dateField') as 'claimDate' | 'paymentDate') || 'claimDate',
     pendingCollection: sp.get('pendingCollection') === '1',
   }
@@ -192,6 +194,14 @@ export default function ClaimsFilters() {
           onChange={e => set('clientId', e.target.value)}
           placeholder="Client ID…"
           className={`${selectClass} w-36 placeholder:text-muted`}
+        />
+
+        <input
+          type="search"
+          value={sp.get('hhoEraReference') ?? ''}
+          onChange={e => set('hhoEraReference', e.target.value)}
+          placeholder="HHO ERA reference…"
+          className={`${selectClass} w-40 placeholder:text-muted`}
         />
 
         <div className="relative" ref={clinicianPopoverRef}>

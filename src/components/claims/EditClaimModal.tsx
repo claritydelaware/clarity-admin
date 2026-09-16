@@ -27,6 +27,7 @@ interface FormValues {
   clientAmount: string
   insuranceAmount: string
   insurancePaidHHO: string
+  hhoEraReference: string
   paymentDateReceived: string
   notes: string
 }
@@ -48,6 +49,7 @@ function mapClaimToFormValues(claim: Claim): FormValues {
     clientAmount: claim.clientAmount ? String(claim.clientAmount) : '',
     insuranceAmount: claim.insuranceAmount ? String(claim.insuranceAmount) : '',
     insurancePaidHHO: claim.insurancePaidHHO != null ? String(claim.insurancePaidHHO) : '',
+    hhoEraReference: claim.hhoEraReference ?? '',
     paymentDateReceived: claim.paymentDateReceived ? toInputDate(claim.paymentDateReceived) : '',
     notes: claim.notes ?? '',
   }
@@ -126,6 +128,7 @@ export default function EditClaimModal({ claim, onClose }: Props) {
       insurancePaidHHO: isHHOSubmit && values.insurancePaidHHO !== ''
         ? parseFloat(values.insurancePaidHHO)
         : undefined,
+      hhoEraReference: isHHOSubmit && values.hhoEraReference !== '' ? values.hhoEraReference : undefined,
       paymentDateReceived: values.paymentDateReceived || undefined,
       notes: values.notes || undefined,
     }
@@ -267,6 +270,13 @@ export default function EditClaimModal({ claim, onClose }: Props) {
                       ? (overUnderHHO > 0 ? '+' : '') + formatCurrency(overUnderHHO)
                       : <span className="italic text-xs">enter both amounts</span>}
                   </div>
+                </div>
+                <div className="col-span-2">
+                  <label className={labelClass}>
+                    Most Recent ERA Reference
+                    <span className="ml-1.5 font-normal text-[10px] text-muted normal-case">col Z — manual correction only; use the Claims board's "Tag Selected" for bulk tagging</span>
+                  </label>
+                  <input type="text" {...register('hhoEraReference')} className={inputClass} placeholder="e.g. DEHHOCLM1/37930" />
                 </div>
               </div>
             )}

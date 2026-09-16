@@ -17,6 +17,7 @@ import TimelineCell from '../board/cells/TimelineCell'
 import Tooltip from '../ui/Tooltip'
 import { PayerBadge } from '../ui/Badge'
 import BulkUpdateModal from './BulkUpdateModal'
+import FinalizeEraModal from './FinalizeEraModal'
 import Button from '../ui/Button'
 
 const COPIED_STORAGE_KEY = 'clarity-copied-claim-ids'
@@ -100,6 +101,8 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [copiedClaimIds, setCopiedClaimIds] = useState<Set<number>>(initCopiedIds)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
+  const [eraTagValue, setEraTagValue] = useState('')
+  const [finalizeEraRef, setFinalizeEraRef] = useState<string | null>(null)
 
   useEffect(() => { setRowSelection({}) }, [claims])
   useEffect(() => { if (Object.keys(rowSelection).length === 0) setBulkModalOpen(false) }, [rowSelection])
@@ -462,7 +465,48 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
     }
   }
 
-  const selectionBar = selectedRowIndices.length > 0 ? (
+  const eraSuggestions = [...new Set(claims.map(c => c.hhoEraReference).filter((r): r is string => Boolean(r)))]
+
+  async function handleTagEra() {
+    const ref = eraTagValue.trim()
+    if (!ref || selectedRowIndices.length === 0) return
+    const success = await bulkUpdate.execute(selectedRowIndices, { hhoEraReference: ref })
+    if (success) setRowSelection({})
+  }
+
+  const eraBar = (
+    <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-lg mb-2">
+      <input
+        list="era-reference-suggestions"
+        value={eraTagValue}
+        onChange={e => setEraTagValue(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && handleTagEra()}
+        placeholder="HHO ERA reference…"
+        className="h-8 w-48 rounded border border-border bg-white px-2 text-xs font-body focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal"
+      />
+      <datalist id="era-reference-suggestions">
+        {eraSuggestions.map(r => <option key={r} value={r} />)}
+      </datalist>
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={!eraTagValue.trim() || selectedRowIndices.length === 0 || bulkUpdate.isSubmitting}
+        onClick={handleTagEra}
+      >
+        Tag Selected
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={!eraTagValue.trim()}
+        onClick={() => setFinalizeEraRef(eraTagValue.trim())}
+      >
+        Finalize ERA
+      </Button>
+    </div>
+  )
+
+  const selectionSummaryBar = selectedRowIndices.length > 0 ? (
     <div className="hidden md:flex items-center justify-between px-4 py-2.5 bg-teal-pale border border-teal/20 rounded-lg mb-2">
       <span className="text-sm font-ui text-teal font-medium">
         {selectedRowIndices.length} claim{selectedRowIndices.length !== 1 ? 's' : ''} selected
@@ -491,6 +535,13 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
       </div>
     </div>
   ) : null
+
+  const selectionBar = (
+    <>
+      {eraBar}
+      {selectionSummaryBar}
+    </>
+  )
 
   return (
     <>
@@ -543,6 +594,14 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
           onConfirm={handleBulkConfirm}
           onClose={() => setBulkModalOpen(false)}
           isSubmitting={bulkUpdate.isSubmitting}
+        />
+      )}
+
+      {finalizeEraRef && (
+        <FinalizeEraModal
+          eraReference={finalizeEraRef}
+          onClose={() => setFinalizeEraRef(null)}
+          onFinalized={() => { setFinalizeEraRef(null); setEraTagValue('') }}
         />
       )}
     </>

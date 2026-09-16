@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type ClaimsFilter } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import type { ClaimUpdateInput, ClaimFullEditInput, NewClaimInput, ClaimStatus } from '../types'
+import type { ClaimUpdateInput, ClaimFullEditInput, NewClaimInput } from '../types'
 
 export type InlineEditField =
   | 'claimId'
@@ -109,7 +109,7 @@ export function useBulkUpdateClaims() {
 
   const execute = useCallback(async (
     rowIndices: number[],
-    update: { status: ClaimStatus; paymentDateReceived?: string },
+    update: Partial<ClaimUpdateInput>,
   ): Promise<boolean> => {
     setIsSubmitting(true)
     try {

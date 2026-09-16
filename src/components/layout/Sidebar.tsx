@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FileText, TrendingUp, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, Activity, ShieldCheck, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, FileText, TrendingUp, TrendingDown, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, ArrowLeftRight, Activity, ShieldCheck, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export const NAV = [
   { to: '/dashboard',          label: 'Dashboard',          icon: LayoutDashboard },
@@ -10,6 +10,8 @@ export const NAV = [
   { to: '/hourly-performance', label: 'Hourly Performance', icon: Activity },
   { to: '/forecast',           label: 'Revenue Forecast',   icon: TrendingUp },
   { to: '/overhead',           label: 'Overhead',           icon: Receipt },
+  { to: '/hho-era-log',        label: 'HHO ERA Log',        icon: ArrowLeftRight },
+  { to: '/hho-overpayment',    label: 'HHO Overpayment',    icon: TrendingDown },
   { to: '/staff',              label: 'Staff',              icon: Users },
   { to: '/credentialing',      label: 'Credentialing',      icon: ShieldCheck },
   { to: '/ce-tracker',         label: 'CE Tracker',         icon: GraduationCap },

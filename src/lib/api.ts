@@ -7,6 +7,7 @@ import type {
   Clinician, ConfigData, ContractRate, ValuationSnapshot, TrendGranularity, TrendPoint,
   HourlyPerformanceHistory, CredentialingRecord, CredentialingInput,
   CELogRecord, CELogInput, CEStatusRecord,
+  HhoEraLogEntry, HhoEraLogInput,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -162,6 +163,11 @@ export const api = {
       apiFetch<OverheadEntry>('/overhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
     update: (month: string, data: Partial<OverheadEntry>): Promise<OverheadEntry> =>
       apiFetch<OverheadEntry>(`/overhead/${month}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  },
+  hhoEraLog: {
+    list: (): Promise<HhoEraLogEntry[]> => apiFetch<HhoEraLogEntry[]>('/hho-era-log'),
+    create: (data: HhoEraLogInput): Promise<HhoEraLogEntry> =>
+      apiFetch<HhoEraLogEntry>('/hho-era-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   },
   payroll: {
     list: (): Promise<PayrollEntry[]> => apiFetch<PayrollEntry[]>('/payroll'),

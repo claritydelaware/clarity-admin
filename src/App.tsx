@@ -14,6 +14,8 @@ import Caseloads from './pages/Caseloads'
 import Valuation from './pages/Valuation'
 import Credentialing from './pages/Credentialing'
 import CETracker from './pages/CETracker'
+import HhoEraLog from './pages/HhoEraLog'
+import HhoOverpayment from './pages/HhoOverpayment'
 
 export default function App() {
   return (
@@ -35,6 +37,8 @@ export default function App() {
           <Route path="valuation" element={<Valuation />} />
           <Route path="credentialing" element={<Credentialing />} />
           <Route path="ce-tracker" element={<CETracker />} />
+          <Route path="hho-era-log" element={<HhoEraLog />} />
+          <Route path="hho-overpayment" element={<HhoOverpayment />} />
         </Route>
       </Routes>
     </BrowserRouter>
