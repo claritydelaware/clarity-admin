@@ -235,13 +235,17 @@ function StepsChecklist({ pursuitId }: { pursuitId: string }) {
     if (otherIndex < 0 || otherIndex >= steps.length) return
     // Re-number the whole list on every move (not just the two swapped steps) so
     // legacy rows sharing sortOrder 0 (from before this field existed) get fixed too.
+    // Sent as a single batch request — one Sheets API round trip instead of one per step.
     const reordered = [...steps]
     ;[reordered[index], reordered[otherIndex]] = [reordered[otherIndex], reordered[index]]
+    // Optimistic local update so the row order flips instantly instead of waiting on the round trip.
+    qc.setQueryData(['pursuit-steps', pursuitId], reordered)
     try {
-      await Promise.all(reordered.map((s, i) => api.pursuitSteps.update(pursuitId, s.id, { sortOrder: i })))
+      await api.pursuitSteps.reorder(pursuitId, reordered.map(s => s.id))
       await qc.invalidateQueries({ queryKey: ['pursuit-steps', pursuitId] })
     } catch {
       toast.error('Failed to reorder steps')
+      await qc.invalidateQueries({ queryKey: ['pursuit-steps', pursuitId] })
     }
   }
 

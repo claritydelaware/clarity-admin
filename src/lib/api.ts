@@ -164,6 +164,8 @@ export const api = {
       apiFetch<PursuitStep>(`/pursuits/${pursuitId}/steps/${stepId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
     remove: (pursuitId: string, stepId: string): Promise<{ ok: boolean }> =>
       apiFetch<{ ok: boolean }>(`/pursuits/${pursuitId}/steps/${stepId}`, { method: 'DELETE' }),
+    reorder: (pursuitId: string, stepIds: string[]): Promise<{ ok: boolean }> =>
+      apiFetch<{ ok: boolean }>(`/pursuits/${pursuitId}/steps/reorder`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stepIds }) }),
   },
   emily: {
     submission: (periodStart: string): Promise<EmilySubmission | null> =>
