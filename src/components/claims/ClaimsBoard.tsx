@@ -474,6 +474,12 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
     if (success) setRowSelection({})
   }
 
+  async function handleClearEraTag() {
+    if (selectedRowIndices.length === 0) return
+    const success = await bulkUpdate.execute(selectedRowIndices, { hhoEraReference: '' })
+    if (success) setRowSelection({})
+  }
+
   const eraBar = (
     <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-lg mb-2">
       <input
@@ -502,6 +508,14 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
         onClick={() => setFinalizeEraRef(eraTagValue.trim())}
       >
         Finalize ERA
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={selectedRowIndices.length === 0 || bulkUpdate.isSubmitting}
+        onClick={handleClearEraTag}
+      >
+        Clear ERA Tag
       </Button>
     </div>
   )
