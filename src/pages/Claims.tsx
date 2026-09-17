@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Download, AlignJustify, List } from 'lucide-react'
 import type { Claim } from '../types'
@@ -91,45 +91,60 @@ export default function Claims() {
   const search = (filters.search ?? '').toLowerCase().trim()
   const clientIdFilter = (filters.clientId ?? '').toLowerCase().trim()
   const eraReferenceFilter = (filters.hhoEraReference ?? '').toLowerCase().trim()
-  const selectedStatuses = (filters.status ?? '').split(',').filter(Boolean)
-  const selectedClinicians = (filters.clinician ?? '').split(',').filter(Boolean)
 
-  let displayed = claims ?? []
-  if (viewMode === 'active') displayed = displayed.filter(c => !isArchived(c))
-  if (search) displayed = displayed.filter(c =>
-    (c.claimId ?? '').toLowerCase().includes(search) ||
-    (c.notes ?? '').toLowerCase().includes(search)
-  )
-  if (clientIdFilter) displayed = displayed.filter(c =>
-    (c.clientId ?? '').toLowerCase().includes(clientIdFilter)
-  )
-  if (eraReferenceFilter) displayed = displayed.filter(c =>
-    (c.hhoEraReference ?? '').toLowerCase().includes(eraReferenceFilter)
-  )
-  if (selectedStatuses.length > 0) displayed = displayed.filter(c => selectedStatuses.includes(c.status))
-  if (selectedClinicians.length > 0) displayed = displayed.filter(c => selectedClinicians.includes(c.clinician))
-  const selectedPayers = (filters.payer ?? '').split(',').filter(Boolean)
-  if (selectedPayers.length > 0) {
-    const expandedPayers = new Set<string>()
-    for (const p of selectedPayers) {
-      expandedPayers.add(p)
-      if (PAYER_GROUPS[p]) PAYER_GROUPS[p].forEach(g => expandedPayers.add(g))
+  // Memoized so `claims` passed to ClaimsBoard stays referentially stable
+  // across re-renders that don't actually change the filter inputs (e.g. a
+  // toast being shown/dismissed elsewhere in the app) — this array previously
+  // recomputed (and returned a brand-new reference) on every Claims render,
+  // which reset ClaimsBoard's row-selection effect and forced its table to
+  // rebuild its row/cell model, discarding any in-progress inline edit.
+  const displayed = useMemo(() => {
+    if (!claims) return null
+
+    const selectedStatuses = (filters.status ?? '').split(',').filter(Boolean)
+    const selectedClinicians = (filters.clinician ?? '').split(',').filter(Boolean)
+    const selectedPayers = (filters.payer ?? '').split(',').filter(Boolean)
+
+    let result = claims
+    if (viewMode === 'active') result = result.filter(c => !isArchived(c))
+    if (search) result = result.filter(c =>
+      (c.claimId ?? '').toLowerCase().includes(search) ||
+      (c.notes ?? '').toLowerCase().includes(search)
+    )
+    if (clientIdFilter) result = result.filter(c =>
+      (c.clientId ?? '').toLowerCase().includes(clientIdFilter)
+    )
+    if (eraReferenceFilter) result = result.filter(c =>
+      (c.hhoEraReference ?? '').toLowerCase().includes(eraReferenceFilter)
+    )
+    if (selectedStatuses.length > 0) result = result.filter(c => selectedStatuses.includes(c.status))
+    if (selectedClinicians.length > 0) result = result.filter(c => selectedClinicians.includes(c.clinician))
+    if (selectedPayers.length > 0) {
+      const expandedPayers = new Set<string>()
+      for (const p of selectedPayers) {
+        expandedPayers.add(p)
+        if (PAYER_GROUPS[p]) PAYER_GROUPS[p].forEach(g => expandedPayers.add(g))
+      }
+      result = result.filter(c => expandedPayers.has(c.insurance))
     }
-    displayed = displayed.filter(c => expandedPayers.has(c.insurance))
-  }
-  if (usePaymentDateFilter && (filters.from || filters.to)) {
-    displayed = displayed.filter(c => {
-      if (!c.paymentDateReceived) return false
-      const pd = new Date(c.paymentDateReceived)
-      if (filters.from && pd < new Date(filters.from)) return false
-      if (filters.to && pd > new Date(filters.to)) return false
-      return true
-    })
-  }
-  if (filters.pendingCollection) {
-    displayed = displayed.filter(hasOutstandingCollection)
-  }
-  const displayedOrNull = claims ? displayed : null
+    if (usePaymentDateFilter && (filters.from || filters.to)) {
+      result = result.filter(c => {
+        if (!c.paymentDateReceived) return false
+        const pd = new Date(c.paymentDateReceived)
+        if (filters.from && pd < new Date(filters.from)) return false
+        if (filters.to && pd > new Date(filters.to)) return false
+        return true
+      })
+    }
+    if (filters.pendingCollection) {
+      result = result.filter(hasOutstandingCollection)
+    }
+    return result
+  }, [
+    claims, viewMode, search, clientIdFilter, eraReferenceFilter,
+    filters.status, filters.clinician, filters.payer,
+    usePaymentDateFilter, filters.from, filters.to, filters.pendingCollection,
+  ])
 
   const handleExport = async () => {
     setExporting(true)
@@ -196,8 +211,8 @@ export default function Claims() {
         <ErrorBanner message={(error as Error).message} onRetry={() => refetch()} />
       )}
 
-      {displayedOrNull && (
-        <ClaimsBoard claims={displayedOrNull} onStatusClick={setSelectedClaim} onDeleteClick={setDeletingClaim} onEditClick={setEditingClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} virtualize={viewMode === 'all'} />
+      {displayed && (
+        <ClaimsBoard claims={displayed} onStatusClick={setSelectedClaim} onDeleteClick={setDeletingClaim} onEditClick={setEditingClaim} onAddRow={() => setNewClaimOpen(true)} compact={density === 'compact'} virtualize={viewMode === 'all'} />
       )}
 
       {selectedClaim && (

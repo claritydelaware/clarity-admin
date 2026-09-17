@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from 'react'
 
 interface Toast {
   id: number
@@ -38,8 +38,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const success = useCallback((msg: string) => add(msg, 'success'), [add])
   const error   = useCallback((msg: string) => add(msg, 'error'),   [add])
 
+  // Memoized so the context value stays referentially stable across the
+  // provider's own re-renders (triggered by `toasts` changing on every show
+  // AND every auto-dismiss) — otherwise every useToast() consumer in the app,
+  // including whole pages, re-renders on every toast event even though
+  // `success`/`error` themselves never change.
+  const value = useMemo(() => ({ success, error }), [success, error])
+
   return (
-    <ToastContext.Provider value={{ success, error }}>
+    <ToastContext.Provider value={value}>
       {children}
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </ToastContext.Provider>
