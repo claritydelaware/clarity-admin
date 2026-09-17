@@ -75,6 +75,13 @@ export const api = {
         body: JSON.stringify(data),
       })
     },
+    bulkPatch(rowIndices: number[], update: Partial<ClaimUpdateInput>): Promise<Claim[]> {
+      return apiFetch<Claim[]>('/claims/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndices, update }),
+      })
+    },
     delete(rowIndex: number): Promise<{ ok: boolean }> {
       return apiFetch<{ ok: boolean }>(`/claims/${rowIndex}`, { method: 'DELETE' })
     },

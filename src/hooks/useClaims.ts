@@ -131,7 +131,7 @@ export function useBulkUpdateClaims() {
   ): Promise<boolean> => {
     setIsSubmitting(true)
     try {
-      const updated = await Promise.all(rowIndices.map(rowIndex => api.claims.patch(rowIndex, update)))
+      const updated = await api.claims.bulkPatch(rowIndices, update)
       mergeClaimsIntoCache(qc, updated)
       toast.success(`Updated ${rowIndices.length} claim${rowIndices.length !== 1 ? 's' : ''} successfully`)
       return true
