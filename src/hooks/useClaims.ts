@@ -1,8 +1,26 @@
 import { useState, useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api, type ClaimsFilter } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import type { ClaimUpdateInput, ClaimFullEditInput, NewClaimInput } from '../types'
+import type { Claim, ClaimUpdateInput, ClaimFullEditInput, NewClaimInput } from '../types'
+
+// Merges freshly-written claim(s) straight into every cached claims-list query
+// (there can be several, one per active filter combination) instead of
+// invalidating and re-fetching the full ~1,900+ row Claims sheet on every edit —
+// the mutation response already contains the authoritative updated row(s).
+// Filtered explicitly by Array.isArray rather than relying on setQueriesData's
+// key-prefix matching alone: ['claims', rowIndex] (useClaim's single-object
+// cache) shares the 'claims' prefix with the list queries but holds a plain
+// Claim, not an array — mapping over it would throw.
+function mergeClaimsIntoCache(qc: QueryClient, updated: Claim[]) {
+  const byRow = new Map(updated.map(c => [c.rowIndex, c]))
+  qc.getQueryCache().findAll({ queryKey: ['claims'] }).forEach(query => {
+    const data = query.state.data
+    if (Array.isArray(data)) {
+      qc.setQueryData<Claim[]>(query.queryKey, (data as Claim[]).map(c => byRow.get(c.rowIndex) ?? c))
+    }
+  })
+}
 
 export type InlineEditField =
   | 'claimId'
@@ -41,8 +59,8 @@ export function useUpdateClaim() {
   return useMutation({
     mutationFn: ({ rowIndex, data }: { rowIndex: number; data: ClaimUpdateInput }) =>
       api.claims.update(rowIndex, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['claims'] })
+    onSuccess: (updated) => {
+      mergeClaimsIntoCache(qc, [updated])
       toast.success('Status updated')
     },
     onError: () => toast.error('Save failed — please try again'),
@@ -66,7 +84,7 @@ export function useFullEditClaim() {
     mutationFn: ({ rowIndex, data }: { rowIndex: number; data: ClaimFullEditInput }) =>
       api.claims.fullEdit(rowIndex, data),
     onSuccess: (updated) => {
-      qc.invalidateQueries({ queryKey: ['claims'] })
+      mergeClaimsIntoCache(qc, [updated])
       qc.setQueryData(['claims', updated.rowIndex], updated)
       toast.success('Claim saved')
     },
@@ -94,8 +112,8 @@ export function useInlineEditClaim() {
   return useMutation({
     mutationFn: ({ rowIndex, field, value }: { rowIndex: number; field: InlineEditField; value: string | number }) =>
       api.claims.patch(rowIndex, { [field]: value }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['claims'] })
+    onSuccess: (updated) => {
+      mergeClaimsIntoCache(qc, [updated])
       toast.success('Saved')
     },
     onError: () => toast.error('Save failed — please try again'),
@@ -113,8 +131,8 @@ export function useBulkUpdateClaims() {
   ): Promise<boolean> => {
     setIsSubmitting(true)
     try {
-      await Promise.all(rowIndices.map(rowIndex => api.claims.patch(rowIndex, update)))
-      qc.invalidateQueries({ queryKey: ['claims'] })
+      const updated = await Promise.all(rowIndices.map(rowIndex => api.claims.patch(rowIndex, update)))
+      mergeClaimsIntoCache(qc, updated)
       toast.success(`Updated ${rowIndices.length} claim${rowIndices.length !== 1 ? 's' : ''} successfully`)
       return true
     } catch {
