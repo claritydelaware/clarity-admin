@@ -48,6 +48,7 @@ export interface Claim {
   receivedWeek?: string
   notes?: string
   hhoEraReference?: string   // HHO-specific, col Z — most recent ERA that touched this claim
+  hhoLastReconciledPaid?: number  // HHO-specific, col AA — HHO Paid as of the last ERA that reconciled this claim
 }
 
 export interface NewClaimInput {
@@ -146,6 +147,7 @@ export interface ClaimFullEditInput {
   totalPayment?: number
   notes?: string
   hhoEraReference?: string
+  hhoLastReconciledPaid?: number
 }
 
 export type HhoEraDirection = 'to-savings' | 'to-checking' | 'none'

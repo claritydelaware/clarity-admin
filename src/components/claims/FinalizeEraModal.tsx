@@ -28,12 +28,20 @@ export default function FinalizeEraModal({ eraReference, onClose, onFinalized }:
 
   const isFirstEntry = eraLogEntries != null && eraLogEntries.length === 0
 
+  // Mirrors the Worker's hhoEraContribution() so the preview matches what actually gets
+  // logged: a claim reconciled before contributes only the delta since its last reconciled
+  // HHO Paid (the real cash movement this round), not its full contracted rate again —
+  // counting the full rate a second time would double-count revenue already reserved.
   const preview = useMemo(() => {
     if (!allClaims) return null
     const matched = allClaims.filter(c => c.hhoEraReference === eraReference)
     return {
       count: matched.length,
-      trueRateTotal: matched.reduce((s, c) => s + c.insuranceAmount, 0),
+      trueRateTotal: matched.reduce((s, c) => s + (
+        c.hhoLastReconciledPaid != null
+          ? c.hhoLastReconciledPaid - (c.insurancePaidHHO ?? 0)
+          : c.insuranceAmount
+      ), 0),
       actualPaidTotal: matched.reduce((s, c) => s + (c.insurancePaidHHO ?? 0), 0),
     }
   }, [allClaims, eraReference])
