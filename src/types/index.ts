@@ -13,7 +13,7 @@ export type ClaimStatus = typeof CLAIM_STATUSES[number]
 export const KNOWN_PAYERS = [
   'BCBS', 'BCBS-MA', 'Aetna', 'United', 'United-MA', 'United-Surest', 'United-SR', 'UMR', 'Medicare',
   'Health Options', 'Health Options Duals', 'Delaware First', 'Amerihealth', 'Amerihealth VIP', 'Mutual of Omaha',
-  'Self-Pay', 'Late Cancellation', 'Meritain', 'ChampVA',
+  'Self-Pay', 'Late Cancellation', 'Meritain', 'ChampVA', 'Tricare',
 ] as const
 
 export const PAYER_GROUPS: Record<string, string[]> = {
@@ -449,6 +449,7 @@ export interface EmilyPayPeriodSummary {
   claimsNoShows: number
   noShowRate: number
   noShowPay: number
+  noShowsConfirmed: boolean
   savedNotes: string
   consultations: number
   consultPay: number
