@@ -214,7 +214,7 @@ export const api = {
     saveRecord: (data: {
       periodStart: string; periodEnd?: string; payDate?: string; clinician: string
       therapySessions?: number; otherSessions?: number; noShows?: number; consultations?: number
-      meetingHours?: number; trainingHours?: number
+      meetingHours?: number; trainingHours?: number; noShowsConfirmed?: boolean
       adminHours?: number; bonusPay?: number; notes?: string
     }): Promise<{ ok: boolean }> =>
       apiFetch('/pay-periods/record', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),

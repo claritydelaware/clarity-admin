@@ -49,6 +49,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const [therapySessions, setTherapySessions] = useState('')
   const [otherSessions, setOtherSessions] = useState('')
   const [noShows, setNoShows] = useState('')
+  const [noShowsConfirmedOverride, setNoShowsConfirmedOverride] = useState<boolean | null>(null)
   const [meetingHours, setMeetingHours] = useState('')
   const [trainingHours, setTrainingHours] = useState('')
   const [consultations, setConsultations] = useState('')
@@ -72,6 +73,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     setTherapySessions('')
     setOtherSessions('')
     setNoShows('')
+    setNoShowsConfirmedOverride(null)
     setMeetingHours('')
     setTrainingHours('')
     setConsultations('')
@@ -107,6 +109,11 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const effNoShows = isLocked
     ? (summary?.noShows ?? 0)
     : noShows !== '' ? (parseInt(noShows) || 0) : (subNoShows ?? summary?.claimsNoShows ?? 0)
+  // No-show fees are reference-only until Bruce manually confirms the fee was
+  // actually collected — no clinician submission can supply that confirmation.
+  const effNoShowsConfirmed = isLocked
+    ? (summary?.noShowsConfirmed ?? false)
+    : noShowsConfirmedOverride ?? summary?.noShowsConfirmed ?? false
   const effMeetingH = isLocked
     ? savedMeetingH
     : meetingHours !== '' ? (parseFloat(meetingHours) || 0) : (subMeetingH ?? savedMeetingH)
@@ -123,13 +130,13 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
   const adminHourlyRate = summary?.adminHourlyRate ?? 25
   const effTherapyPay   = effTherapySessions * (summary?.therapySessionRate ?? 50)
   const effOtherPay     = effOtherSessions   * (summary?.otherSessionRate   ?? 40)
-  // No-show pay is reference only — actually paid only after Bruce manually verifies
-  // the no-show fee was collected, so it's excluded from sessionPay/totalPay here.
+  // No-show pay is reference only until Bruce checks "confirmed collected" —
+  // only then does it count toward sessionPay/totalPay.
   const effNoShowPay    = effNoShows         * (summary?.noShowRate         ?? 40)
   const effSessionPay   = effTherapyPay + effOtherPay
   const effConsultPay   = effConsults * (adminHourlyRate / 4)
   const effAdminPay     = effMeetingH * adminHourlyRate + effConsultPay
-  const effTotalPay     = effSessionPay + effAdminPay + effBonusP
+  const effTotalPay     = effSessionPay + effAdminPay + effBonusP + (effNoShowsConfirmed ? effNoShowPay : 0)
   const taxRate         = summary?.overheadTaxRate ?? 0.0956
   const fixedOverhead   = summary?.overheadFixedAmount ?? 55.40
   const hasGustoActuals = summary?.overheadSource === 'gusto' && summary.gustoEmployerTaxes != null
@@ -150,7 +157,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     `Therapy Sessions (${effTherapySessions} × $${summary.therapySessionRate}): ${formatCurrency(effTherapyPay)}`,
     `Other Sessions   (${effOtherSessions} × $${summary.otherSessionRate}): ${formatCurrency(effOtherPay)}`,
     `Session Pay subtotal: ${formatCurrency(effSessionPay)}`,
-    `No-Shows (${effNoShows} × $${summary.noShowRate}, pending collection verification): ${formatCurrency(effNoShowPay)}`,
+    `No-Shows (${effNoShows} × $${summary.noShowRate}${effNoShowsConfirmed ? ', confirmed collected' : ', pending collection verification'}): ${formatCurrency(effNoShowPay)}`,
     `Admin Pay: ${formatCurrency(effAdminPay)}`,
     effBonusP > 0 ? `Bonus: ${formatCurrency(effBonusP)}` : null,
     `Total Pay: ${formatCurrency(effTotalPay)}`,
@@ -169,6 +176,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
       therapySessions: effTherapySessions,
       otherSessions: effOtherSessions,
       noShows: effNoShows,
+      noShowsConfirmed: effNoShowsConfirmed,
       consultations: effConsults,
       meetingHours: effMeetingH,
       trainingHours: effTrainingH,
@@ -179,6 +187,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
         setTherapySessions('')
         setOtherSessions('')
         setNoShows('')
+        setNoShowsConfirmedOverride(null)
         setMeetingHours('')
         setTrainingHours('')
         setConsultations('')
@@ -352,12 +361,27 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                   disabled={isLocked}
                   className="w-12 rounded-lg border border-border px-1 py-0.5 text-xs text-center text-ink focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60 disabled:bg-gray-50"
                 />
-                × ${summary.noShowRate} — pending collection verification)
+                × ${summary.noShowRate})
                 {effNoShows !== summary.claimsNoShows && (
                   <span className="text-[10px] text-amber-600 italic whitespace-nowrap">claims: {summary.claimsNoShows}</span>
                 )}
               </span>
-              <span className="tabular-nums text-ink shrink-0">{formatCurrency(effNoShowPay)}</span>
+              <span className={`tabular-nums shrink-0 ${effNoShowsConfirmed ? 'text-ink' : 'text-muted'}`}>{formatCurrency(effNoShowPay)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 pl-1">
+              <input
+                type="checkbox"
+                id="noShowsConfirmed"
+                checked={effNoShowsConfirmed}
+                onChange={e => setNoShowsConfirmedOverride(e.target.checked)}
+                disabled={isLocked}
+                className="h-3.5 w-3.5 rounded border-border text-teal focus:outline-none focus:ring-1 focus:ring-teal disabled:opacity-60"
+              />
+              <label htmlFor="noShowsConfirmed" className="text-[11px] text-muted font-body">
+                {effNoShowsConfirmed
+                  ? <>Confirmed collected — included in Total Pay</>
+                  : <>Confirm fee collected to include {formatCurrency(effNoShowPay)} in Total Pay</>}
+              </label>
             </div>
 
             <div className="grid grid-cols-3 gap-3 pt-2">
