@@ -19,6 +19,7 @@ import UtilizationBars from '../components/dashboard/UtilizationBars'
 import AgingList from '../components/dashboard/AgingList'
 import PayerMixList from '../components/dashboard/PayerMixList'
 import TrendChart from '../components/dashboard/TrendChart'
+import WeekdayPattern from '../components/dashboard/WeekdayPattern'
 import { SessionsTooltip, RevenueTooltip, ReceivedTooltip } from '../components/dashboard/DashboardTooltips'
 import type { Clinician, DateWindow } from '../types'
 
@@ -230,6 +231,9 @@ export default function Dashboard() {
           <div className="-mx-5 -mb-5"><AgingList rows={agingRows} /></div>
         </ChartCard>
       </div>
+
+      {/* Weekday pattern */}
+      <WeekdayPattern />
 
       {/* Custom Trend Explorer */}
       <TrendChart />
