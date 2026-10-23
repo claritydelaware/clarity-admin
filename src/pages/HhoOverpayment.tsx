@@ -11,6 +11,7 @@ import ErrorBanner from '../components/ui/ErrorBanner'
 import { mergeChartOptions } from '../components/charts/baseChartOptions'
 import { formatCurrency, formatDate } from '../lib/utils'
 import { SERVICE_CODES } from '../types'
+import { COLORS } from '../lib/chartTheme'
 
 function MetricCard({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'success' | 'error' | 'muted' }) {
   const toneClass = {
@@ -56,7 +57,7 @@ export default function HhoOverpayment() {
   const chartOptions = mergeChartOptions({
     chart: { type: 'line' },
     stroke: { curve: 'smooth', width: 2.5 },
-    colors: ['#254D54'],
+    colors: [COLORS.teal],
     xaxis: { type: 'datetime', labels: { datetimeUTC: false, format: 'MMM d' } },
     yaxis: { labels: { formatter: (v: number) => formatCurrency(v) } },
     tooltip: { x: { format: 'MMM d, yyyy' }, y: { formatter: (v: number) => formatCurrency(v) } },
@@ -99,7 +100,7 @@ export default function HhoOverpayment() {
           </div>
 
           {missingCapture.length > 0 && (
-            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm font-body text-amber-800">
+            <div className="flex items-start gap-2 rounded-xl bg-warning-bg border border-warning-border px-4 py-3 text-sm font-body text-warning">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <span>
                 <strong>{missingCapture.length}</strong> Health Options claim{missingCapture.length !== 1 ? 's are' : ' is'} marked
@@ -129,7 +130,7 @@ export default function HhoOverpayment() {
                     <th className="text-right py-2">Avg / Claim</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {byCode.map(r => (
                     <tr key={r.code}>
                       <td className="py-2 pr-3 text-ink">{r.code}</td>
@@ -154,7 +155,7 @@ export default function HhoOverpayment() {
             {sortedEntries.length === 0 ? (
               <p className="text-sm text-muted font-body py-4">No ERA entries logged yet.</p>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-border">
                 {[...sortedEntries].reverse().slice(0, 5).map(e => (
                   <div key={e.rowIndex} className="flex items-center justify-between py-2.5 text-sm font-body">
                     <div>

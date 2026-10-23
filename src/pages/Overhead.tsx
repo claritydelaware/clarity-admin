@@ -244,7 +244,7 @@ function PayrollPreviewPanel({ preview, onConfirm, onDiscard, existing }: {
           </p>
         </div>
         {existing && (
-          <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-ui">
+          <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-warning text-xs font-ui">
             Will overwrite existing entry
           </span>
         )}
@@ -277,13 +277,13 @@ function PayrollPreviewPanel({ preview, onConfirm, onDiscard, existing }: {
           <table className="w-full text-sm font-body">
             <thead className="bg-surface-sunken border-b border-border">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Employee</th>
-                <th className="px-4 py-2 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Gross</th>
-                <th className="px-4 py-2 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">ER Taxes</th>
-                <th className="px-4 py-2 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Distributions</th>
+                <th className="px-4 py-2 text-left table-th">Employee</th>
+                <th className="px-4 py-2 text-right table-th">Gross</th>
+                <th className="px-4 py-2 text-right table-th">ER Taxes</th>
+                <th className="px-4 py-2 text-right table-th">Distributions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {preview.breakdown.map(emp => (
                 <tr key={emp.name} className="hover:bg-surface-sunken">
                   <td className="px-4 py-2 text-ink">{emp.name}</td>
@@ -333,7 +333,7 @@ function PreviewPanel({ preview, onConfirm, onDiscard, existing }: {
           <p className="text-xs font-body text-muted mt-0.5">Parsed from Xero P&amp;L export</p>
         </div>
         {existing && (
-          <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs font-ui">
+          <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-warning text-xs font-ui">
             Will overwrite existing entry
           </span>
         )}
@@ -366,12 +366,12 @@ function PreviewPanel({ preview, onConfirm, onDiscard, existing }: {
           <table className="w-full text-sm font-body">
             <thead className="bg-surface-sunken border-b border-border">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Account</th>
-                <th className="px-4 py-2 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Category</th>
-                <th className="px-4 py-2 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Amount</th>
+                <th className="px-4 py-2 text-left table-th">Account</th>
+                <th className="px-4 py-2 text-left table-th">Category</th>
+                <th className="px-4 py-2 text-right table-th">Amount</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {preview.lineItems.map((item, i) => (
                 <tr key={i} className="hover:bg-surface-sunken">
                   <td className="px-4 py-2 text-ink">{item.account}</td>
@@ -728,16 +728,16 @@ export default function Overhead() {
           <table className="w-full text-sm font-body min-w-[700px]">
             <thead className="bg-surface-sunken border-b border-border">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Month</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Total Income</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Payroll</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Operational</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Net Income</th>
-                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Source</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide"></th>
+                <th className="px-5 py-3 text-left table-th">Month</th>
+                <th className="px-4 py-3 text-right table-th">Total Income</th>
+                <th className="px-4 py-3 text-right table-th">Payroll</th>
+                <th className="px-4 py-3 text-right table-th">Operational</th>
+                <th className="px-4 py-3 text-right table-th">Net Income</th>
+                <th className="px-4 py-3 text-left table-th">Source</th>
+                <th className="px-4 py-3 text-right table-th"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {displayedEntries.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-muted text-sm">
@@ -864,15 +864,15 @@ export default function Overhead() {
           <table className="w-full text-sm font-body min-w-[600px]">
             <thead className="bg-surface-sunken border-b border-border">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Month</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Gross Earnings</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">ER Taxes</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Total Cost</th>
-                <th className="px-4 py-3 text-right text-xs font-medium font-ui text-muted uppercase tracking-wide">Distributions</th>
-                <th className="px-4 py-3 text-center text-xs font-medium font-ui text-muted uppercase tracking-wide">Employees</th>
+                <th className="px-5 py-3 text-left table-th">Month</th>
+                <th className="px-4 py-3 text-right table-th">Gross Earnings</th>
+                <th className="px-4 py-3 text-right table-th">ER Taxes</th>
+                <th className="px-4 py-3 text-right table-th">Total Cost</th>
+                <th className="px-4 py-3 text-right table-th">Distributions</th>
+                <th className="px-4 py-3 text-center table-th">Employees</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {displayedPayroll.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-5 py-8 text-center text-muted text-sm">

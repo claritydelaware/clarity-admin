@@ -125,7 +125,7 @@ export default function StatusUpdateModal({ claim, onClose }: Props) {
         </div>
 
         {isError && (
-          <p className="text-xs text-error font-ui bg-red-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-error font-ui bg-error-bg rounded-lg px-3 py-2">
             {(error as Error).message}
           </p>
         )}

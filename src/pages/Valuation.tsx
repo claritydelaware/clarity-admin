@@ -7,12 +7,13 @@ import PageHeader from '../components/layout/PageHeader'
 import MetricCard from '../components/ui/MetricCard'
 import ChartCard from '../components/charts/ChartCard'
 import Card from '../components/ui/Card'
-import LoadingSpinner from '../components/ui/LoadingSpinner'
+import { SkeletonMetricCards, SkeletonChart } from '../components/ui/Skeleton'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import EmptyState from '../components/ui/EmptyState'
 import { mergeChartOptions } from '../components/charts/baseChartOptions'
 import { formatCurrency, CLINICIAN_COLORS } from '../lib/utils'
 import type { Clinician } from '../types'
+import { COLORS } from '../lib/chartTheme'
 
 function hhiLabel(hhi: number | null): string {
   if (hhi == null) return '—'
@@ -55,7 +56,7 @@ export default function Valuation() {
     tooltip: {
       y: { formatter: (v: number | null) => (v == null ? '—' : `${Math.round(v * 100)}%`) },
     },
-    colors: ['#C9922A', '#254D54'],
+    colors: [COLORS.goldDark, COLORS.teal],
   })
 
   const trendSeries = [
@@ -70,7 +71,7 @@ export default function Valuation() {
 
   const maxClinicianRevenue = clinicianEntries[0]?.[1] ?? 0
 
-  if (isLoading) return <LoadingSpinner size={20} label="Building valuation snapshot…" />
+  if (isLoading) return <div className="space-y-6"><PageHeader title="Valuation" subtitle="Building snapshot…" /><SkeletonMetricCards /><div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><SkeletonChart height={300} /><SkeletonChart height={300} /></div></div>
   if (isError) return <ErrorBanner message={(error as Error).message} onRetry={() => refetch()} />
   if (!data) return <EmptyState title="No valuation data available" />
 
@@ -87,7 +88,7 @@ export default function Valuation() {
       <PageHeader title="Valuation" subtitle="Practice-level financial health — payer concentration, overhead efficiency, and margin trend" />
 
       {!data.dataComplete && (
-        <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm font-body text-amber-800">
+        <div className="flex items-center gap-2 rounded-lg bg-warning-bg border border-warning-border px-4 py-2.5 text-sm font-body text-warning">
           <AlertTriangle size={15} className="shrink-0" />
           Overhead or payroll data couldn't be read for this snapshot — overhead/margin figures below may be incomplete. Try refreshing.
         </div>
@@ -98,27 +99,24 @@ export default function Valuation() {
           index={0}
           label="Trailing 12mo Revenue"
           value={formatCurrency(data.trailingTwelveMonthsRevenue)}
-          accentColor="#254D54"
         />
         <MetricCard
           index={1}
           label="Top Payer Concentration"
           value={data.top1PayerPct != null ? `${data.top1PayerPct.toFixed(1)}%` : '—'}
           sub={data.payerConcentration[0]?.payer}
-          accentColor="#F6C54D"
         />
         <MetricCard
           index={2}
           label="Top 3 Payer Concentration"
           value={data.top3PayerPct != null ? `${data.top3PayerPct.toFixed(1)}%` : '—'}
-          accentColor="#3A7078"
         />
         <MetricCard
           index={3}
-          label="Herfindahl Index"
+          info="Herfindahl-Hirschman Index (HHI): sum of squared payer revenue shares. Lower means revenue is spread across more payers; above 2,500 is considered highly concentrated."
+          label="Payer concentration index"
           value={data.herfindahlIndex != null ? data.herfindahlIndex.toFixed(0) : '—'}
           sub={hhiLabel(data.herfindahlIndex)}
-          accentColor="#C9922A"
         />
       </div>
 
@@ -167,7 +165,7 @@ export default function Valuation() {
                   className="h-full rounded-full"
                   style={{
                     width: maxClinicianRevenue > 0 ? `${(revenue / maxClinicianRevenue) * 100}%` : '0%',
-                    backgroundColor: CLINICIAN_COLORS[clinician as Clinician] ?? '#254D54',
+                    backgroundColor: CLINICIAN_COLORS[clinician as Clinician] ?? COLORS.teal,
                   }}
                 />
               </div>

@@ -25,10 +25,10 @@ function LicenseStatusBadge({ exp }: { exp: string | null }) {
   const status = licenseStatus(exp)
   if (!status) return <span className="text-xs text-muted font-body">—</span>
   const cls = status === 'expired'
-    ? 'bg-red-50 text-error border-red-200'
+    ? 'bg-error-bg text-error border-error-border'
     : status === 'warning'
-    ? 'bg-amber-50 text-amber-700 border-amber-200'
-    : 'bg-green-50 text-success border-green-200'
+    ? 'bg-warning-bg text-warning border-warning-border'
+    : 'bg-success-bg text-success border-green-200'
   const label = status === 'expired' ? 'Expired' : status === 'warning' ? 'Expiring soon' : 'Active'
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-ui border ${cls}`}>{label}</span>
 }
@@ -346,7 +346,7 @@ export default function StaffDetail() {
             <ErrorBanner message="Primary license expired" className="mb-4" />
           )}
           {lStatus === 'warning' && (
-            <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 font-body mb-4">
+            <div className="flex items-center gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2 text-xs text-warning font-body mb-4">
               Primary license expiring soon
             </div>
           )}

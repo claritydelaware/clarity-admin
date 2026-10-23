@@ -589,7 +589,7 @@ export default function NewClaimModal({ open, onClose }: Props) {
           {showSupplemental && (
             <Card className="border-border">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-muted uppercase tracking-wide font-ui">Supplemental Entry</span>
+                <span className="table-th font-ui">Supplemental Entry</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -644,25 +644,25 @@ export default function NewClaimModal({ open, onClose }: Props) {
           )}
 
           {isDiscontinuedCode && (
-            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+            <div className="flex items-start gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2.5 text-sm font-body text-warning">
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
               {serviceCode} was discontinued after 1/15/2026. Verify this is intentional.
             </div>
           )}
           {isHHOCash && (
-            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+            <div className="flex items-start gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2.5 text-sm font-body text-warning">
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
               Health Options (Medicaid) clients cannot be charged no-show fees.
             </div>
           )}
           {is90785Alone && (
-            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+            <div className="flex items-start gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2.5 text-sm font-body text-warning">
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
               90785 is an add-on code and cannot be billed alone. Use "+ Add supplemental code" to pair it with a primary service.
             </div>
           )}
           {clientAmount > 0 && status !== 'Deductible' && !['self-pay', 'late cancellation'].includes((insurance ?? '').toLowerCase()) && !hasCollectionNote && (
-            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+            <div className="flex items-start gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2.5 text-sm font-body text-warning">
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
               Client amount of {formatCurrency(clientAmount)} entered without copay/coinsurance collection noted. This claim will be flagged as outstanding.
             </div>
@@ -670,7 +670,7 @@ export default function NewClaimModal({ open, onClose }: Props) {
 
           {isError && <ErrorBanner message={(error as Error).message} />}
           {suppError && (
-            <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800 font-body">
+            <div className="flex items-center gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2.5 text-sm text-warning font-body">
               <AlertTriangle size={15} className="shrink-0" />
               {suppError}
             </div>

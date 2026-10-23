@@ -19,7 +19,7 @@ function pct(val: number | null | undefined): string {
 function utilColor(val: number | null | undefined): string {
   if (val == null) return 'text-muted'
   if (val >= 1)    return 'text-error font-semibold'
-  if (val >= 0.95) return 'text-amber-600 font-semibold'
+  if (val >= 0.95) return 'text-warning font-semibold'
   return 'text-ink'
 }
 
@@ -73,7 +73,7 @@ export default function ProductivitySection({ months }: { months: CaseloadTrendM
       {latest && (
         <Card padding="none">
           <div className="px-5 py-3 border-b border-border bg-surface-sunken">
-            <p className="text-xs font-medium text-muted uppercase tracking-wide">
+            <p className="table-th">
               Most Recent Month — {monthLabel(latest.month)}
             </p>
           </div>
@@ -82,11 +82,11 @@ export default function ProductivitySection({ months }: { months: CaseloadTrendM
               <thead>
                 <tr className="border-b border-border">
                   {['Clinician', 'Sessions', 'Clients', 'Avg/Wk', 'Util %', 'Revenue'].map(h => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-2.5 text-left table-th">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-border">
                 {rows.map(r => (
                   <tr key={r.name} className="hover:bg-surface-sunken transition-colors">
                     <td className="px-4 py-2.5 font-medium text-ink">{r.name}</td>

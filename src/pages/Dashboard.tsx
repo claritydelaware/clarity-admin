@@ -2,19 +2,24 @@ import { Activity, DollarSign, Clock, TrendingUp, ArrowDownToLine, Percent, Cale
 import { useDashboard } from '../hooks/useDashboard'
 import { useDateWindow } from '../hooks/useDateWindow'
 import { useCapacityAlerts, useCapacityAlertCollapse } from '../hooks/useCapacityAlerts'
-import { formatCurrency, getPayerStyle, CLINICIAN_COLORS } from '../lib/utils'
-import { SkeletonMetricCards } from '../components/ui/Skeleton'
+import { useStaff } from '../hooks/useStaff'
+import { useAttention } from '../hooks/useAttention'
+import { formatCurrency, formatCurrencyWhole, formatCurrencyCompact } from '../lib/utils'
+import { CLINICIAN_COLORS, COLORS } from '../lib/chartTheme'
+import { SkeletonDashboard } from '../components/ui/Skeleton'
 import MetricCard from '../components/ui/MetricCard'
 import Tabs from '../components/ui/Tabs'
-import ProgressBar from '../components/ui/ProgressBar'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import PageHeader from '../components/layout/PageHeader'
 import ChartCard from '../components/charts/ChartCard'
 import AreaChart from '../components/charts/AreaChart'
-import BarChart from '../components/charts/BarChart'
 import CapacityAlert from '../components/dashboard/CapacityAlert'
+import AttentionStrip from '../components/dashboard/AttentionStrip'
+import UtilizationBars from '../components/dashboard/UtilizationBars'
+import AgingList from '../components/dashboard/AgingList'
+import PayerMixList from '../components/dashboard/PayerMixList'
 import TrendChart from '../components/dashboard/TrendChart'
-import { SessionsTooltip, RevenueTooltip, PendingTooltip, ReceivedTooltip } from '../components/dashboard/DashboardTooltips'
+import { SessionsTooltip, RevenueTooltip, ReceivedTooltip } from '../components/dashboard/DashboardTooltips'
 import type { Clinician, DateWindow } from '../types'
 
 const DATE_WINDOW_TABS = [
@@ -33,11 +38,26 @@ function pctDelta(current: number, prior: number): number | null {
   return isNaN(pct) || !isFinite(pct) ? null : pct
 }
 
+function vs(prior: string, label: string) {
+  return label ? `vs ${prior} · ${label}` : `vs ${prior}`
+}
+
+function SectionLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <h2 className="text-xs font-ui font-semibold uppercase tracking-wider text-ink">{children}</h2>
+      {hint && <span className="text-xs font-body text-muted">{hint}</span>}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { window: dateWindow, setWindow, label: windowLabel, fromISO, toISO } = useDateWindow()
   const { data, isLoading, isError, error } = useDashboard(fromISO, toISO, dateWindow)
   const capacityAlerts = useCapacityAlerts()
   const { collapsed: alertsCollapsed, toggleCollapsed: toggleAlertsCollapsed } = useCapacityAlertCollapse(capacityAlerts)
+  const { data: staff } = useStaff()
+  const { items: attentionItems, snoozed: snoozedItems, snooze, unsnooze } = useAttention()
 
   if (isLoading) {
     return (
@@ -46,7 +66,7 @@ export default function Dashboard() {
           title="Dashboard"
           actions={<Tabs tabs={DATE_WINDOW_TABS} value={dateWindow} onChange={v => setWindow(v as DateWindow)} size="sm" />}
         />
-        <SkeletonMetricCards />
+        <SkeletonDashboard />
       </div>
     )
   }
@@ -58,11 +78,25 @@ export default function Dashboard() {
   const priorLabel = priorPeriodLabel ?? ''
 
   const agingRows = [
-    { label: '0–30 days',  ...aging.bucket0_30,  danger: false },
-    { label: '31–60 days', ...aging.bucket31_60, danger: false },
-    { label: '61–90 days', ...aging.bucket61_90, danger: false },
-    { label: '90+ days',   ...aging.bucket90plus, danger: aging.bucket90plus.total > 0 },
+    { label: '0–30 days',  ...aging.bucket0_30 },
+    { label: '31–60 days', ...aging.bucket31_60 },
+    { label: '61–90 days', ...aging.bucket61_90 },
+    { label: '90+ days',   ...aging.bucket90plus },
   ]
+
+  const targets = CLINICIANS.map(c => {
+    const t = staff?.find(m => m.name.startsWith(c))?.targetCapacity
+    return t ? `${c} ${t}/wk` : null
+  })
+  const utilSubtitle = targets.every(Boolean)
+    ? `Share of weekly session target (${targets.join(' · ')}); the line marks 100%`
+    : 'Share of weekly session target; the line marks 100%'
+
+  const revenueSpark = sixMonthTrend.map(d => d.revenue)
+  const sessionsSpark = sixMonthTrend.map(d => CLINICIANS.reduce((sum, c) => sum + (d.sessionsByClinician[c] ?? 0), 0))
+  const avgRevenue = revenueSpark.length ? revenueSpark.reduce((a, b) => a + b, 0) / revenueSpark.length : 0
+
+  const incoming = data.incomingPayments && data.incomingPayments.count > 0 ? data.incomingPayments : null
 
   return (
     <div className="space-y-6">
@@ -76,140 +110,136 @@ export default function Dashboard() {
         <CapacityAlert alerts={capacityAlerts} collapsed={alertsCollapsed} onToggleCollapsed={toggleAlertsCollapsed} />
       )}
 
-      {/* Primary metric cards */}
+      <AttentionStrip items={attentionItems} snoozed={snoozedItems} onSnooze={snooze} onRestore={unsnooze} />
+
+      {/* Period metrics — follow the MTD/QTD/YTD selector */}
+      <section className="space-y-3">
+      <SectionLabel hint={windowLabel}>This period</SectionLabel>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <MetricCard
           index={0}
           icon={<Activity size={16} />}
-          label={`Sessions — ${windowLabel}`}
+          label="Sessions"
           value={String(cm.sessions)}
-          sub={CLINICIANS.map(c => `${c}: ${cm.sessionsByClinician[c]}`).join(' · ')}
+          caption={pp ? vs(String(pp.sessions), priorLabel) : undefined}
           delta={pp ? pctDelta(cm.sessions, pp.sessions) : null}
+          sparkline={sessionsSpark}
+          breakdown={CLINICIANS.map(c => ({ label: c, value: cm.sessionsByClinician[c], color: CLINICIAN_COLORS[c] }))}
+          info="Completed sessions by service date. Excludes add-on (90785) and screening/testing codes."
           tooltipContent={pp ? <SessionsTooltip cm={cm} pp={pp} priorLabel={priorLabel} ppFull={ppFull} ppFullLabel={ppFullLabel} /> : undefined}
         />
         <MetricCard
           index={1}
           icon={<DollarSign size={16} />}
-          label={`Revenue — ${windowLabel}`}
-          value={formatCurrency(cm.revenue)}
-          sub={CLINICIANS.map(c => `${c}: ${formatCurrency(cm.revenueByClinician[c])}`).join(' · ')}
+          label="Revenue"
+          value={formatCurrencyWhole(cm.revenue)}
+          caption={pp ? vs(formatCurrencyWhole(pp.revenue), priorLabel) : undefined}
           delta={pp ? pctDelta(cm.revenue, pp.revenue) : null}
+          sparkline={revenueSpark}
+          breakdown={CLINICIANS.map(c => ({ label: c, value: cm.revenueByClinician[c], color: CLINICIAN_COLORS[c], display: formatCurrencyCompact(cm.revenueByClinician[c]) }))}
+          info="Billed value (client + insurance) of sessions with service dates in this period. Excludes denied claims. Not the same as cash received."
           tooltipContent={pp ? <RevenueTooltip cm={cm} pp={pp} priorLabel={priorLabel} ppFull={ppFull} ppFullLabel={ppFullLabel} /> : undefined}
         />
         <MetricCard
           index={2}
-          icon={<Clock size={16} />}
-          label="Pending (all time)"
-          value={`${cm.pendingCount} claims`}
-          sub={formatCurrency(cm.pendingAmount)}
-          delta={pp ? pctDelta(cm.pendingCount, pp.pendingCount) : null}
-          tooltipContent={<PendingTooltip aging={data.aging} />}
+          icon={<TrendingUp size={16} />}
+          label="Received"
+          value={formatCurrencyWhole(cm.receivedAmount)}
+          caption={pp ? vs(formatCurrencyWhole(pp.receivedAmount), priorLabel) : undefined}
+          delta={pp ? pctDelta(cm.receivedAmount, pp.receivedAmount) : null}
+          breakdown={cm.receivedByClinician
+            ? CLINICIANS.map(c => ({ label: c, value: cm.receivedByClinician![c], color: CLINICIAN_COLORS[c], display: formatCurrencyCompact(cm.receivedByClinician![c]) }))
+            : undefined}
+          info="Cash actually received in this period, by payment date."
+          tooltipContent={pp ? <ReceivedTooltip cm={cm} pp={pp} priorLabel={priorLabel} ppFull={ppFull} ppFullLabel={ppFullLabel} /> : undefined}
         />
         <MetricCard
           index={3}
-          icon={<TrendingUp size={16} />}
-          label={`Received — ${windowLabel}`}
-          value={formatCurrency(cm.receivedAmount)}
-          delta={pp ? pctDelta(cm.receivedAmount, pp.receivedAmount) : null}
-          tooltipContent={pp ? <ReceivedTooltip cm={cm} pp={pp} priorLabel={priorLabel} ppFull={ppFull} ppFullLabel={ppFullLabel} /> : undefined}
+          icon={<Percent size={16} />}
+          label="Collection rate"
+          value={data.collectionRate != null ? `${data.collectionRate}%` : '—'}
+          sub="Received ÷ Revenue"
+          info="Share of this period's revenue that has been collected so far. Rises as pending claims pay."
         />
       </div>
+      </section>
 
-      {/* Secondary metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {data.incomingPayments && data.incomingPayments.count > 0 && (
+      {/* Snapshot metrics — current state, unaffected by the period selector */}
+      <section className="space-y-3">
+      <SectionLabel hint="Current — not affected by the period selector">Right now</SectionLabel>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${incoming ? 'xl:grid-cols-3' : 'xl:grid-cols-2'}`}>
+        <MetricCard
+          index={4}
+          icon={<Clock size={16} />}
+          label="Pending claims"
+          value={String(cm.pendingCount)}
+          sub={`${formatCurrencyWhole(cm.pendingAmount)} awaiting payment`}
+        />
+        {incoming && (
           <MetricCard
-            index={0}
+            index={5}
             icon={<ArrowDownToLine size={16} />}
-            label="Incoming Payments"
-            value={formatCurrency(data.incomingPayments.amount)}
-            sub={`${data.incomingPayments.count} claim${data.incomingPayments.count !== 1 ? 's' : ''} — Payment Pending or future-dated`}
+            label="Incoming payments"
+            value={formatCurrencyWhole(incoming.amount)}
+            sub={`${incoming.count} claim${incoming.count !== 1 ? 's' : ''} — Payment Pending or future-dated`}
           />
         )}
         <MetricCard
-          index={1}
-          icon={<Percent size={16} />}
-          label={`Collection Rate — ${windowLabel}`}
-          value={data.collectionRate != null ? `${data.collectionRate}%` : '—'}
-          sub="Received ÷ Revenue"
-        />
-        <MetricCard
-          index={2}
+          index={6}
           icon={<CalendarClock size={16} />}
-          label="Avg Days to Payment"
+          label="Avg days to payment"
           value={data.avgDaysToPayment != null ? `${data.avgDaysToPayment} days` : '—'}
-          sub="Last 90 days"
+          sub="Trailing 90 days"
         />
       </div>
+      </section>
 
       {/* Utilization */}
-      <ChartCard title="Utilization vs Target" subtitle="Shannon/Jen: 25 sessions/wk · Emily: 10 sessions/wk · Shana: 20 sessions/wk">
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {CLINICIANS.map(c => (
-            <ProgressBar
-              key={c}
-              value={Math.min(100, cm.utilizationByClinician[c])}
-              label={c}
-              color={CLINICIAN_COLORS[c]}
-              size="sm"
-            />
-          ))}
-        </div>
+      <ChartCard title="Utilization vs target" subtitle={utilSubtitle}>
+        <UtilizationBars clinicians={CLINICIANS} values={cm.utilizationByClinician} />
       </ChartCard>
 
       {/* Revenue Trend + Aging side-by-side */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <ChartCard title="Revenue Trend" className="lg:col-span-3">
+        <ChartCard title="Revenue trend" subtitle="Last 6 months · dashed line is the 6-month average" className="lg:col-span-3">
           <AreaChart
-            series={[{ name: 'Revenue', data: sixMonthTrend.map(d => d.revenue) }]}
+            series={[{ name: 'Revenue', data: revenueSpark }]}
             categories={sixMonthTrend.map(d => d.month)}
-            colors={['#254D54']}
-            yFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+            colors={[COLORS.teal]}
+            yFormatter={(v: number) => formatCurrencyCompact(v)}
             tooltipFormatter={(v: number) => formatCurrency(v)}
+            options={{
+              annotations: {
+                yaxis: [{
+                  y: avgRevenue,
+                  borderColor: COLORS.mutedLight,
+                  strokeDashArray: 4,
+                  label: {
+                    text: `Avg ${formatCurrencyCompact(avgRevenue)}`,
+                    position: 'left',
+                    offsetX: 60,
+                    style: { background: 'transparent', color: COLORS.muted, fontSize: '10px' },
+                  },
+                }],
+              },
+            }}
           />
         </ChartCard>
 
-        <div className="lg:col-span-2 bg-surface rounded-xl border border-border shadow-card">
-          <div className="px-5 py-4">
-            <h3 className="text-sm font-semibold font-heading text-ink">Pending Claims Aging</h3>
-          </div>
-          <div className="divide-y divide-border">
-            {agingRows.map(row => (
-              <div key={row.label} className="flex items-center justify-between py-3 px-5">
-                <p className={`text-sm font-medium font-body ${row.danger ? 'text-error' : 'text-ink'}`}>{row.label}</p>
-                <div className="flex items-center gap-4">
-                  <p className={`text-sm tabular-nums font-body ${row.danger ? 'text-error' : 'text-muted'}`}>
-                    {row.count} claim{row.count !== 1 ? 's' : ''}
-                  </p>
-                  <p className={`text-sm font-medium tabular-nums font-body min-w-20 text-right ${row.danger ? 'text-error' : 'text-ink'}`}>
-                    {formatCurrency(row.total)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ChartCard title="Pending claims aging" subtitle="Open balance by age" className="lg:col-span-2">
+          <div className="-mx-5 -mb-5"><AgingList rows={agingRows} /></div>
+        </ChartCard>
       </div>
 
       {/* Custom Trend Explorer */}
       <TrendChart />
 
       {/* Payer Mix */}
-      <ChartCard title="Payer Mix" subtitle="This month">
+      <ChartCard title="Payer mix" subtitle="Revenue by payer · this month">
         {payerMix.length === 0 ? (
           <p className="text-sm text-muted font-body py-8 text-center">No data for this month.</p>
         ) : (
-          <BarChart
-            series={[{ name: 'Revenue', data: payerMix.map(d => d.amount) }]}
-            categories={payerMix.map(d => d.payer)}
-            colors={payerMix.map(d => getPayerStyle(d.payer).backgroundColor)}
-            distributed
-            yFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
-            tooltipFormatter={(v: number) => formatCurrency(v)}
-            options={{
-              xaxis: { labels: { rotate: -35, style: { fontSize: '10px' } } },
-            }}
-          />
+          <PayerMixList rows={payerMix.map(d => ({ payer: d.payer, amount: d.amount }))} />
         )}
       </ChartCard>
     </div>

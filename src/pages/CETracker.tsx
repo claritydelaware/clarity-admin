@@ -104,7 +104,7 @@ export default function CETracker() {
                         <p className="text-xs text-muted font-body py-2">No CE activities logged yet.</p>
                       ) : (
                         <table className="w-full text-sm font-body">
-                          <tbody className="divide-y divide-gray-100">
+                          <tbody className="divide-y divide-border">
                             {entries.map(entry => (
                               <tr
                                 key={entry.rowIndex}

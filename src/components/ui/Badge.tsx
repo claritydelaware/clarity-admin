@@ -1,15 +1,8 @@
 import type { ClaimStatus, CredentialingStatus, CEStatusValue, PursuitStatus, StepStatus } from '../../types'
 import { getPayerStyle } from '../../lib/utils'
+import { CLAIM_STATUS_STYLE, onColor } from '../../lib/chartTheme'
 
-const STATUS_COLORS: Record<ClaimStatus, string> = {
-  'Pending':           'var(--color-status-orange)',
-  'Payment Received':  'var(--color-status-green)',
-  'Finalized':         'var(--color-status-gray)',
-  'Denied':            'var(--color-status-red)',
-  'Deductible':        'var(--color-status-blue)',
-  'Sent to Secondary': 'var(--color-status-purple)',
-  'Payment Pending':   'var(--color-status-green)',
-}
+const FALLBACK_STATUS = { bg: 'var(--color-status-gray)', fg: '#fff' }
 
 interface Props {
   status: ClaimStatus
@@ -19,15 +12,15 @@ interface Props {
 const BASE = 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-ui font-medium whitespace-nowrap'
 
 export default function Badge({ status, onClick }: Props) {
-  const bg = STATUS_COLORS[status] ?? 'var(--color-status-gray)'
+  const { bg, fg } = CLAIM_STATUS_STYLE[status] ?? FALLBACK_STATUS
 
   if (onClick) {
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`${BASE} text-white cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal`}
-        style={{ backgroundColor: bg }}
+        className={`${BASE} cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal`}
+        style={{ backgroundColor: bg, color: fg }}
         title="Click to update status"
       >
         {status}
@@ -36,7 +29,7 @@ export default function Badge({ status, onClick }: Props) {
   }
 
   return (
-    <span className={`${BASE} text-white`} style={{ backgroundColor: bg }}>
+    <span className={BASE} style={{ backgroundColor: bg, color: fg }}>
       {status}
     </span>
   )
@@ -65,8 +58,8 @@ export function CredentialingStatusBadge({ status, onClick }: CredentialingBadge
       <button
         type="button"
         onClick={onClick}
-        className={`${BASE} text-white cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal`}
-        style={{ backgroundColor: bg }}
+        className={`${BASE} cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal`}
+        style={{ backgroundColor: bg, color: onColor(bg) }}
         title="Click to update status"
       >
         {status}
@@ -75,7 +68,7 @@ export function CredentialingStatusBadge({ status, onClick }: CredentialingBadge
   }
 
   return (
-    <span className={`${BASE} text-white`} style={{ backgroundColor: bg }}>
+    <span className={BASE} style={{ backgroundColor: bg, color: onColor(bg) }}>
       {status}
     </span>
   )
@@ -89,7 +82,7 @@ const CE_STATUS_COLORS: Record<CEStatusValue, string> = {
 
 export function CEStatusBadge({ status }: { status: CEStatusValue }) {
   return (
-    <span className={`${BASE} text-white`} style={{ backgroundColor: CE_STATUS_COLORS[status] ?? 'var(--color-status-gray)' }}>
+    <span className={BASE} style={{ backgroundColor: CE_STATUS_COLORS[status] ?? 'var(--color-status-gray)', color: onColor(CE_STATUS_COLORS[status] ?? 'var(--color-status-gray)') }}>
       {status}
     </span>
   )
@@ -106,7 +99,7 @@ const PURSUIT_STATUS_COLORS: Record<PursuitStatus, string> = {
 
 export function PursuitStatusBadge({ status }: { status: PursuitStatus }) {
   return (
-    <span className={`${BASE} text-white`} style={{ backgroundColor: PURSUIT_STATUS_COLORS[status] ?? 'var(--color-status-gray)' }}>
+    <span className={BASE} style={{ backgroundColor: PURSUIT_STATUS_COLORS[status] ?? 'var(--color-status-gray)', color: onColor(PURSUIT_STATUS_COLORS[status] ?? 'var(--color-status-gray)') }}>
       {status}
     </span>
   )
@@ -121,7 +114,7 @@ const STEP_STATUS_COLORS: Record<StepStatus, string> = {
 
 export function StepStatusBadge({ status }: { status: StepStatus }) {
   return (
-    <span className={`${BASE} text-white`} style={{ backgroundColor: STEP_STATUS_COLORS[status] ?? 'var(--color-status-gray)' }}>
+    <span className={BASE} style={{ backgroundColor: STEP_STATUS_COLORS[status] ?? 'var(--color-status-gray)', color: onColor(STEP_STATUS_COLORS[status] ?? 'var(--color-status-gray)') }}>
       {status}
     </span>
   )

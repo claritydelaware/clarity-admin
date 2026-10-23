@@ -7,6 +7,7 @@ import { useTrend } from '../../hooks/useAnalytics'
 import { formatCurrency, CLINICIAN_COLORS } from '../../lib/utils'
 import { CLINICIANS } from '../../types'
 import type { TrendGranularity, Clinician } from '../../types'
+import { COLORS } from '../../lib/chartTheme'
 
 const GRANULARITY_TABS = [
   { value: 'day', label: 'Daily' },
@@ -25,13 +26,13 @@ const METRIC_TABS: { value: Metric; label: string }[] = [
 ]
 
 const METRIC_COLOR: Record<Metric, string> = {
-  revenue: '#254D54',
-  income: '#16A34A',
-  sessions: '#F6C54D',
+  revenue: COLORS.teal,
+  income: COLORS.success,
+  sessions: COLORS.gold,
 }
 
 const inputClass =
-  'h-8 rounded border border-gray-200 bg-white px-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent'
+  'h-8 rounded border border-border bg-white px-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent'
 
 export default function TrendChart() {
   const [granularity, setGranularity] = useState<TrendGranularity>('month')
@@ -99,7 +100,7 @@ export default function TrendChart() {
               <ChevronDown size={12} className="opacity-50 shrink-0" />
             </button>
             {clinicianOpen && (
-              <div className="absolute z-20 top-9 right-0 bg-white border border-gray-200 rounded-lg shadow-md py-1 min-w-40">
+              <div className="absolute z-20 top-9 right-0 bg-white border border-border rounded-lg shadow-md py-1 min-w-40">
                 {CLINICIANS.map(c => (
                   <label
                     key={c}

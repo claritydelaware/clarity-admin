@@ -29,7 +29,7 @@ export default function BoardRow<T>({ row, compact = false, groupColor }: Props<
           <td
             key={cell.id}
             role="gridcell"
-            className={`${rowPy} text-sm border-r border-b border-border-strong/40 last:border-r-0${alignClass}`}
+            className={`${rowPy} text-sm border-b border-border${alignClass}`}
             style={{
               borderLeft: isFirst && groupColor ? `3px solid ${groupColor}` : undefined,
               backgroundColor: cellBg,

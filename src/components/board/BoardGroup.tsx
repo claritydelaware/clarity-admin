@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, Children, cloneElement, isValidElement } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { onColor } from '../../lib/chartTheme'
 
 export interface ColumnSummary {
   id: string
@@ -45,6 +46,7 @@ export default function BoardGroup({ label, count, color, colSpan, summary, colu
     return child
   })
 
+  const fg = onColor(color)
   const firstSummaryIdx = columnSummaries?.findIndex(c => c.value) ?? -1
   const useCellLayout = columnSummaries && firstSummaryIdx >= 0
   const labelSpan = useCellLayout ? firstSummaryIdx : colSpan
@@ -54,7 +56,7 @@ export default function BoardGroup({ label, count, color, colSpan, summary, colu
       <tr
         role="row"
         className="cursor-pointer select-none transition-colors"
-        style={{ backgroundColor: color }}
+        style={{ backgroundColor: color, color: fg }}
         onClick={toggle}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
         tabIndex={0}
@@ -76,15 +78,15 @@ export default function BoardGroup({ label, count, color, colSpan, summary, colu
               />
             )}
             {collapsed
-              ? <ChevronRight size={16} className="shrink-0 text-white" />
-              : <ChevronDown size={16} className="shrink-0 text-white" />
+              ? <ChevronRight size={16} className="shrink-0" />
+              : <ChevronDown size={16} className="shrink-0" />
             }
-            <span className="text-sm font-heading font-semibold text-white">{label}</span>
-            <span className="text-xs font-ui font-medium px-2 py-0.5 rounded-full bg-white/20 text-white">
+            <span className="text-sm font-heading font-semibold">{label}</span>
+            <span className="text-xs font-ui font-medium px-2 py-0.5 rounded-full bg-black/15">
               {count}
             </span>
             {!useCellLayout && summary && (
-              <span className="text-xs font-ui text-white/80 tabular-nums">{summary}</span>
+              <span className="text-xs font-ui opacity-80 tabular-nums">{summary}</span>
             )}
           </div>
         </td>
@@ -94,7 +96,7 @@ export default function BoardGroup({ label, count, color, colSpan, summary, colu
             className="py-2.5 px-2 border-b border-border/50 text-center"
           >
             {col.value && (
-              <span className="text-xs font-ui font-semibold text-white tabular-nums">{col.value}</span>
+              <span className="text-xs font-ui font-semibold tabular-nums">{col.value}</span>
             )}
           </td>
         ))}

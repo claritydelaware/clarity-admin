@@ -274,7 +274,7 @@ export default function EditClaim() {
             </div>
 
             {isHHO && (
-              <div className="grid grid-cols-2 gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="grid grid-cols-2 gap-4 rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
                 <div>
                   <label className={labelClass}>
                     Ins. Paid (HHO)
@@ -289,7 +289,7 @@ export default function EditClaim() {
                   </label>
                   <div className={[
                     'flex h-9 items-center px-3 rounded-lg border border-border bg-surface-sunken text-sm font-body tabular-nums select-none',
-                    hasHHOAmounts && overUnderHHO > 0 ? 'text-green-700 font-medium' :
+                    hasHHOAmounts && overUnderHHO > 0 ? 'text-success font-medium' :
                     hasHHOAmounts && overUnderHHO < 0 ? 'text-error font-medium' : 'text-muted',
                   ].join(' ')}>
                     {hasHHOAmounts
@@ -311,13 +311,13 @@ export default function EditClaim() {
             </div>
 
             {isDiscontinuedCode && (
-              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+              <div className="flex items-start gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2.5 text-sm font-body text-warning">
                 <AlertTriangle size={15} className="mt-0.5 shrink-0" />
                 {serviceCode} was discontinued after 1/15/2026. Verify this is intentional.
               </div>
             )}
             {isHHOCash && (
-              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+              <div className="flex items-start gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2.5 text-sm font-body text-warning">
                 <AlertTriangle size={15} className="mt-0.5 shrink-0" />
                 Health Options (Medicaid) clients cannot be charged no-show fees.
               </div>

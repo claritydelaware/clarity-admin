@@ -42,7 +42,7 @@ export default function PartnerCard({ summary }: { summary: PartnerPeriodSummary
         </div>
         <div>
           <dt className="text-xs font-ui text-muted uppercase tracking-wide">Pct Received</dt>
-          <dd className={`font-heading text-base font-semibold tabular-nums ${pctRecv >= 80 ? 'text-success' : 'text-amber-600'}`}>{pct(pctRecv)}</dd>
+          <dd className={`font-heading text-base font-semibold tabular-nums ${pctRecv >= 80 ? 'text-success' : 'text-warning'}`}>{pct(pctRecv)}</dd>
         </div>
       </dl>
 

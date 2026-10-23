@@ -4,6 +4,7 @@ import { mergeChartOptions } from '../charts/baseChartOptions'
 import ChartCard from '../charts/ChartCard'
 import { formatCurrency, CLINICIAN_COLORS } from '../../lib/utils'
 import type { HourlyPeriodHistoryEntry, HourlyPerformanceHistory } from '../../types'
+import { COLORS } from '../../lib/chartTheme'
 
 function ClinicianChart({ name, entries }: { name: 'Emily' | 'Shana'; entries: HourlyPeriodHistoryEntry[] }) {
   if (entries.length === 0) return null
@@ -20,7 +21,7 @@ function ClinicianChart({ name, entries }: { name: 'Emily' | 'Shana'; entries: H
     chart: { type: 'line' },
     stroke: { curve: 'smooth', width: [2, 2.5] },
     fill: { type: ['gradient', 'solid'], gradient: { shadeIntensity: 1, opacityFrom: 0.15, opacityTo: 0.02 } },
-    colors: [CLINICIAN_COLORS[name], '#16A34A'],
+    colors: [CLINICIAN_COLORS[name], COLORS.success],
     xaxis: { type: 'datetime', labels: { datetimeUTC: false, format: 'MMM d' } },
     yaxis: {
       labels: {

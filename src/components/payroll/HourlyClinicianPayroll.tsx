@@ -14,6 +14,7 @@ import LoadingSpinner from '../ui/LoadingSpinner'
 import ErrorBanner from '../ui/ErrorBanner'
 import PayHistoryTable from './PayHistoryTable'
 import type { Clinician, EmilyPayPeriodSummary, HourlyPayPeriod, EmilySubmission } from '../../types'
+import { COLORS } from '../../lib/chartTheme'
 
 function formatPeriodLabel(start: string, end: string): string {
   if (!start) return '—'
@@ -218,7 +219,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
     : Math.abs(totalDelta) <= 2 && maxDelta <= 2 ? 'amber'
     : 'red'
   const reconcStatusLabel = { green: '✓ Counts match', amber: '⚠ Minor discrepancies', red: '✗ Significant mismatch' }
-  const reconcStatusColor = { green: 'text-success', amber: 'text-amber-600', red: 'text-error' }
+  const reconcStatusColor = { green: 'text-success', amber: 'text-warning', red: 'text-error' }
 
   const periodOptions = [...periods].reverse().map(p => ({
     value: p.periodStart,
@@ -274,7 +275,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                       animations: { enabled: false },
                     },
                     stroke: { curve: 'smooth', width: 1.5 },
-                    colors: ['#254D54'],
+                    colors: [COLORS.teal],
                     tooltip: { enabled: false },
                   } as ApexOptions}
                   series={[{ data: sparklineData.map(d => d.margin) }]}
@@ -321,7 +322,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 />
                 × ${summary.therapySessionRate})
                 {effTherapySessions !== summary.claimsTherapySessions && (
-                  <span className="text-[10px] text-amber-600 italic whitespace-nowrap">claims: {summary.claimsTherapySessions}</span>
+                  <span className="text-[10px] text-warning italic whitespace-nowrap">claims: {summary.claimsTherapySessions}</span>
                 )}
               </span>
               <span className="tabular-nums text-ink shrink-0">{formatCurrency(effTherapyPay)}</span>
@@ -341,7 +342,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 />
                 × ${summary.otherSessionRate})
                 {effOtherSessions !== summary.claimsOtherSessions && (
-                  <span className="text-[10px] text-amber-600 italic whitespace-nowrap">claims: {summary.claimsOtherSessions}</span>
+                  <span className="text-[10px] text-warning italic whitespace-nowrap">claims: {summary.claimsOtherSessions}</span>
                 )}
               </span>
               <span className="tabular-nums text-ink shrink-0">{formatCurrency(effOtherPay)}</span>
@@ -363,7 +364,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                 />
                 × ${summary.noShowRate})
                 {effNoShows !== summary.claimsNoShows && (
-                  <span className="text-[10px] text-amber-600 italic whitespace-nowrap">claims: {summary.claimsNoShows}</span>
+                  <span className="text-[10px] text-warning italic whitespace-nowrap">claims: {summary.claimsNoShows}</span>
                 )}
               </span>
               <span className={`tabular-nums shrink-0 ${effNoShowsConfirmed ? 'text-ink' : 'text-muted'}`}>{formatCurrency(effNoShowPay)}</span>
@@ -522,7 +523,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                             <td className="py-1.5 text-ink">{r.label}</td>
                             <td className="py-1.5 text-right tabular-nums">{r.reported}</td>
                             <td className="py-1.5 text-right tabular-nums">{r.claims}</td>
-                            <td className={`py-1.5 text-right tabular-nums font-medium ${delta !== 0 ? Math.abs(delta) >= 3 ? 'text-error' : 'text-amber-600' : 'text-muted'}`}>
+                            <td className={`py-1.5 text-right tabular-nums font-medium ${delta !== 0 ? Math.abs(delta) >= 3 ? 'text-error' : 'text-warning' : 'text-muted'}`}>
                               {delta !== 0 ? (delta > 0 ? `+${delta}` : String(delta)) : '—'}
                             </td>
                           </tr>
@@ -532,7 +533,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                         <td className="py-1.5 text-ink">Total</td>
                         <td className="py-1.5 text-right tabular-nums">{totalReported}</td>
                         <td className="py-1.5 text-right tabular-nums">{totalClaims}</td>
-                        <td className={`py-1.5 text-right tabular-nums font-medium ${totalDelta !== 0 ? Math.abs(totalDelta) >= 3 ? 'text-error' : 'text-amber-600' : 'text-muted'}`}>
+                        <td className={`py-1.5 text-right tabular-nums font-medium ${totalDelta !== 0 ? Math.abs(totalDelta) >= 3 ? 'text-error' : 'text-warning' : 'text-muted'}`}>
                           {totalDelta !== 0 ? (totalDelta > 0 ? `+${totalDelta}` : String(totalDelta)) : '—'}
                         </td>
                       </tr>
@@ -543,7 +544,7 @@ export default function HourlyClinicianPayroll({ clinician, clinicianFullName, p
                     <p className="text-xs font-body text-muted">
                       Prior 3-period avg therapy sessions: <span className="font-medium text-ink">{summary.priorPeriodAvgSessions}</span>
                       {effTherapySessions > 0 && Math.abs(effTherapySessions - summary.priorPeriodAvgSessions) > 3 && (
-                        <span className="ml-1.5 text-amber-600">
+                        <span className="ml-1.5 text-warning">
                           ({effTherapySessions > summary.priorPeriodAvgSessions ? '+' : ''}{Math.round(effTherapySessions - summary.priorPeriodAvgSessions)} from avg)
                         </span>
                       )}

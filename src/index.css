@@ -11,8 +11,9 @@
   --color-gold-pale:  #FFF8E7;
   --color-ink:        #1A1A1A;
   --color-muted:      #6B7280;
-  --color-success:    #16A34A;
+  --color-success:    #15803D;
   --color-error:      #DC2626;
+  --color-warning:    #B45309;
 
   /* Surface */
   --color-surface:        #FFFFFF;
@@ -22,19 +23,28 @@
   --color-border:        #E6E9EF;
   --color-border-strong: #C5CDD8;
 
-  /* Status (monday.com palette) */
-  --color-status-green:  #00C875;
-  --color-status-orange: #FDAB3D;
-  --color-status-red:    #E2445C;
-  --color-status-blue:   #0086C9;
-  --color-status-purple: #A25DDC;
-  --color-status-gray:   #C4C4C4;
+  /* Feedback surfaces (alerts, delta badges, highlighted rows) */
+  --color-success-bg:     #E7F5EC;
+  --color-error-bg:       #FDECEC;
+  --color-error-border:   #F4B8B8;
+  --color-warning-bg:     #FDF3D6;
+  --color-warning-border: #F3D58A;
 
-  /* Clinician */
+  /* Status — mirrored in src/lib/chartTheme.ts. Every fill below passes 4.5:1
+     with white text except status-orange (gold), which takes ink text. */
+  --color-status-green:  #15803D;
+  --color-status-orange: #F6C54D;
+  --color-status-red:    #DC2626;
+  --color-status-blue:   #0A6FA8;
+  --color-status-purple: #7E3FB8;
+  --color-status-gray:   #6B7280;
+  --color-status-teal:   #3A7078;
+
+  /* Clinician — four hues so stacked bars/lines stay distinguishable */
   --color-clinician-shannon: #254D54;
   --color-clinician-jen:     #F6C54D;
-  --color-clinician-emily:   #3A7078;
-  --color-clinician-shana:   #C9922A;
+  --color-clinician-emily:   #2F76A8;
+  --color-clinician-shana:   #B4533C;
 
   /* Radius */
   --radius-sm: 6px;
@@ -124,7 +134,7 @@
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--color-surface-sunken) 25%, var(--color-border) 50%, var(--color-surface-sunken) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -152,4 +162,26 @@ a, button, [role="button"], [role="tab"], [role="menuitem"] {
   transition-property: color, background-color, border-color, opacity, transform;
   transition-duration: 150ms;
   transition-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Shared table header cell typography - add alongside padding/alignment utilities. */
+  .table-th {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    font-family: var(--font-ui);
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 }

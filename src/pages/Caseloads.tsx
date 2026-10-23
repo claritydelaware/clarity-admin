@@ -221,7 +221,7 @@ export default function Caseloads() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Activity size={13} className="text-green-600" />
+                  <Activity size={13} className="text-success" />
                   <p className="text-xs text-muted font-ui uppercase tracking-wide">Active (30d)</p>
                 </div>
                 <p className="text-2xl font-heading text-teal">{activeCount}</p>
@@ -428,7 +428,7 @@ export default function Caseloads() {
                           <span className={[
                             'inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium',
                             stat.isActive
-                              ? 'bg-green-50 border border-green-200 text-green-700'
+                              ? 'bg-success-bg border border-green-200 text-success'
                               : 'bg-gray-100 border border-border text-muted',
                           ].join(' ')}>
                             <span className={`w-1.5 h-1.5 rounded-full ${stat.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />

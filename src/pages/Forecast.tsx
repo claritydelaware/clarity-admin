@@ -6,16 +6,19 @@ import { useForecastAccuracy } from '../hooks/useAnalytics'
 import { usePayerPerformance } from '../hooks/usePayerPerformance'
 import { useToast } from '../context/ToastContext'
 import { api } from '../lib/api'
-import { formatCurrency, isArchived } from '../lib/utils'
+import { formatCurrency, formatCurrencyCompact, isArchived } from '../lib/utils'
+import ChartCard from '../components/charts/ChartCard'
+import BarChart from '../components/charts/BarChart'
 import PageHeader from '../components/layout/PageHeader'
 import MetricCard from '../components/ui/MetricCard'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import ErrorBanner from '../components/ui/ErrorBanner'
-import LoadingSpinner from '../components/ui/LoadingSpinner'
+import { SkeletonMetricCards, SkeletonForecastGroups } from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
 import ProgressBar from '../components/ui/ProgressBar'
 import type { Claim, ForecastAccuracyWeek, PayerPerformance } from '../types'
+import { COLORS } from '../lib/chartTheme'
 
 interface WeekGroup {
   forecastWeek: string
@@ -51,11 +54,13 @@ function ForecastWeekGroup({ forecastWeek, items, isOverdue }: WeekGroup & { isO
   })()
 
   return (
-    <Card padding="none" className={isOverdue ? 'border-red-200' : ''}>
+    <Card padding="none" className={isOverdue ? 'border-error-border' : ''}>
       <button
+        type="button"
+        aria-expanded={open}
         onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${
-          isOverdue ? 'bg-red-50 hover:bg-red-100' : 'bg-teal-pale hover:bg-teal-pale/70'
+        className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal ${
+          isOverdue ? 'bg-error-bg hover:bg-red-100' : 'bg-teal-pale hover:bg-teal-pale/70'
         }`}
       >
         <div className="flex items-center gap-2">
@@ -81,15 +86,15 @@ function ForecastWeekGroup({ forecastWeek, items, isOverdue }: WeekGroup & { isO
           <table className="w-full text-sm font-body min-w-[500px]">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Clinician</th>
-                <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Payer</th>
-                <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Code</th>
-                <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Claim date</th>
-                <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Pending</th>
-                <th className="text-right px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Expected</th>
+                <th className="text-left px-5 py-2 table-th">Clinician</th>
+                <th className="text-left px-4 py-2 table-th">Payer</th>
+                <th className="text-left px-4 py-2 table-th">Code</th>
+                <th className="text-left px-4 py-2 table-th">Claim date</th>
+                <th className="text-left px-4 py-2 table-th">Pending</th>
+                <th className="text-right px-5 py-2 table-th">Expected</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-border">
               {items.map(c => (
                 <tr key={c.rowIndex} className="hover:bg-surface-sunken transition-colors">
                   <td className="px-5 py-2.5 text-ink">{c.clinician}</td>
@@ -120,8 +125,8 @@ function OverdueSection({ weeks }: { weeks: WeekGroup[] }) {
   const totalOverdueAmount = allOverdue.reduce((s, c) => s + c.insuranceAmount, 0)
 
   return (
-    <Card padding="none" className="border-red-200">
-      <div className="flex items-center justify-between px-5 py-3 bg-red-50">
+    <Card padding="none" className="border-error-border">
+      <div className="flex items-center justify-between px-5 py-3 bg-error-bg">
         <div className="flex items-center gap-2">
           <AlertCircle size={13} className="text-error shrink-0" />
           <span className="text-xs font-ui font-medium text-error uppercase tracking-wide">
@@ -140,12 +145,12 @@ function OverdueSection({ weeks }: { weeks: WeekGroup[] }) {
         <table className="w-full text-sm font-body min-w-[500px]">
           <thead>
             <tr className="border-b border-red-100">
-              <th className="text-left px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Clinician</th>
-              <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Payer</th>
-              <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Code</th>
-              <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Claim date</th>
-              <th className="text-left px-4 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Overdue</th>
-              <th className="text-right px-5 py-2 text-xs font-medium font-ui text-muted uppercase tracking-wide">Expected</th>
+              <th className="text-left px-5 py-2 table-th">Clinician</th>
+              <th className="text-left px-4 py-2 table-th">Payer</th>
+              <th className="text-left px-4 py-2 table-th">Code</th>
+              <th className="text-left px-4 py-2 table-th">Claim date</th>
+              <th className="text-left px-4 py-2 table-th">Overdue</th>
+              <th className="text-right px-5 py-2 table-th">Expected</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-red-50">
@@ -268,7 +273,7 @@ function PayerPipelinePanel({ claims, payerPerf }: {
             </div>
             <ProgressBar
               value={grandTotal > 0 ? otherTotal / grandTotal * 100 : 0}
-              color="#C4C4C4"
+              color={COLORS.mutedLight}
               size="sm"
               className="mt-1.5"
             />
@@ -424,7 +429,7 @@ export default function Forecast() {
   const qForecastRemaining = qRemainingClaims.reduce((s, c) => s + c.insuranceAmount, 0)
   const qPendingCount      = qRemainingClaims.length
 
-  if (isLoading) return <LoadingSpinner label="Loading forecast…" />
+  if (isLoading) return <div className="space-y-5"><PageHeader title="Revenue Forecast" subtitle="Pending claims by expected payment week" /><SkeletonMetricCards /><SkeletonForecastGroups /></div>
   if (isError) return <ErrorBanner message={(error as Error).message} />
 
   return (
@@ -473,6 +478,32 @@ export default function Forecast() {
       {(claims?.length ?? 0) > 0 && (
         <QuarterBanner label={qLabel} collected={qCollected} remaining={qForecastRemaining} pendingCount={qPendingCount} />
       )}
+
+      {/* Expected cash by week */}
+      {weeks.length > 0 && (() => {
+        const sum = (items: Claim[]) => items.reduce((a, c) => a + c.insuranceAmount, 0)
+        const bars = [
+          ...(overdueAmount > 0 ? [{ label: 'Overdue', value: overdueAmount, color: COLORS.error }] : []),
+          ...upcomingWeeks.slice(0, 8).map(w => ({
+            label: new Date(w.forecastWeek).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: sum(w.items),
+            color: COLORS.teal,
+          })),
+        ]
+        return (
+          <ChartCard title="Expected payments by week" subtitle="Overdue balance, then the next 8 forecast weeks (week of)">
+            <BarChart
+              series={[{ name: 'Expected', data: bars.map(b => b.value) }]}
+              categories={bars.map(b => b.label)}
+              colors={bars.map(b => b.color)}
+              distributed
+              height={200}
+              yFormatter={(v: number) => formatCurrencyCompact(v)}
+              tooltipFormatter={(v: number) => formatCurrency(v)}
+            />
+          </ChartCard>
+        )
+      })()}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_288px] gap-4 items-start">

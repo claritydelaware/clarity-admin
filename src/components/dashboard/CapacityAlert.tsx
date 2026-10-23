@@ -10,8 +10,8 @@ export default function CapacityAlert({ alerts, collapsed, onToggleCollapsed }: 
   if (alerts.length === 0) return null
 
   const hasDanger = alerts.some(a => a.level === 'danger')
-  const colorClasses = hasDanger ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
-  const labelClasses = hasDanger ? 'text-error' : 'text-amber-700'
+  const colorClasses = hasDanger ? 'bg-error-bg border-error-border' : 'bg-warning-bg border-warning-border'
+  const labelClasses = hasDanger ? 'text-error' : 'text-warning'
 
   if (collapsed) {
     return (
@@ -42,7 +42,7 @@ export default function CapacityAlert({ alerts, collapsed, onToggleCollapsed }: 
       </p>
       <ul className="space-y-0.5">
         {alerts.map(a => (
-          <li key={a.name} className={`text-sm font-body ${a.level === 'danger' ? 'text-error' : 'text-amber-800'}`}>
+          <li key={a.name} className={`text-sm font-body ${a.level === 'danger' ? 'text-error' : 'text-warning'}`}>
             {a.name} has been at {a.pct.toFixed(0)}% utilization over the last 3 weeks
             {a.level === 'danger' ? ' — over capacity, consider caseload review.' : ' — approaching capacity.'}
           </li>

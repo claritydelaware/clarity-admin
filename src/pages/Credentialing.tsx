@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Plus, ShieldCheck } from 'lucide-react'
 import { useCredentialing } from '../hooks/useCredentialing'
 import PageHeader from '../components/layout/PageHeader'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import LoadingSpinner from '../components/ui/LoadingSpinner'
+import Tabs from '../components/ui/Tabs'
+import { SkeletonTable } from '../components/ui/Skeleton'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import EmptyState from '../components/ui/EmptyState'
 import { CredentialingStatusBadge } from '../components/ui/Badge'
@@ -21,6 +22,14 @@ export default function Credentialing() {
   const { data: records, isLoading, isError, error } = useCredentialing()
   const [addingFor, setAddingFor] = useState<Clinician | null>(null)
   const [editing, setEditing] = useState<CredentialingRecord | null>(null)
+  const [view, setView] = useState<'matrix' | 'clinician'>('matrix')
+
+  const matrix = useMemo(() => {
+    const payers = [...new Set((records ?? []).map(r => r.payer))].sort((a, b) => a.localeCompare(b))
+    const cell = new Map<string, CredentialingRecord>()
+    for (const r of records ?? []) cell.set(`${r.payer}|${r.clinician}`, r)
+    return { payers, cell }
+  }, [records])
 
   const byClinician = (clinician: Clinician): CredentialingRecord[] =>
     (records ?? [])
@@ -29,12 +38,61 @@ export default function Credentialing() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Credentialing" subtitle="Payer enrollment status per clinician" />
+      <PageHeader
+        title="Credentialing"
+        subtitle="Payer enrollment status per clinician"
+        actions={
+          <Tabs
+            tabs={[{ value: 'matrix', label: 'Matrix' }, { value: 'clinician', label: 'By clinician' }]}
+            value={view}
+            onChange={v => setView(v as 'matrix' | 'clinician')}
+            size="sm"
+          />
+        }
+      />
 
-      {isLoading && <LoadingSpinner label="Loading credentialing records…" />}
+      {isLoading && <SkeletonTable rows={6} />}
       {isError && <ErrorBanner message={(error as Error).message} />}
 
-      {records && (
+      {records && view === 'matrix' && (
+        <Card padding="none">
+          {matrix.payers.length === 0 ? (
+            <EmptyState icon={<ShieldCheck size={32} />} title="No payers tracked yet" description="Switch to By clinician to add the first one." />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm font-body min-w-[560px]">
+                <thead className="bg-surface-sunken border-b border-border">
+                  <tr>
+                    <th className="px-5 py-3 text-left table-th">Payer</th>
+                    {CLINICIANS.map(c => <th key={c} className="px-4 py-3 text-left table-th">{c}</th>)}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {matrix.payers.map(payer => (
+                    <tr key={payer} className="hover:bg-surface-sunken transition-colors">
+                      <th scope="row" className="px-5 py-2.5 text-left font-medium text-ink">{payer}</th>
+                      {CLINICIANS.map(c => {
+                        const r = matrix.cell.get(`${payer}|${c}`)
+                        return (
+                          <td key={c} className="px-4 py-2.5">
+                            {r ? (
+                              <CredentialingStatusBadge status={r.status} onClick={() => setEditing(r)} />
+                            ) : (
+                              <span className="text-muted/60" title="Not tracked">—</span>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {records && view === 'clinician' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {CLINICIANS.map(clinician => {
             const rows = byClinician(clinician)
@@ -62,7 +120,7 @@ export default function Credentialing() {
                   />
                 ) : (
                   <table className="w-full text-sm font-body">
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-border">
                       {rows.map(r => (
                         <tr key={r.rowIndex} className="hover:bg-surface-sunken transition-colors">
                           <td className="px-5 py-3 font-medium text-ink">{r.payer}</td>

@@ -1,14 +1,10 @@
 import type { ClaimStatus } from '../../../types'
 
-const STATUS_COLORS: Record<string, string> = {
-  'Pending':           'var(--color-status-orange)',
-  'Payment Received':  'var(--color-status-green)',
-  'Denied':            'var(--color-status-red)',
-  'Deductible':        'var(--color-status-blue)',
-  'Sent to Secondary': 'var(--color-status-purple)',
-  'Finalized':         'var(--color-status-gray)',
-  'Payment Pending':   'var(--color-status-green)',
-}
+import { CLAIM_STATUS_STYLE } from '../../../lib/chartTheme'
+
+const STATUS_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(CLAIM_STATUS_STYLE).map(([k, v]) => [k, v.bg]),
+)
 
 export { STATUS_COLORS }
 
@@ -18,15 +14,15 @@ interface Props {
 }
 
 export default function StatusCell({ status, onClick }: Props) {
-  const bg = STATUS_COLORS[status] || 'var(--color-status-gray)'
+  const { bg, fg } = CLAIM_STATUS_STYLE[status] ?? { bg: 'var(--color-status-gray)', fg: '#fff' }
 
   if (onClick) {
     return (
       <button
         type="button"
         onClick={onClick}
-        className="w-full py-1 px-2 rounded-full text-white text-xs font-ui font-medium text-center cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal"
-        style={{ backgroundColor: bg }}
+        className="w-full min-w-0 py-1 px-2 rounded-full text-xs whitespace-nowrap overflow-hidden text-ellipsis font-ui font-medium text-center cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal"
+        style={{ backgroundColor: bg, color: fg }}
         title="Click to update status"
       >
         {status}
@@ -36,8 +32,8 @@ export default function StatusCell({ status, onClick }: Props) {
 
   return (
     <span
-      className="block w-full py-1 px-2 rounded-full text-white text-xs font-ui font-medium text-center"
-      style={{ backgroundColor: bg }}
+      className="block w-full min-w-0 py-1 px-2 rounded-full text-xs whitespace-nowrap overflow-hidden text-ellipsis font-ui font-medium text-center"
+      style={{ backgroundColor: bg, color: fg }}
     >
       {status}
     </span>

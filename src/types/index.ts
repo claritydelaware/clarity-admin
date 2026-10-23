@@ -285,6 +285,8 @@ export interface DashboardPeriodMetrics {
   pendingCount: number
   pendingAmount: number
   receivedAmount: number
+  /** Added to the Worker later than the other fields — absent until it's deployed. */
+  receivedByClinician?: Record<Clinician, number>
   utilizationByClinician: Record<Clinician, number>
 }
 

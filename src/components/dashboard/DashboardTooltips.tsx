@@ -18,7 +18,7 @@ function TooltipRow({ label, current, prior, highlight }: {
 function TooltipTable({ children, priorLabel }: { children: React.ReactNode; priorLabel: string }) {
   return (
     <div className="text-xs font-body">
-      <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-muted font-medium">{priorLabel}</div>
+      <div className="px-3 py-2 bg-surface-sunken border-b border-border text-muted font-medium">{priorLabel}</div>
       <div className="px-3 py-2">
         <table className="w-full">
           <thead>
@@ -40,7 +40,7 @@ function TooltipTable({ children, priorLabel }: { children: React.ReactNode; pri
 // alongside the apples-to-apples MTD-equivalent figure already in the table above.
 function FullPeriodFooter({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-3 py-2 border-t border-gray-100 flex justify-between text-muted">
+    <div className="px-3 py-2 border-t border-border flex justify-between text-muted">
       <span>{label} (full)</span>
       <span className="tabular-nums text-ink font-medium">{value}</span>
     </div>
@@ -80,7 +80,7 @@ export function RevenueTooltip({ cm, pp, priorLabel, ppFull, ppFullLabel }: {
           <TooltipRow key={c} label={c} current={formatCurrency(cm.revenueByClinician[c])} prior={formatCurrency(pp.revenueByClinician[c])} />
         ))}
       </TooltipTable>
-      <div className="px-3 py-2 border-t border-gray-100 flex justify-between text-muted">
+      <div className="px-3 py-2 border-t border-border flex justify-between text-muted">
         <span>Rev / session</span>
         <span className="tabular-nums text-ink font-medium">
           {formatCurrency(rps)} <span className="text-muted font-normal">vs {formatCurrency(priorRps)}</span>
@@ -102,7 +102,7 @@ export function PendingTooltip({ aging }: { aging: DashboardData['aging'] }) {
   ]
   return (
     <div className="text-xs font-body">
-      <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-muted font-medium">Aging breakdown</div>
+      <div className="px-3 py-2 bg-surface-sunken border-b border-border text-muted font-medium">Aging breakdown</div>
       <div className="px-3 py-2">
         <table className="w-full">
           <thead>
@@ -136,7 +136,7 @@ export function ReceivedTooltip({ cm, pp, priorLabel, ppFull, ppFullLabel }: {
   const priorCollectionRate = pp.revenue > 0 ? (pp.receivedAmount / pp.revenue) * 100 : null
   return (
     <div className="text-xs font-body">
-      <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-muted font-medium">{priorLabel}</div>
+      <div className="px-3 py-2 bg-surface-sunken border-b border-border text-muted font-medium">{priorLabel}</div>
       <div className="px-3 py-2 space-y-1">
         <div className="flex justify-between">
           <span className="text-muted">This period</span>
@@ -146,7 +146,7 @@ export function ReceivedTooltip({ cm, pp, priorLabel, ppFull, ppFullLabel }: {
           <span className="text-muted">Prior period</span>
           <span className="tabular-nums text-muted">{formatCurrency(pp.receivedAmount)}</span>
         </div>
-        <div className="flex justify-between pt-1 border-t border-gray-100">
+        <div className="flex justify-between pt-1 border-t border-border">
           <span className="text-muted">Difference</span>
           <span className={`tabular-nums font-medium ${diff >= 0 ? 'text-success' : 'text-error'}`}>
             {diff >= 0 ? '+' : ''}{formatCurrency(diff)}
@@ -154,7 +154,7 @@ export function ReceivedTooltip({ cm, pp, priorLabel, ppFull, ppFullLabel }: {
         </div>
       </div>
       {collectionRate !== null && priorCollectionRate !== null && (
-        <div className="px-3 py-2 border-t border-gray-100 flex justify-between text-muted">
+        <div className="px-3 py-2 border-t border-border flex justify-between text-muted">
           <span>Collection rate</span>
           <span className="tabular-nums text-ink font-medium">
             {collectionRate.toFixed(1)}%{' '}

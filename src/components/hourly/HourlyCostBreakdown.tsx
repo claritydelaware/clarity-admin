@@ -39,11 +39,11 @@ export default function HourlyCostBreakdown({ history }: { history: HourlyPerfor
           return (
             <Card key={name} padding="none">
               <div className="px-5 py-3 border-b border-border bg-surface-sunken flex items-center justify-between">
-                <p className="text-xs font-medium text-muted uppercase tracking-wide">{name}</p>
+                <p className="table-th">{name}</p>
                 <p className="text-xs text-muted font-body">Avg revenue/period: {formatCurrency(avgRevenue)}</p>
               </div>
               <table className="w-full text-sm font-body">
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-border">
                   {COST_ROWS.map(row => {
                     const val = avg(entries, row.pick)
                     return (

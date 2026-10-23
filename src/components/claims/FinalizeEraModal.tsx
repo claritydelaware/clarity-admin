@@ -71,7 +71,7 @@ export default function FinalizeEraModal({ eraReference, onClose, onFinalized }:
     <Dialog open onClose={onClose} title={`Finalize ERA — ${eraReference}`} maxWidth="sm">
       <div className="space-y-4">
         {preview && preview.count === 0 && (
-          <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm font-body text-amber-800">
+          <div className="flex items-start gap-2 rounded-xl bg-warning-bg border border-warning-border px-3 py-2.5 text-sm font-body text-warning">
             <AlertTriangle size={15} className="mt-0.5 shrink-0" />
             No claims are currently tagged with "{eraReference}" — check for a typo before finalizing.
           </div>

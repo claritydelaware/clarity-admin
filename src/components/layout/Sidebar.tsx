@@ -1,23 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FileText, TrendingUp, TrendingDown, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, ArrowLeftRight, Activity, ShieldCheck, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react'
-
-export const NAV = [
-  { to: '/dashboard',          label: 'Dashboard',          icon: LayoutDashboard },
-  { to: '/analytics',          label: 'Analytics',          icon: BarChart2 },
-  { to: '/claims',             label: 'Claims',             icon: FileText },
-  { to: '/pay-periods',        label: 'Pay Periods',        icon: Calendar },
-  { to: '/hourly-performance', label: 'Hourly Performance', icon: Activity },
-  { to: '/forecast',           label: 'Revenue Forecast',   icon: TrendingUp },
-  { to: '/overhead',           label: 'Overhead',           icon: Receipt },
-  { to: '/hho-era-log',        label: 'HHO ERA Log',        icon: ArrowLeftRight },
-  { to: '/hho-overpayment',    label: 'HHO Overpayment',    icon: TrendingDown },
-  { to: '/staff',              label: 'Staff',              icon: Users },
-  { to: '/credentialing',      label: 'Credentialing',      icon: ShieldCheck },
-  { to: '/ce-tracker',         label: 'CE Tracker',         icon: GraduationCap },
-  { to: '/caseloads',          label: 'Caseloads',          icon: ClipboardList },
-  { to: '/valuation',          label: 'Valuation',          icon: Landmark },
-]
+import { useAttention } from '../../hooks/useAttention'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { NAV_GROUPS } from './navConfig'
 
 const HOVER_COLLAPSE_DELAY_MS = 400
 
@@ -32,6 +17,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
   const location = useLocation()
   const [isHovering, setIsHovering] = useState(false)
   const collapseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { byRoute } = useAttention()
 
   useEffect(() => {
     return () => {
@@ -80,7 +66,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       >
         {/* Brand */}
         <div className={[
-          'flex items-center overflow-hidden transition-[padding] duration-300',
+          'flex items-center gap-3 overflow-hidden transition-[padding] duration-300',
           expanded ? 'px-5 py-4' : 'px-0 py-4 justify-center',
         ].join(' ')}>
           <img
@@ -88,54 +74,77 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             alt="Clarity Counseling"
             className="object-contain h-9 w-9 shrink-0"
           />
+          {expanded && (
+            <span className="text-sm font-heading font-semibold text-white whitespace-nowrap leading-tight">
+              Clarity Counseling<span className="block text-[10px] font-ui font-medium uppercase tracking-widest text-white/50">Admin</span>
+            </span>
+          )}
         </div>
 
-        {/* Workspace label */}
-        {expanded && (
-          <div className="px-5 pb-2">
-            <span className="text-[10px] font-ui font-semibold uppercase tracking-widest text-white/40 whitespace-nowrap">
-              Clarity Counseling
-            </span>
-          </div>
-        )}
-
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-1 px-2 space-y-0.5">
-          {NAV.map(({ to, label, icon: Icon }) => {
-            const isActive = location.pathname.startsWith(to)
-            return (
-              <NavLink
-                key={to}
-                to={to}
-                onClick={onClose}
-                title={!expanded ? label : undefined}
-                className={[
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150',
-                  isActive
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/60 hover:bg-white/8 hover:text-white/90',
-                ].join(' ')}
-              >
-                <Icon size={17} strokeWidth={1.75} className="shrink-0" />
-                {expanded && (
-                  <span className={`text-sm whitespace-nowrap ${isActive ? 'font-medium' : ''}`}>{label}</span>
-                )}
-              </NavLink>
-            )
-          })}
+        <nav className="flex-1 overflow-y-auto py-1 px-2" aria-label="Main">
+          {NAV_GROUPS.map((group, gi) => (
+            <Fragment key={group.label}>
+              {expanded ? (
+                <p className={`px-3 pb-1 text-[10px] font-ui font-semibold uppercase tracking-widest text-white/50 whitespace-nowrap ${gi === 0 ? 'pt-1' : 'pt-4'}`}>
+                  {group.label}
+                </p>
+              ) : (
+                gi > 0 && <div className="mx-3 my-2 border-t border-white/10" aria-hidden="true" />
+              )}
+              <div className="space-y-0.5">
+                {group.items.map(({ to, label, icon: Icon }) => {
+                  const isActive = location.pathname.startsWith(to)
+                  const badge = byRoute[to]
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      onClick={onClose}
+                      title={!expanded ? label : undefined}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={[
+                        'relative flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+                        isActive
+                          ? 'bg-white/15 text-white'
+                          : 'text-white/70 hover:bg-white/10 hover:text-white',
+                      ].join(' ')}
+                    >
+                      {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-gold" aria-hidden="true" />}
+                      <span className="relative shrink-0">
+                        <Icon size={17} strokeWidth={1.75} />
+                        {badge && !expanded && (
+                          <span className={`absolute -top-1 -right-1 h-2 w-2 rounded-full ring-2 ring-teal ${badge.level === 'danger' ? 'bg-error' : 'bg-gold'}`} />
+                        )}
+                      </span>
+                      {expanded && (
+                        <>
+                          <span className={`text-sm whitespace-nowrap ${isActive ? 'font-medium' : ''}`}>{label}</span>
+                          {badge && (
+                            <span
+                              className={`ml-auto min-w-5 rounded-full px-1.5 py-0.5 text-center text-[11px] font-ui font-semibold tabular-nums ${badge.level === 'danger' ? 'bg-error text-white' : 'bg-gold text-ink'}`}
+                              aria-label={`${badge.count} item${badge.count !== 1 ? 's' : ''} need attention`}
+                            >
+                              {badge.count}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  )
+                })}
+              </div>
+            </Fragment>
+          ))}
         </nav>
 
         {/* Footer + collapse toggle */}
         <div className="border-t border-white/10">
-          {expanded && (
-            <p className="px-5 py-3 text-[11px] text-white/30 font-body whitespace-nowrap">
-              Clarity Counseling of Delaware
-            </p>
-          )}
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="w-full flex items-center gap-2 px-5 py-3 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors border-t border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-inset"
+            className="w-full flex items-center gap-2 px-5 py-3 text-white/60 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-inset"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >

@@ -56,7 +56,7 @@ export default function PayerPerformanceSection() {
                   {columns.map(([col, label]) => (
                     <th
                       key={col}
-                      className="px-4 py-3 text-xs font-medium text-muted uppercase tracking-wide cursor-pointer select-none hover:text-ink text-right first:text-left"
+                      className="px-4 py-3 table-th cursor-pointer select-none hover:text-ink text-right first:text-left"
                       onClick={() => toggle(col)}
                     >
                       {label} <SortIcon col={col} />
@@ -64,7 +64,7 @@ export default function PayerPerformanceSection() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {sorted.map(p => (
                   <tr key={p.payer} className="hover:bg-surface-sunken transition-colors">
                     <td className="px-4 py-3 font-medium text-ink">{p.payer}</td>
@@ -74,7 +74,7 @@ export default function PayerPerformanceSection() {
                     </td>
                     <td className={[
                       'px-4 py-3 text-right tabular-nums font-medium',
-                      p.collectionRate != null && p.collectionRate < 0.80 ? 'text-amber-600' : 'text-ink',
+                      p.collectionRate != null && p.collectionRate < 0.80 ? 'text-warning' : 'text-ink',
                     ].join(' ')}>
                       {p.collectionRate != null ? `${Math.round(p.collectionRate * 100)}%` : '—'}
                     </td>

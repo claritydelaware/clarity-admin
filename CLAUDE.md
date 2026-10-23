@@ -66,6 +66,11 @@ admin.claritydelaware.com  (currently on *.pages.dev until DNS cutover)
 
 ---
 
+## Local Demo Mode
+`npm run dev:demo` runs the app on synthetic data from `demo/mock-api.mjs` (served by a dev-only Vite middleware; nothing is proxied to the live Worker, writes reset on restart). Use it for design review. `npm run dev` still proxies to the real Worker.
+
+---
+
 ## Design System
 
 ### Colors
@@ -92,15 +97,28 @@ Additional palette:
 All fonts are Plus Jakarta Sans (single-font stack). Load via `<link>` in `index.html`.
 
 ### UI Approach
-Light background (cream/white) content area. White sidebar with right border. Gold accent on active nav item (left border + teal-pale background). This is a utility tool — prioritize information density and clarity over decorative elements. No hero sections, no gradients on content areas.
+Light cream/white content area with a **teal sidebar** (grouped nav: Overview / Revenue cycle / Finance / People; gold bar on the active item; count badges from `useAttention`). Utility tool — information density and clarity over decoration. No hero sections, no gradients on content areas.
 
-### Status Badge Colors
+- **Colors live in two mirrored places:** `@theme` tokens in `src/index.css` (for Tailwind classes) and `src/lib/chartTheme.ts` (for ApexCharts/inline SVG hex). Change both together. Never hardcode hex in pages — import `COLORS`, `CLINICIAN_COLORS`, `CHART_PALETTE` from `chartTheme`.
+- **Clinician colors:** Shannon teal `#254D54`, Jen gold `#F6C54D`, Emily blue `#2F76A8`, Shana terracotta `#B4533C` (four distinct hues so stacked charts stay readable).
+- **Feedback surfaces:** use `bg-success-bg / bg-error-bg / bg-warning-bg`, `border-error-border / border-warning-border`, `text-success / text-error / text-warning` — not raw Tailwind red/green/amber/gray.
+- **Table headers:** add the `table-th` class (typography) plus padding/alignment utilities.
+- **KPI cards:** `MetricCard` supports `caption` (visible comparison text), `sparkline`, `breakdown` (stacked bar), and `info` (definition tooltip). Use `formatCurrencyWhole` on cards, `formatCurrencyCompact` on axes. Separate period-scoped metrics from "Right now" snapshots.
+- **Loading:** use skeletons (`SkeletonDashboard`, `SkeletonTable`, `SkeletonMetricCards`, `SkeletonChart`), not spinners, for page-level loads.
+- **Motion:** `prefers-reduced-motion` is honored globally in `index.css`.
+
+### Status Badge Colors (claims)
+Single source: `CLAIM_STATUS_STYLE` in `src/lib/chartTheme.ts`. All fills meet 4.5:1 with their text.
+
 | Status | Background | Text |
 |---|---|---|
-| Pending | `#F6C54D` | `#1A1A1A` |
-| Payment Received | `#16A34A` | `#FFFFFF` |
-| Finalized | `#6B7280` | `#FFFFFF` |
-| Denied | `#DC2626` | `#FFFFFF` |
+| Pending | gold `#F6C54D` | ink |
+| Payment Pending | teal-mid `#3A7078` | white |
+| Payment Received | green `#15803D` | white |
+| Finalized | gray `#6B7280` | white |
+| Denied | red `#DC2626` | white |
+| Deductible | blue `#0A6FA8` | white |
+| Sent to Secondary | purple `#7E3FB8` | white |
 
 ### Logo
 - Light sidebar logo: `public/new-clarity-logo-transparent.png` (dark text, use on white/light backgrounds)

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { createColumnHelper, type ColumnDef, type RowSelectionState, type Row } from '@tanstack/react-table'
-import { Copy, Check, X, Trash2, ExternalLink } from 'lucide-react'
+import { Copy, Check, X, Trash2, ExternalLink, CircleDollarSign } from 'lucide-react'
+import { CLAIM_STATUS_STYLE } from '../../lib/chartTheme'
 import type { Claim, ClaimStatus } from '../../types'
 import { SERVICE_CODES, SUBMISSION_METHODS } from '../../types'
 import { formatCurrency, formatDate, toInputDate, getPayerStyle, hasOutstandingCollection } from '../../lib/utils'
@@ -60,10 +61,14 @@ function CollectionDot({ onMark }: { onMark: (label: string) => void }) {
     <div className="relative" ref={ref}>
       <button
         type="button"
-        title="Outstanding copay/coinsurance"
+        title="Outstanding copay/coinsurance — click to mark collected"
+        aria-label="Outstanding copay or coinsurance — mark as collected"
+        aria-expanded={open}
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
-        className="w-2.5 h-2.5 rounded-full bg-error shrink-0 cursor-pointer hover:ring-2 hover:ring-error/30 transition-shadow"
-      />
+        className="text-error shrink-0 cursor-pointer rounded-full hover:bg-error-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 transition-colors"
+      >
+        <CircleDollarSign size={15} strokeWidth={2} />
+      </button>
       {open && (
         <div className="absolute z-30 right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg py-1 min-w-40 animate-slide-down">
           <p className="px-3 py-1 text-[10px] font-medium text-muted uppercase tracking-wide border-b border-border mb-0.5">
@@ -245,7 +250,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
     col.accessor('forecastPaymentDate', {
       id: 'timeline',
       header: 'Timeline',
-      size: 112,
+      size: 132,
       meta: { align: 'center' },
       enableSorting: true,
       sortingFn: (a, b) => {
@@ -297,6 +302,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
     col.accessor('status', {
       header: 'Status',
       size: 130,
+      minSize: 56,
       meta: {
         align: 'center',
         cellBg: (row: Row<Claim>) => STATUS_COLORS[row.original.status] ?? 'var(--color-status-gray)',
@@ -305,10 +311,11 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
         <button
           type="button"
           onClick={() => onStatusClick(row.original)}
-          className="w-full h-full text-xs font-ui font-medium text-white cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal"
+          className="w-full h-full min-w-0 text-xs font-ui font-medium cursor-pointer hover:opacity-85 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-teal"
+          style={{ color: CLAIM_STATUS_STYLE[row.original.status]?.fg ?? '#fff' }}
           title="Click to update status"
         >
-          {row.original.status}
+          <span className="block truncate px-1">{row.original.status}</span>
         </button>
       ),
     }),
@@ -373,7 +380,7 @@ export default function ClaimsBoard({ claims, onStatusClick, onDeleteClick, onEd
         const v = getValue()
         if (v == null) return <span className="text-muted italic">—</span>
         return (
-          <span className={`tabular-nums font-medium ${v > 0 ? 'text-green-600' : v < 0 ? 'text-error' : ''}`}>
+          <span className={`tabular-nums font-medium ${v > 0 ? 'text-success' : v < 0 ? 'text-error' : ''}`}>
             {formatCurrency(v)}
           </span>
         )

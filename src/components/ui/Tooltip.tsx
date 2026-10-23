@@ -73,7 +73,7 @@ export default function Tooltip({ content, children, maxWidth = 280, disabled = 
         >
           {variant === 'card' ? (
             <div
-              className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden mb-1.5"
+              className="bg-white border border-border rounded-xl shadow-lg overflow-hidden mb-1.5"
               style={{ minWidth: 240, maxWidth }}
             >
               {content}

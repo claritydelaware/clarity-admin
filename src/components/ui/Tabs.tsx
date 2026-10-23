@@ -38,7 +38,7 @@ export default function Tabs({ tabs, value, onChange, size = 'md', className = '
       role="tablist"
     >
       <div
-        className="absolute top-1 h-[calc(100%-8px)] bg-white rounded-md shadow-xs transition-all duration-200 ease-out"
+        className="absolute top-1 h-[calc(100%-8px)] bg-white rounded-md shadow-xs transition-[left,width] duration-200 ease-out"
         style={{ left: indicator.left, width: indicator.width }}
       />
       {tabs.map(tab => (
@@ -47,6 +47,15 @@ export default function Tabs({ tabs, value, onChange, size = 'md', className = '
           type="button"
           role="tab"
           aria-selected={value === tab.value}
+          tabIndex={value === tab.value ? 0 : -1}
+          onKeyDown={e => {
+            if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+            e.preventDefault()
+            const i = tabs.findIndex(t => t.value === value)
+            const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]
+            onChange(next.value)
+            containerRef.current?.querySelectorAll<HTMLElement>('[role="tab"]')[tabs.indexOf(next)]?.focus()
+          }}
           data-tab-active={value === tab.value}
           onClick={() => onChange(tab.value)}
           className={[

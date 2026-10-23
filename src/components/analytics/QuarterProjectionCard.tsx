@@ -11,6 +11,7 @@ import { useQuarterlySummary } from '../../hooks/useQuarterlySummary'
 import { useQuarterProjection } from '../../hooks/useQuarterProjection'
 import { usePayerPerformance } from '../../hooks/usePayerPerformance'
 import { formatCurrency } from '../../lib/utils'
+import { COLORS } from '../../lib/chartTheme'
 
 function pctChange(current: number, prior: number): string {
   if (prior === 0) return '—'
@@ -49,7 +50,7 @@ function QuarterlyPerformance() {
     chart: { type: 'bar' },
     stroke: { width: [0, 0, 0, 2], curve: 'smooth' },
     plotOptions: { bar: { borderRadius: 3, columnWidth: '65%' } },
-    colors: ['#E8F1F2', '#3A7078', '#254D54', '#F6C54D'],
+    colors: [COLORS.tealPale, COLORS.tealMid, COLORS.teal, COLORS.gold],
     fill: { opacity: [1, 1, 1, 1] },
     xaxis: { categories: chartData.map(d => d.label) },
     yaxis: [
@@ -83,7 +84,7 @@ function QuarterlyPerformance() {
   return (
     <div className="space-y-4">
       {quarters.flatMap(q => q.missingOverheadMonths.map(m => (
-        <div key={`${q.label}-${m}`} className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm font-body text-amber-800">
+        <div key={`${q.label}-${m}`} className="flex items-center gap-2 rounded-lg bg-warning-bg border border-warning-border px-4 py-2.5 text-sm font-body text-warning">
           <AlertTriangle size={15} className="shrink-0" />
           Overhead data missing for {m} — import from Xero to complete {q.label}
         </div>
@@ -98,17 +99,17 @@ function QuarterlyPerformance() {
         <table className="w-full text-sm font-body min-w-180">
           <thead className="bg-surface-sunken border-b border-border">
             <tr>
-              <th className="px-5 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Quarter</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Revenue</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Income</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Overhead</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Profit</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Margin</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Payroll Margin</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wide">Sessions</th>
+              <th className="px-5 py-3 text-left table-th">Quarter</th>
+              <th className="px-4 py-3 text-right table-th">Revenue</th>
+              <th className="px-4 py-3 text-right table-th">Income</th>
+              <th className="px-4 py-3 text-right table-th">Overhead</th>
+              <th className="px-4 py-3 text-right table-th">Profit</th>
+              <th className="px-4 py-3 text-right table-th">Margin</th>
+              <th className="px-4 py-3 text-right table-th">Payroll Margin</th>
+              <th className="px-4 py-3 text-right table-th">Sessions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-border">
             {[...quarters].reverse().map(q => (
               <tr key={q.label} className="hover:bg-surface-sunken transition-colors">
                 <td className="px-5 py-3 font-medium text-ink">{q.label}</td>
@@ -146,7 +147,7 @@ function QuarterProjection() {
   return (
     <div className="space-y-4">
       {proj.missingOverheadMonths.map(m => (
-        <div key={m} className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm font-body text-amber-800">
+        <div key={m} className="flex items-center gap-2 rounded-lg bg-warning-bg border border-warning-border px-4 py-2.5 text-sm font-body text-warning">
           <AlertTriangle size={15} className="shrink-0" />
           Overhead data missing for {m} — projection accounts for this using available month averages
         </div>
@@ -162,14 +163,14 @@ function QuarterProjection() {
             <table className="w-full text-sm font-body">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted uppercase tracking-wide"></th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Revenue</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Income</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Overhead</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Profit</th>
+                  <th className="px-4 py-2.5 text-left table-th"></th>
+                  <th className="px-4 py-2.5 text-right table-th">Revenue</th>
+                  <th className="px-4 py-2.5 text-right table-th">Income</th>
+                  <th className="px-4 py-2.5 text-right table-th">Overhead</th>
+                  <th className="px-4 py-2.5 text-right table-th">Profit</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-border">
                 <tr className="hover:bg-surface-sunken transition-colors">
                   <td className="px-4 py-2.5 text-muted">Actuals to date</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{formatCurrency(proj.actualRevenue)}</td>
@@ -213,13 +214,13 @@ function QuarterProjection() {
             <table className="w-full text-sm font-body">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted uppercase tracking-wide">Metric</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">{proj.qtdLabel}</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">{proj.priorQtdLabel}</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wide">Change</th>
+                  <th className="px-4 py-2.5 text-left table-th">Metric</th>
+                  <th className="px-4 py-2.5 text-right table-th">{proj.qtdLabel}</th>
+                  <th className="px-4 py-2.5 text-right table-th">{proj.priorQtdLabel}</th>
+                  <th className="px-4 py-2.5 text-right table-th">Change</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-border">
                 {([
                   { label: 'Revenue',  cur: proj.actualRevenue,  prior: proj.priorRevenue,  good: true  },
                   { label: 'Income',   cur: proj.actualIncome,   prior: proj.priorIncome,   good: true  },

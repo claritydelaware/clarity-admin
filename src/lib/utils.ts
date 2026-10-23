@@ -1,11 +1,6 @@
-import type { Claim, Clinician } from '../types'
+import type { Claim } from '../types'
 
-export const CLINICIAN_COLORS: Record<Clinician, string> = {
-  Shannon: '#254D54',
-  Jen:     '#F6C54D',
-  Emily:   '#3A7078',
-  Shana:   '#C9922A',
-}
+export { CLINICIAN_COLORS } from './chartTheme'
 
 export function isArchived(claim: Claim): boolean {
   if (claim.status === 'Denied') return true
@@ -46,6 +41,16 @@ export function getLagDays(claimDate: string, paymentDate: string): number {
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+}
+
+/** Whole dollars, for KPI cards where cents are noise. */
+export function formatCurrencyWhole(amount: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount)
+}
+
+/** $48.2k / $1.2M, for chart axes and tight spaces. */
+export function formatCurrencyCompact(amount: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(amount)
 }
 
 export function formatDate(dateStr: string): string {

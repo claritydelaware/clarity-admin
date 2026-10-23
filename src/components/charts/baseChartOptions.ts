@@ -1,13 +1,8 @@
 import type { ApexOptions } from 'apexcharts'
 
-const CHART_COLORS = [
-  '#254D54', // teal
-  '#F6C54D', // gold
-  '#3A7078', // teal-mid
-  '#C9922A', // gold-dark
-  '#00C875', // status-green
-  '#0086C9', // status-blue
-]
+import { CHART_PALETTE, COLORS } from '../../lib/chartTheme'
+
+const CHART_COLORS = CHART_PALETTE
 
 const FONT = "'Plus Jakarta Sans', sans-serif"
 
@@ -24,7 +19,7 @@ export const baseChartOptions: ApexOptions = {
   },
   colors: CHART_COLORS,
   grid: {
-    borderColor: '#E6E9EF',
+    borderColor: COLORS.border,
     strokeDashArray: 4,
     xaxis: { lines: { show: false } },
     yaxis: { lines: { show: true } },
@@ -41,20 +36,20 @@ export const baseChartOptions: ApexOptions = {
   },
   xaxis: {
     labels: {
-      style: { fontFamily: FONT, fontSize: '11px', colors: '#6B7280' },
+      style: { fontFamily: FONT, fontSize: '11px', colors: COLORS.muted },
     },
-    axisBorder: { color: '#E6E9EF' },
-    axisTicks: { color: '#E6E9EF' },
+    axisBorder: { color: COLORS.border },
+    axisTicks: { color: COLORS.border },
   },
   yaxis: {
     labels: {
-      style: { fontFamily: FONT, fontSize: '11px', colors: '#6B7280' },
+      style: { fontFamily: FONT, fontSize: '11px', colors: COLORS.muted },
     },
   },
   legend: {
     fontFamily: FONT,
     fontSize: '12px',
-    labels: { colors: '#6B7280' },
+    labels: { colors: COLORS.muted },
     markers: { size: 4, shape: 'circle' as const },
     itemMargin: { horizontal: 12 },
   },

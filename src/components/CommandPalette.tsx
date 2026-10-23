@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Search, Plus, FileText, CornerDownLeft } from 'lucide-react'
 import Dialog from './ui/Dialog'
-import { NAV } from './layout/Sidebar'
+import { NAV } from './layout/navConfig'
 import { useClaims } from '../hooks/useClaims'
 import { formatCurrency } from '../lib/utils'
 

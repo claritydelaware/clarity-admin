@@ -9,9 +9,9 @@ interface ErrorBannerProps {
 
 export default function ErrorBanner({ message, onRetry, className = '' }: ErrorBannerProps) {
   return (
-    <div className={`flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl ${className}`}>
+    <div className={`flex items-center gap-3 p-4 bg-error-bg border border-error-border rounded-xl ${className}`}>
       <AlertTriangle size={18} className="text-error shrink-0" />
-      <p className="text-sm text-red-700 font-body flex-1">{message}</p>
+      <p className="text-sm text-error font-body flex-1">{message}</p>
       {onRetry && (
         <Button variant="ghost" size="sm" onClick={onRetry}>
           Retry

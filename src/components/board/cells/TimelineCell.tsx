@@ -26,16 +26,20 @@ export default function TimelineCell({ claimDate, forecastPaymentDate, paymentDa
   let pct: number
   let daysLabel: string
   let barColor: string
+  let shortLabel: string
+  let overdue = false
 
   if (totalSpan <= 0 && isReceived) {
     const actualDays = received ? daysBetween(claim, received) : 0
     pct = 1
     daysLabel = actualDays === 0 ? 'Same-day payment' : `Paid in ${actualDays}d`
+    shortLabel = `${actualDays}d`
     barColor = 'var(--color-status-green)'
   } else if (isReceived && received) {
     pct = 1
     const actualDays = daysBetween(claim, received)
     const diff = actualDays - totalSpan
+    shortLabel = `${actualDays}d`
     daysLabel = diff <= 0
       ? `Paid in ${actualDays}d (${Math.abs(diff)}d early)`
       : `Paid in ${actualDays}d (${diff}d late)`
@@ -49,8 +53,11 @@ export default function TimelineCell({ claimDate, forecastPaymentDate, paymentDa
 
     if (remaining > 0) {
       daysLabel = `${remaining}d remaining of ${span}d expected`
+      shortLabel = `${elapsed}/${span}d`
     } else {
       daysLabel = `${Math.abs(remaining)}d overdue (expected ${span}d)`
+      shortLabel = `+${Math.abs(remaining)}d`
+      overdue = true
     }
 
     if (pct > 1) {
@@ -67,10 +74,12 @@ export default function TimelineCell({ claimDate, forecastPaymentDate, paymentDa
   const tooltipText = `${daysLabel} (${Math.round(displayPct)}%)`
 
   return (
-    <div className="flex items-center justify-center w-full" title={tooltipText}>
+    <div className="flex items-center gap-1.5 w-full" title={tooltipText}>
       <div
-        className="relative w-full h-3 rounded-full overflow-hidden"
-        style={{ backgroundColor: 'var(--color-border, #e5e7eb)' }}
+        className="relative flex-1 h-2 rounded-full overflow-hidden"
+        style={{ backgroundColor: 'var(--color-border)' }}
+        role="img"
+        aria-label={tooltipText}
       >
         <div
           className="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
@@ -80,6 +89,9 @@ export default function TimelineCell({ claimDate, forecastPaymentDate, paymentDa
           }}
         />
       </div>
+      <span className={`shrink-0 w-10 text-right text-[11px] font-ui tabular-nums ${overdue ? 'text-error font-medium' : 'text-muted'}`}>
+        {shortLabel}
+      </span>
     </div>
   )
 }

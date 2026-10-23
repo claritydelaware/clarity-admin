@@ -80,7 +80,7 @@ export default function HhoEraLog() {
                       <th className="text-left py-2.5 px-4">Notes</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-border">
                     {sorted.map(e => (
                       <tr key={e.rowIndex}>
                         <td className="py-2.5 px-4 text-ink whitespace-nowrap">{formatDate(e.eraDate)}</td>

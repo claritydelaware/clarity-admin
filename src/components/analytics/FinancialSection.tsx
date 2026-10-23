@@ -5,13 +5,14 @@ import ChartCard from '../charts/ChartCard'
 import MetricCard from '../ui/MetricCard'
 import { formatCurrency } from '../../lib/utils'
 import type { CaseloadTrendMonth } from '../../types'
+import { COLORS as THEME } from '../../lib/chartTheme'
 
 const COLORS = {
-  revenue:       '#254D54',
-  income:        '#3A7078',
-  overhead:      '#9CA3AF',
-  margin:        '#F6C54D',
-  payrollMargin: '#16A34A',
+  revenue:       THEME.teal,
+  income:        THEME.tealMid,
+  overhead:      THEME.mutedLight,
+  margin:        THEME.gold,
+  payrollMargin: THEME.success,
 }
 
 function monthLabel(iso: string): string {
@@ -87,7 +88,7 @@ export default function FinancialSection({ months }: { months: CaseloadTrendMont
           <MetricCard
             label="Net Collections"
             value={formatCurrency(latest.collectionVariance ?? 0)}
-            className={(latest.collectionVariance ?? 0) < 0 ? 'border-amber-200' : (latest.collectionVariance ?? 0) > 0 ? 'border-green-200' : ''}
+            className={(latest.collectionVariance ?? 0) < 0 ? 'border-warning-border' : (latest.collectionVariance ?? 0) > 0 ? 'border-green-200' : ''}
           />
         </div>
       )}

@@ -3,6 +3,7 @@ import LineChart from '../charts/LineChart'
 import BarChart from '../charts/BarChart'
 import { formatCurrency } from '../../lib/utils'
 import type { CaseloadTrendMonth } from '../../types'
+import { COLORS } from '../../lib/chartTheme'
 
 function monthLabel(iso: string): string {
   const d = new Date(iso + 'T00:00:00')
@@ -19,7 +20,7 @@ function RevenuePerSessionChart({ months }: { months: CaseloadTrendMonth[] }) {
       <LineChart
         series={[{ name: 'Revenue/Session', data: chartData.map(d => d.rps ?? null) }]}
         categories={chartData.map(d => d.month)}
-        colors={['#254D54']}
+        colors={[COLORS.teal]}
         yFormatter={(v: number) => `$${v}`}
         tooltipFormatter={(v: number) => `$${v}`}
       />
@@ -33,7 +34,7 @@ function CollectionVarianceChart({ months }: { months: CaseloadTrendMonth[] }) {
     .map(m => ({
       month:    monthLabel(m.month),
       variance: m.collectionVariance,
-      fill:     Math.abs(m.collectionVariance ?? 0) > 2000 ? '#DC2626' : '#254D54',
+      fill:     Math.abs(m.collectionVariance ?? 0) > 2000 ? COLORS.error : COLORS.teal,
     }))
 
   return (

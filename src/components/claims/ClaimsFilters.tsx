@@ -156,7 +156,7 @@ export default function ClaimsFilters() {
   }
 
   const selectClass =
-    'h-8 rounded border border-gray-200 bg-white px-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent'
+    'h-8 rounded border border-border bg-white px-2 text-sm font-body text-ink focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent'
 
   return (
     <div className="space-y-2">
@@ -218,7 +218,7 @@ export default function ClaimsFilters() {
             <ChevronDown size={12} className="opacity-50 shrink-0" />
           </button>
           {clinicianOpen && (
-            <div className="absolute z-20 top-9 left-0 bg-white border border-gray-200 rounded-lg shadow-md py-1 min-w-40">
+            <div className="absolute z-20 top-9 left-0 bg-white border border-border rounded-lg shadow-md py-1 min-w-40">
               {CLINICIANS.map(c => (
                 <label
                   key={c}
@@ -251,7 +251,7 @@ export default function ClaimsFilters() {
             <ChevronDown size={12} className="opacity-50 shrink-0" />
           </button>
           {payerOpen && (
-            <div className="absolute z-20 top-9 left-0 bg-white border border-gray-200 rounded-lg shadow-md py-1 min-w-48 max-h-64 overflow-y-auto">
+            <div className="absolute z-20 top-9 left-0 bg-white border border-border rounded-lg shadow-md py-1 min-w-48 max-h-64 overflow-y-auto">
               {KNOWN_PAYERS.map(p => (
                 <label
                   key={p}
@@ -284,7 +284,7 @@ export default function ClaimsFilters() {
             <ChevronDown size={12} className="opacity-50 shrink-0" />
           </button>
           {statusOpen && (
-            <div className="absolute z-20 top-9 left-0 bg-white border border-gray-200 rounded-lg shadow-md py-1 min-w-48">
+            <div className="absolute z-20 top-9 left-0 bg-white border border-border rounded-lg shadow-md py-1 min-w-48">
               {CLAIM_STATUSES.map(s => (
                 <label
                   key={s}
@@ -338,7 +338,7 @@ export default function ClaimsFilters() {
           <button
             type="button"
             onClick={() => { setSaving(true); setPresetName('') }}
-            className="inline-flex items-center gap-1 h-8 px-2 text-xs text-muted hover:text-teal font-body transition-colors border border-dashed border-gray-200 rounded"
+            className="inline-flex items-center gap-1 h-8 px-2 text-xs text-muted hover:text-teal font-body transition-colors border border-dashed border-border rounded"
             disabled={presets.length >= MAX_PRESETS}
             title="Save filter preset"
           >

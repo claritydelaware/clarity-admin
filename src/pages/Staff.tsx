@@ -5,7 +5,7 @@ import PageHeader from '../components/layout/PageHeader'
 import Card from '../components/ui/Card'
 import Avatar from '../components/ui/Avatar'
 import Button from '../components/ui/Button'
-import LoadingSpinner from '../components/ui/LoadingSpinner'
+import { SkeletonTable } from '../components/ui/Skeleton'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import EmptyState from '../components/ui/EmptyState'
 import type { StaffMember } from '../types'
@@ -46,7 +46,7 @@ export default function Staff() {
         }
       />
 
-      {isLoading && <LoadingSpinner label="Loading staff…" />}
+      {isLoading && <SkeletonTable rows={5} />}
       {isError && <ErrorBanner message={(error as Error).message} />}
 
       {staff && (
@@ -54,14 +54,14 @@ export default function Staff() {
           <table className="w-full text-sm font-body">
             <thead className="bg-surface-sunken border-b border-border">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">License</th>
-                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Expiration</th>
-                <th className="px-4 py-3 text-left text-xs font-medium font-ui text-muted uppercase tracking-wide">Compensation</th>
+                <th className="px-5 py-3 text-left table-th">Name</th>
+                <th className="px-4 py-3 text-left table-th">Role</th>
+                <th className="px-4 py-3 text-left table-th">License</th>
+                <th className="px-4 py-3 text-left table-th">Expiration</th>
+                <th className="px-4 py-3 text-left table-th">Compensation</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {staff.length === 0 && (
                 <tr>
                   <td colSpan={5}>
@@ -91,7 +91,7 @@ export default function Staff() {
                         <span className={[
                           'text-sm',
                           lStatus === 'expired' ? 'text-error font-medium' :
-                          lStatus === 'warning' ? 'text-amber-600 font-medium' : 'text-muted',
+                          lStatus === 'warning' ? 'text-warning font-medium' : 'text-muted',
                         ].join(' ')}>
                           {new Date(member.licenseExpiration).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           {lStatus === 'expired' && ' — Expired'}
