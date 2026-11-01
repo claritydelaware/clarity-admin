@@ -4,7 +4,7 @@ import { useDateWindow } from '../hooks/useDateWindow'
 import { useCapacityAlerts, useCapacityAlertCollapse } from '../hooks/useCapacityAlerts'
 import { useStaff } from '../hooks/useStaff'
 import { useAttention } from '../hooks/useAttention'
-import { formatCurrency, formatCurrencyWhole, formatCurrencyCompact } from '../lib/utils'
+import { formatCurrency, formatDate, formatCurrencyWhole, formatCurrencyCompact } from '../lib/utils'
 import { CLINICIAN_COLORS, COLORS } from '../lib/chartTheme'
 import { SkeletonDashboard } from '../components/ui/Skeleton'
 import MetricCard from '../components/ui/MetricCard'
@@ -98,6 +98,7 @@ export default function Dashboard() {
   const avgRevenue = revenueSpark.length ? revenueSpark.reduce((a, b) => a + b, 0) / revenueSpark.length : 0
 
   const incoming = data.incomingPayments && data.incomingPayments.count > 0 ? data.incomingPayments : null
+  const nc = data.netCollection
 
   return (
     <div className="space-y-6">
@@ -157,10 +158,10 @@ export default function Dashboard() {
         <MetricCard
           index={3}
           icon={<Percent size={16} />}
-          label="Collection rate"
+          label="Cash vs. revenue"
           value={data.collectionRate != null ? `${data.collectionRate}%` : '—'}
           sub="Received ÷ Revenue"
-          info="Share of this period's revenue that has been collected so far. Rises as pending claims pay."
+          info="Cash received this period divided by revenue earned this period. These are different claims (deposits include earlier months' work), so it can exceed 100% and is not an industry collection rate. See Net collection rate below."
         />
       </div>
       </section>
@@ -168,7 +169,7 @@ export default function Dashboard() {
       {/* Snapshot metrics — current state, unaffected by the period selector */}
       <section className="space-y-3">
       <SectionLabel hint="Current — not affected by the period selector">Right now</SectionLabel>
-      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${incoming ? 'xl:grid-cols-3' : 'xl:grid-cols-2'}`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${incoming ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
         <MetricCard
           index={4}
           icon={<Clock size={16} />}
@@ -185,6 +186,14 @@ export default function Dashboard() {
             sub={`${incoming.count} claim${incoming.count !== 1 ? 's' : ''} — Payment Pending or future-dated`}
           />
         )}
+        <MetricCard
+          index={7}
+          icon={<Percent size={16} />}
+          label="Net collection rate"
+          value={nc?.rate != null ? `${nc.rate}%` : '—'}
+          sub={nc ? `${formatCurrencyWhole(nc.pending)} still pending · ${formatCurrencyWhole(nc.denied)} denied` : undefined}
+          info={`Of everything billed for sessions ${nc ? `${formatDate(`${nc.from}T00:00:00`)} – ${formatDate(`${nc.to}T00:00:00`)}` : '60–150 days ago'}, the share that has been paid or is on its way (not Pending or Denied). Same cohort every day, so it's comparable to industry net collection rate benchmarks: 90–94% is average, 95%+ is strong for behavioral health.`}
+        />
         <MetricCard
           index={6}
           icon={<CalendarClock size={16} />}

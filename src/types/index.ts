@@ -306,6 +306,15 @@ export interface DashboardData {
   payerMix: PayerMixEntry[]
   incomingPayments?: { count: number; amount: number }
   collectionRate?: number | null
+  netCollection?: {
+    rate: number | null
+    collected: number
+    pending: number
+    denied: number
+    total: number
+    from: string
+    to: string
+  }
   avgDaysToPayment?: number | null
 }
 

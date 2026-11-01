@@ -251,7 +251,9 @@ function dashboard(window) {
     sixMonthTrend: months6.map((m, i) => ({ month: MONTH(m), revenue: revFor(i), sessionsByClinician: by(92 + i, 82, 22 + i, i >= 4 ? 14 : 0) })),
     aging: { bucket0_30: { count: 96, total: 12100 }, bucket31_60: { count: 31, total: 4300 }, bucket61_90: { count: 11, total: 1520 }, bucket90plus: { count: 4, total: 500 } },
     payerMix: [['BCBS', 14200], ['Aetna', 8100], ['United', 4300], ['Health Options', 3100], ['Medicare', 1100], ['Self-Pay', 1040]].map(([payer, amount]) => ({ payer, amount })),
-    incomingPayments: { count: 18, amount: 2310 }, collectionRate: 85, avgDaysToPayment: 21,
+    incomingPayments: { count: 18, amount: 2310 }, collectionRate: 85,
+    netCollection: { rate: 94.2, collected: 41800, pending: 1900, denied: 2650, total: 44350, from: '2026-06-04', to: '2026-09-02' },
+    avgDaysToPayment: 21,
   }
 }
 
