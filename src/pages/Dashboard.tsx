@@ -1,4 +1,5 @@
 import { Activity, DollarSign, Clock, TrendingUp, ArrowDownToLine, Percent, CalendarClock } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useDashboard } from '../hooks/useDashboard'
 import { useDateWindow } from '../hooks/useDateWindow'
 import { useCapacityAlerts, useCapacityAlertCollapse } from '../hooks/useCapacityAlerts'
@@ -191,7 +192,23 @@ export default function Dashboard() {
           icon={<Percent size={16} />}
           label="Net collection rate"
           value={nc?.rate != null ? `${nc.rate}%` : '—'}
-          sub={nc ? `${formatCurrencyWhole(nc.pending)} still pending · ${formatCurrencyWhole(nc.denied)} denied` : undefined}
+          sub={nc ? (
+            <>
+              <Link
+                to={`/claims?status=Pending&from=${nc.from}&to=${nc.to}`}
+                className="underline decoration-dotted underline-offset-2 hover:text-teal focus-visible:text-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/40 rounded-sm"
+              >
+                {formatCurrencyWhole(nc.pending)} still pending
+              </Link>
+              {' · '}
+              <Link
+                to={`/claims?status=Denied&from=${nc.from}&to=${nc.to}`}
+                className="underline decoration-dotted underline-offset-2 hover:text-teal focus-visible:text-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/40 rounded-sm"
+              >
+                {formatCurrencyWhole(nc.denied)} denied
+              </Link>
+            </>
+          ) : undefined}
           info={`Of everything billed for sessions ${nc ? `${formatDate(`${nc.from}T00:00:00`)} – ${formatDate(`${nc.to}T00:00:00`)}` : '60–150 days ago'}, the share that has been paid or is on its way (not Pending or Denied). Same cohort every day, so it's comparable to industry net collection rate benchmarks: 90–94% is average, 95%+ is strong for behavioral health.`}
         />
         <MetricCard

@@ -8,7 +8,7 @@ import StackedBar, { type StackedSegment } from './StackedBar'
 interface MetricCardProps {
   label: string
   value: ReactNode
-  sub?: string | null
+  sub?: ReactNode
   /** Plain-text comparison line shown under the value, e.g. "vs $42,100 last month". */
   caption?: string | null
   delta?: number | null
