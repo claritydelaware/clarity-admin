@@ -320,24 +320,26 @@ export function handle(method, pathname, params, body) {
   if (p === '/analytics/hourly-performance') return { Emily: hourlyHistory('Emily'), Shana: hourlyHistory('Shana') }
   if (p === '/analytics/holiday-bonus') {
     const bonusFor = name => {
-      const periods = hourlyHistory(name).slice(-3).map(e => ({
-        periodStart: e.periodStart, periodEnd: e.periodEnd, partial: false, sessions: e.sessions,
-        revenue: e.revenue, totalPay: e.totalPay, overheadCosts: e.overheadCosts,
-        stripeFeesCost: e.stripeFeesCost, contribution: e.revenue - e.totalExpenses,
+      const hist = hourlyHistory(name)
+      const sum = k => hist.reduce((s, x) => s + x[k], 0)
+      const periods = hist.slice(-6).map(e => ({
+        periodStart: e.periodStart, periodEnd: e.periodEnd, payDate: e.payDate, sessions: e.sessions,
+        sessionPay: e.sessionPay, adminPay: e.adminPay, bonusPay: e.bonusPay, totalPay: e.totalPay,
       }))
-      const sum = k => periods.reduce((s, x) => s + x[k], 0)
-      const e3 = hourlyHistory(name).slice(-3)
-      const e = k => e3.reduce((s, x) => s + x[k], 0)
+      const collected = sum('paymentsReceived')
       return {
-        sessions: sum('sessions'), revenue: sum('revenue'), paymentsReceived: e('paymentsReceived'),
-        sessionPay: e('sessionPay'), adminPay: e('adminPay'), bonusPay: 0, totalPay: sum('totalPay'),
-        overheadCosts: sum('overheadCosts'), stripeFeesCost: sum('stripeFeesCost'),
-        totalExpenses: e('totalExpenses'), contribution: sum('contribution'),
-        cashProfit: e('paymentsReceived') - e('totalExpenses'), periods,
-        windowStart: name === 'Emily' ? '2026-02-16' : '2026-06-15', windowDays: name === 'Emily' ? 288 : 169,
+        windowStart: name === 'Emily' ? '2026-02-16' : '2026-06-15',
+        windowDays: name === 'Emily' ? 288 : 169,
+        collected, collectedClaims: Math.round(sum('sessions') * 0.9), stripeFeesCost: sum('stripeFeesCost'),
+        sessionPay: sum('sessionPay'), adminPay: sum('adminPay'), bonusPay: sum('bonusPay'), totalPay: sum('totalPay'),
+        employerTaxes: sum('totalPay') * 0.0956,
+        collectionsByMonth: hist.slice(-4).map((e, i) => ({
+          month: `2026-${String(8 + i).padStart(2, '0')}`, claims: Math.round(e.sessions * 0.9), collected: e.paymentsReceived,
+        })),
+        periods,
       }
     }
-    return { from: params.get('from'), to: params.get('to'), clinicians: { Emily: bonusFor('Emily'), Shana: bonusFor('Shana') } }
+    return { from: params.get('from') ?? '', to: params.get('to'), clinicians: { Emily: bonusFor('Emily'), Shana: bonusFor('Shana') } }
   }
 
   // staff

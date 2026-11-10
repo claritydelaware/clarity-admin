@@ -522,30 +522,32 @@ export interface HourlyPerformanceHistory {
 export interface HolidayBonusPeriod {
   periodStart: string
   periodEnd: string
-  partial: boolean
+  payDate: string
   sessions: number
-  revenue: number
-  totalPay: number
-  overheadCosts: number
-  stripeFeesCost: number
-  contribution: number
-}
-
-export interface HolidayBonusClinician {
-  sessions: number
-  revenue: number
-  paymentsReceived: number
   sessionPay: number
   adminPay: number
   bonusPay: number
   totalPay: number
-  overheadCosts: number
-  stripeFeesCost: number
-  totalExpenses: number
-  contribution: number
-  cashProfit: number
+}
+
+export interface HolidayBonusMonth {
+  month: string
+  collected: number
+  claims: number
+}
+
+export interface HolidayBonusClinician {
   windowStart: string
   windowDays: number
+  collected: number
+  collectedClaims: number
+  stripeFeesCost: number
+  sessionPay: number
+  adminPay: number
+  bonusPay: number
+  totalPay: number
+  employerTaxes: number
+  collectionsByMonth: HolidayBonusMonth[]
   periods: HolidayBonusPeriod[]
 }
 
