@@ -5,7 +5,7 @@ import type {
   PartnerPeriodSummary, EmilyPayPeriodSummary, SalaryPayPeriod, HourlyPayPeriod,
   EmilySubmission, EmilyPaymentAnalysisRow, QuarterProjection,
   Clinician, ConfigData, ContractRate, ValuationSnapshot, TrendGranularity, TrendPoint,
-  HourlyPerformanceHistory, CredentialingRecord, CredentialingInput,
+  HourlyPerformanceHistory, HolidayBonusBasis, CredentialingRecord, CredentialingInput,
   CELogRecord, CELogInput, CEStatusRecord,
   HhoEraLogEntry, HhoEraLogInput,
 } from '../types'
@@ -133,6 +133,11 @@ export const api = {
     },
     hourlyPerformance: (): Promise<HourlyPerformanceHistory> =>
       apiFetch<HourlyPerformanceHistory>('/analytics/hourly-performance'),
+    holidayBonus: (from: string, to: string): Promise<HolidayBonusBasis> => {
+      const p = new URLSearchParams({ to })
+      if (from) p.set('from', from)   // omitted → each clinician's window starts at their hire date
+      return apiFetch<HolidayBonusBasis>(`/analytics/holiday-bonus?${p.toString()}`)
+    },
   },
   staff: {
     list: (): Promise<StaffMember[]> => apiFetch<StaffMember[]>('/staff'),

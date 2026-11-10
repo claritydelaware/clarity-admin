@@ -318,6 +318,27 @@ export function handle(method, pathname, params, body) {
   if (p === '/analytics/valuation-snapshot') return valuation
   if (p === '/analytics/trend') return trend(params.get('granularity'))
   if (p === '/analytics/hourly-performance') return { Emily: hourlyHistory('Emily'), Shana: hourlyHistory('Shana') }
+  if (p === '/analytics/holiday-bonus') {
+    const bonusFor = name => {
+      const periods = hourlyHistory(name).slice(-3).map(e => ({
+        periodStart: e.periodStart, periodEnd: e.periodEnd, partial: false, sessions: e.sessions,
+        revenue: e.revenue, totalPay: e.totalPay, overheadCosts: e.overheadCosts,
+        stripeFeesCost: e.stripeFeesCost, contribution: e.revenue - e.totalExpenses,
+      }))
+      const sum = k => periods.reduce((s, x) => s + x[k], 0)
+      const e3 = hourlyHistory(name).slice(-3)
+      const e = k => e3.reduce((s, x) => s + x[k], 0)
+      return {
+        sessions: sum('sessions'), revenue: sum('revenue'), paymentsReceived: e('paymentsReceived'),
+        sessionPay: e('sessionPay'), adminPay: e('adminPay'), bonusPay: 0, totalPay: sum('totalPay'),
+        overheadCosts: sum('overheadCosts'), stripeFeesCost: sum('stripeFeesCost'),
+        totalExpenses: e('totalExpenses'), contribution: sum('contribution'),
+        cashProfit: e('paymentsReceived') - e('totalExpenses'), periods,
+        windowStart: name === 'Emily' ? '2026-02-16' : '2026-06-15', windowDays: name === 'Emily' ? 288 : 169,
+      }
+    }
+    return { from: params.get('from'), to: params.get('to'), clinicians: { Emily: bonusFor('Emily'), Shana: bonusFor('Shana') } }
+  }
 
   // staff
   if (p === '/staff') return method === 'POST' ? (staff.push(body), body) : staff

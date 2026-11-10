@@ -519,6 +519,42 @@ export interface HourlyPerformanceHistory {
   Shana: HourlyPeriodHistoryEntry[]
 }
 
+export interface HolidayBonusPeriod {
+  periodStart: string
+  periodEnd: string
+  partial: boolean
+  sessions: number
+  revenue: number
+  totalPay: number
+  overheadCosts: number
+  stripeFeesCost: number
+  contribution: number
+}
+
+export interface HolidayBonusClinician {
+  sessions: number
+  revenue: number
+  paymentsReceived: number
+  sessionPay: number
+  adminPay: number
+  bonusPay: number
+  totalPay: number
+  overheadCosts: number
+  stripeFeesCost: number
+  totalExpenses: number
+  contribution: number
+  cashProfit: number
+  windowStart: string
+  windowDays: number
+  periods: HolidayBonusPeriod[]
+}
+
+export interface HolidayBonusBasis {
+  from: string
+  to: string
+  clinicians: { Emily: HolidayBonusClinician; Shana: HolidayBonusClinician }
+}
+
 export interface PayerPerformance {
   payer: string
   totalClaims: number

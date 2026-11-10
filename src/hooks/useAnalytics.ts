@@ -34,6 +34,14 @@ export function useTrend(granularity: TrendGranularity, from?: string, to?: stri
   })
 }
 
+export function useHolidayBonus(from: string, to: string) {
+  return useQuery({
+    queryKey: ['analytics', 'holiday-bonus', from, to],
+    queryFn: () => api.analytics.holidayBonus(from, to),
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
 export function useHourlyPerformance() {
   return useQuery({
     queryKey: ['analytics', 'hourly-performance'],

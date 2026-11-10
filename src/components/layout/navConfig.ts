@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, TrendingUp, TrendingDown, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, ArrowLeftRight, Activity, ShieldCheck, GraduationCap } from 'lucide-react'
+import { LayoutDashboard, FileText, TrendingUp, TrendingDown, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, ArrowLeftRight, Activity, ShieldCheck, GraduationCap, Gift } from 'lucide-react'
 
 export const NAV_GROUPS = [
   {
@@ -23,6 +23,7 @@ export const NAV_GROUPS = [
     items: [
       { to: '/pay-periods',        label: 'Pay Periods',        icon: Calendar },
       { to: '/hourly-performance', label: 'Hourly Performance', icon: Activity },
+      { to: '/holiday-bonus',      label: 'Holiday Bonus',      icon: Gift },
       { to: '/overhead',           label: 'Overhead',           icon: Receipt },
     ],
   },
