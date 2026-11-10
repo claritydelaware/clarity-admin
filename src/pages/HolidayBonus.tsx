@@ -32,9 +32,11 @@ function monthLabel(ym: string): string {
 function ClinicianCard({ name, data, inputs }: { name: string; data: HolidayBonusClinician; inputs: Inputs }) {
   const f = bonusFigures(data, inputs)
   const months = data.windowDays / DAYS_PER_MONTH
+  const noShowPay = data.totalPay - data.sessionPay - data.adminPay - data.bonusPay
   const lines: Array<[string, number]> = [
     ['Session pay', data.sessionPay],
     ['Admin pay', data.adminPay],
+    ...(noShowPay > 0.005 ? [['No-show pay (confirmed)', noShowPay] as [string, number]] : []),
     ...(data.bonusPay > 0 ? [['Bonuses already paid', data.bonusPay] as [string, number]] : []),
     ['Employer payroll taxes (est.)', data.employerTaxes],
     [`Vendor seats (${months.toFixed(1)} mo)`, f.vendor],
@@ -195,6 +197,7 @@ export default function HolidayBonus() {
                     <th className="table-th px-4 py-2 text-right">Sessions</th>
                     <th className="table-th px-4 py-2 text-right">Session pay</th>
                     <th className="table-th px-4 py-2 text-right">Admin</th>
+                    <th className="table-th px-4 py-2 text-right">No-show</th>
                     <th className="table-th px-4 py-2 text-right">Bonus</th>
                     <th className="table-th px-4 py-2 text-right">Total</th>
                   </tr>
@@ -209,6 +212,9 @@ export default function HolidayBonus() {
                         <td className="px-4 py-2 text-right tabular-nums">{p.sessions}</td>
                         <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(p.sessionPay)}</td>
                         <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(p.adminPay)}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">
+                          {formatCurrency(Math.max(0, p.totalPay - p.sessionPay - p.adminPay - p.bonusPay))}
+                        </td>
                         <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(p.bonusPay)}</td>
                         <td className="px-4 py-2 text-right tabular-nums text-ink font-medium">{formatCurrency(p.totalPay)}</td>
                       </tr>
