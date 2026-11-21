@@ -260,7 +260,7 @@ export default function SpEntry() {
     <div className="space-y-4">
       <PageHeader
         title="SP Entry"
-        subtitle="Checklist for posting HHO ERAs in SimplePractice. Enter ERAs in date order. SimplePractice adds the amount you type to what is already posted, so reprocessed lines are negative."
+        subtitle="Checklist for posting HHO ERAs in SimplePractice. Enter ERAs in date order. SimplePractice adds the amount you type to what is already posted, so reprocessed lines are negative. Write off a line once, on its last ERA, when HHO has paid the contract rate."
         actions={lines && lines.length > 0 ? (
           <Button size="sm" variant="secondary" onClick={() => setShowImport(s => !s)}>Re-import data</Button>
         ) : undefined}
@@ -380,7 +380,7 @@ export default function SpEntry() {
                         <th className="text-right py-2.5 px-3">In SP now</th>
                         <th className="text-right py-2.5 px-3">Billed</th>
                         <th className="text-right py-2.5 px-3">Enter (adds to SP)</th>
-                        <th className="text-right py-2.5 px-3">Write-off (adds)</th>
+                        <th className="text-right py-2.5 px-3">Write-off (final)</th>
                         <th className="text-right py-2.5 px-3">Result</th>
                         <th className="text-left py-2.5 px-3">Notes</th>
                       </tr>
@@ -427,7 +427,7 @@ export default function SpEntry() {
                             )}
                           </td>
                           <td className="py-2 px-3 text-right whitespace-nowrap">
-                            {l.writeOff == null || l.writeOff === 0 ? <span className="text-xs text-muted">{l.writeOff === 0 ? 'none' : '—'}</span> : (
+                            {l.writeOff == null || l.writeOff === 0 ? <span className="text-xs text-muted" title={l.flags}>{l.writeOff === 0 ? 'none' : l.type === 'denied' || l.change === 0 && l.enter === 0 ? '—' : 'wait'}</span> : (
                               <span className="inline-flex items-center gap-1.5">
                                 <span className={`tabular-nums ${l.done ? '' : `font-semibold ${l.writeOff < 0 ? 'text-error' : 'text-ink'}`}`}>{formatCurrency(l.writeOff)}</span>
                                 <button
