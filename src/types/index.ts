@@ -178,7 +178,7 @@ export interface HhoEraLogInput {
   notes?: string
 }
 
-export type SpEntryType = 'new' | 'reprocessed' | 'unchanged' | 'denied'
+export type SpEntryType = 'new' | 'reprocessed' | 'offset' | 'unchanged' | 'denied'
 
 // One ERA line to post in SimplePractice. Hashed Client IDs only.
 export interface SpEntryLine {

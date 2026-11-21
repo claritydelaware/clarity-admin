@@ -50,10 +50,13 @@ function csvToImportRows(text: string): SpEntryImportRow[] {
     const flags = col(r, 'flags')
     const rawType = col(r, 'type')
     const type: SpEntryType = rawType === 'denied' ? 'denied'
-      : flags.includes('re-issued unchanged') ? 'unchanged'
+      : rawType === 'offset' ? 'offset'
+      : rawType === 'unchanged' || flags.includes('re-issued unchanged') ? 'unchanged'
       : rawType === 'reprocessed' ? 'reprocessed' : 'new'
     const before = col(r, 'amount_in_SP_before_this_ERA')
-    const enter = parseFloat(col(r, 'amount_after_this_ERA')), change = parseFloat(col(r, 'change'))
+    const afterRaw = parseFloat(col(r, 'amount_after_this_ERA')), change = parseFloat(col(r, 'change'))
+    // A recoup on a claim with several lines has no single result; keep the change, store 0 for the result.
+    const enter = Number.isNaN(afterRaw) && type === 'offset' ? 0 : afterRaw
     if (!col(r, 'era') || !col(r, 'client_id') || Number.isNaN(enter) || Number.isNaN(change)) {
       throw new Error(`Line ${i + 2} is incomplete (era, client_id, amounts)`)
     }
@@ -74,12 +77,13 @@ function csvToImportRows(text: string): SpEntryImportRow[] {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 // A denial only needs entry when it reverses a payment already in SimplePractice (e.g. an N4 re-denial: $150 -> $0).
-const needsEntry = (l: SpEntryLine) => l.type === 'new' || l.type === 'reprocessed' || (l.type === 'denied' && l.change !== 0)
+const needsEntry = (l: SpEntryLine) => l.type === 'new' || l.type === 'reprocessed' || l.type === 'offset' || (l.type === 'denied' && l.change !== 0)
 const dateKey = (s: string) => { const [m, d, y] = s.split('/').map(Number); return (y || 0) * 10000 + (m || 0) * 100 + (d || 0) }
 
 const TYPE_STYLE: Record<SpEntryType, string> = {
   new: 'bg-teal-pale text-teal',
   reprocessed: 'bg-warning-bg text-warning',
+  offset: 'bg-gold-tint text-gold-dark',
   unchanged: 'bg-surface-sunken text-muted',
   denied: 'bg-error-bg text-error',
 }
@@ -87,7 +91,7 @@ const TYPE_STYLE: Record<SpEntryType, string> = {
 type View = 'todo' | 'all' | 'done' | SpEntryType
 const VIEWS: Array<{ id: View; label: string }> = [
   { id: 'todo', label: 'To enter' }, { id: 'all', label: 'All' }, { id: 'done', label: 'Done' },
-  { id: 'new', label: 'New' }, { id: 'reprocessed', label: 'Reprocessed' },
+  { id: 'new', label: 'New' }, { id: 'reprocessed', label: 'Reprocessed' }, { id: 'offset', label: 'Recoup' },
   { id: 'unchanged', label: 'Unchanged' }, { id: 'denied', label: 'Denied' },
 ]
 
@@ -260,7 +264,7 @@ export default function SpEntry() {
     <div className="space-y-4">
       <PageHeader
         title="SP Entry"
-        subtitle="Checklist for posting HHO ERAs in SimplePractice. Enter ERAs in date order. SimplePractice adds the amount you type to what is already posted, so reprocessed lines are negative. Write off a line the first time HHO pays the contract rate on it; wait means not yet."
+        subtitle="Checklist for posting HHO ERAs in SimplePractice. Enter ERAs in date order. SimplePractice adds the amount you type to what is already posted, so reductions are negative and each ERA's lines should net to $0.00. Write off a line the first time HHO pays the contract rate on it; wait means not yet."
         actions={lines && lines.length > 0 ? (
           <Button size="sm" variant="secondary" onClick={() => setShowImport(s => !s)}>Re-import data</Button>
         ) : undefined}
@@ -327,7 +331,7 @@ export default function SpEntry() {
               padding="none"
               className="min-w-0"
               title={`ERA ${activeEra.era} · ${activeEra.eraDate}`}
-              subtitle={`New ${formatCurrency(eraStats.newTotal)} · corrections ${formatCurrency(eraStats.corrections)} · claims net ${formatCurrency(eraStats.claimsNet)} · HHO payment adjustment ${formatCurrency(-eraStats.claimsNet)} → $0.00 deposit · ${activeEra.doneRequired}/${activeEra.required} entered`}
+              subtitle={`New ${formatCurrency(eraStats.newTotal)} · reductions ${formatCurrency(eraStats.corrections)} · net ${formatCurrency(eraStats.claimsNet)} (SimplePractice Unallocated should be $0.00) · ${activeEra.doneRequired}/${activeEra.required} entered`}
               actions={
                 <>
                   <Button size="sm" variant="secondary" icon={<CheckCheck size={14} />} disabled={!shown.some(l => !l.done)} onClick={() => bulk(true)}>Mark shown done</Button>
@@ -411,7 +415,7 @@ export default function SpEntry() {
                             ) : '—'}
                           </td>
                           <td className="py-2 px-3">
-                            <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-ui font-medium ${TYPE_STYLE[l.type]}`}>{l.type}</span>
+                            <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-ui font-medium ${TYPE_STYLE[l.type]}`}>{l.type === 'offset' ? 'recoup' : l.type === 'unchanged' ? 'no change' : l.type}</span>
                           </td>
                           <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">{l.spBefore != null ? formatCurrency(l.spBefore) : '—'}</td>
                           <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap text-muted">{l.billed != null ? formatCurrency(l.billed) : '—'}</td>
@@ -437,7 +441,7 @@ export default function SpEntry() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap text-muted">{formatCurrency(l.enter)}</td>
+                          <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap text-muted">{l.type === 'offset' && l.flags.includes('claim has') ? '—' : formatCurrency(l.enter)}</td>
                           <td className="py-2 px-3 text-xs max-w-[16rem] truncate" title={l.flags}>{l.flags || ''}</td>
                         </tr>
                       ))}
