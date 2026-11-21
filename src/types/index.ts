@@ -199,6 +199,9 @@ export interface SpEntryLine {
   doneAt?: string
   checkEft?: string      // Availity Check/EFT # for the ERA
   checkDate?: string     // MM/DD/YYYY
+  claimId?: string       // HHO Payor Claim #
+  billed?: number
+  writeOff?: number      // write-off to ADD in SimplePractice for this ERA
 }
 
 export type SpEntryImportRow = Omit<SpEntryLine, 'rowIndex' | 'done' | 'doneAt'>

@@ -245,7 +245,7 @@ let spEntry = (() => {
       const kind = i % 6 === 5 ? 'denied' : i % 6 === 4 ? 'unchanged' : i % 3 === 0 && ei < 2 ? 'reprocessed' : 'new'
       const before = kind === 'new' || kind === 'denied' ? undefined : 150
       const enter = kind === 'denied' ? 0 : kind === 'unchanged' ? 100.36 : 100.63
-      lines.push({ rowIndex: lines.length + 2, era, eraDate, clientId: `demo${(i % 5) + 1}c0ffee${ei}${i}ab`, clinician: i % 2 ? 'Jen' : 'Shannon', dos: `${9 + ei}/${(i % 20) + 1}/2026`, cpt: i % 4 === 3 ? '90834' : '90837', type: kind, spBefore: before, enter, change: kind === 'denied' || kind === 'unchanged' ? 0 : round2(enter - (before ?? 0)), flags: kind === 'unchanged' ? 're-issued unchanged' : '', sheetRow: 1000 + lines.length, done: ei === 0 && i < 8, doneAt: undefined, checkEft: ei < 2 ? `38${ei}1122${ei}9` : undefined, checkDate: ei < 2 ? `09/${15 + ei * 7}/2026` : undefined })
+      lines.push({ rowIndex: lines.length + 2, era, eraDate, clientId: `demo${(i % 5) + 1}c0ffee${ei}${i}ab`, clinician: i % 2 ? 'Jen' : 'Shannon', dos: `${9 + ei}/${(i % 20) + 1}/2026`, cpt: i % 4 === 3 ? '90834' : '90837', type: kind, spBefore: before, enter, change: kind === 'denied' || kind === 'unchanged' ? 0 : round2(enter - (before ?? 0)), flags: kind === 'unchanged' ? 're-issued unchanged' : '', sheetRow: 1000 + lines.length, done: ei === 0 && i < 8, doneAt: undefined, claimId: `2026100${ei}${String(i).padStart(2, '0')}0001`, billed: 150, writeOff: kind === 'new' ? round2(150 - enter) : kind === 'reprocessed' ? 49.37 : 0, checkEft: ei < 2 ? `38${ei}1122${ei}9` : undefined, checkDate: ei < 2 ? `09/${15 + ei * 7}/2026` : undefined })
     }
   })
   return lines

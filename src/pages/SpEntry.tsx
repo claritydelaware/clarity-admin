@@ -64,6 +64,9 @@ function csvToImportRows(text: string): SpEntryImportRow[] {
       spBefore: before === '' ? undefined : parseFloat(before), enter, change, flags,
       sheetRow: Number.isNaN(sheetRow) ? undefined : sheetRow,
       checkEft: col(r, 'check_eft') || undefined, checkDate: col(r, 'check_date') || undefined,
+      claimId: col(r, 'claim_id') || undefined,
+      billed: Number.isNaN(parseFloat(col(r, 'billed'))) ? undefined : parseFloat(col(r, 'billed')),
+      writeOff: Number.isNaN(parseFloat(col(r, 'write_off'))) ? undefined : parseFloat(col(r, 'write_off')),
     }
   })
 }
@@ -183,7 +186,7 @@ export default function SpEntry() {
     if (!activeEra) return []
     const q = search.trim().toLowerCase()
     return activeEra.lines.filter(l => {
-      if (q && !(l.clientId.toLowerCase().includes(q) || l.dos.includes(q) || l.cpt.includes(q))) return false
+      if (q && !(l.clientId.toLowerCase().includes(q) || l.dos.includes(q) || l.cpt.includes(q) || (l.claimId ?? '').includes(q))) return false
       if (view === 'todo') return needsEntry(l) && !l.done
       if (view === 'done') return l.done
       if (view === 'all') return true
@@ -322,6 +325,7 @@ export default function SpEntry() {
 
             <Card
               padding="none"
+              className="min-w-0"
               title={`ERA ${activeEra.era} · ${activeEra.eraDate}`}
               subtitle={`New ${formatCurrency(eraStats.newTotal)} · corrections ${formatCurrency(eraStats.corrections)} · claims net ${formatCurrency(eraStats.claimsNet)} · HHO payment adjustment ${formatCurrency(-eraStats.claimsNet)} → $0.00 deposit · ${activeEra.doneRequired}/${activeEra.required} entered`}
               actions={
@@ -350,7 +354,7 @@ export default function SpEntry() {
                 <div className="relative ml-auto">
                   <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
                   <input
-                    type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Client ID, date, code"
+                    type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Client ID, claim #, date, code"
                     aria-label="Search lines"
                     className="h-8 w-52 rounded-lg border border-border bg-white pl-8 pr-2 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal"
                   />
@@ -371,9 +375,12 @@ export default function SpEntry() {
                         <th className="text-left py-2.5 px-3">Clinician</th>
                         <th className="text-left py-2.5 px-3">DOS</th>
                         <th className="text-left py-2.5 px-3">CPT</th>
+                        <th className="text-left py-2.5 px-3">HHO claim #</th>
                         <th className="text-left py-2.5 px-3">Type</th>
                         <th className="text-right py-2.5 px-3">In SP now</th>
+                        <th className="text-right py-2.5 px-3">Billed</th>
                         <th className="text-right py-2.5 px-3">Enter (adds to SP)</th>
+                        <th className="text-right py-2.5 px-3">Write-off (adds)</th>
                         <th className="text-right py-2.5 px-3">Result</th>
                         <th className="text-left py-2.5 px-3">Notes</th>
                       </tr>
@@ -392,16 +399,39 @@ export default function SpEntry() {
                           <td className="py-2 px-3 whitespace-nowrap">{l.clinician || '—'}</td>
                           <td className="py-2 px-3 whitespace-nowrap tabular-nums">{l.dos}</td>
                           <td className="py-2 px-3 tabular-nums">{l.cpt}</td>
+                          <td className="py-2 px-3 whitespace-nowrap">
+                            {l.claimId ? (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="font-mono text-xs">{l.claimId}</span>
+                                <button
+                                  type="button" onClick={() => copyText(l.claimId ?? '')} aria-label={`Copy claim number ${l.claimId}`}
+                                  className="rounded p-1 text-muted hover:text-teal hover:bg-teal-pale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+                                ><Copy size={12} /></button>
+                              </span>
+                            ) : '—'}
+                          </td>
                           <td className="py-2 px-3">
                             <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-ui font-medium ${TYPE_STYLE[l.type]}`}>{l.type}</span>
                           </td>
                           <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">{l.spBefore != null ? formatCurrency(l.spBefore) : '—'}</td>
+                          <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap text-muted">{l.billed != null ? formatCurrency(l.billed) : '—'}</td>
                           <td className="py-2 px-3 text-right whitespace-nowrap">
                             {l.change === 0 ? <span className="text-xs text-muted">{l.type === 'denied' ? 'no payment' : 'nothing to add'}</span> : (
                               <span className="inline-flex items-center gap-1.5">
                                 <span className={`tabular-nums ${l.done ? '' : `font-semibold ${l.change < 0 ? 'text-error' : 'text-ink'}`}`}>{formatCurrency(l.change)}</span>
                                 <button
                                   type="button" onClick={() => copyAmount(l.change)} aria-label={`Copy ${l.change.toFixed(2)}`}
+                                  className="rounded p-1 text-muted hover:text-teal hover:bg-teal-pale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+                                ><Copy size={12} /></button>
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-right whitespace-nowrap">
+                            {l.writeOff == null || l.writeOff === 0 ? <span className="text-xs text-muted">{l.writeOff === 0 ? 'none' : '—'}</span> : (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className={`tabular-nums ${l.done ? '' : `font-semibold ${l.writeOff < 0 ? 'text-error' : 'text-ink'}`}`}>{formatCurrency(l.writeOff)}</span>
+                                <button
+                                  type="button" onClick={() => copyAmount(l.writeOff ?? 0)} aria-label={`Copy write-off ${(l.writeOff ?? 0).toFixed(2)}`}
                                   className="rounded p-1 text-muted hover:text-teal hover:bg-teal-pale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
                                 ><Copy size={12} /></button>
                               </span>
