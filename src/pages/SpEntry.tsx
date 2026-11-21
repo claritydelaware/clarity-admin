@@ -257,7 +257,7 @@ export default function SpEntry() {
     <div className="space-y-4">
       <PageHeader
         title="SP Entry"
-        subtitle="Checklist for posting HHO ERAs in SimplePractice — enter ERAs in date order, one change per date of service per ERA."
+        subtitle="Checklist for posting HHO ERAs in SimplePractice. Enter ERAs in date order. SimplePractice adds the amount you type to what is already posted, so reprocessed lines are negative."
         actions={lines && lines.length > 0 ? (
           <Button size="sm" variant="secondary" onClick={() => setShowImport(s => !s)}>Re-import data</Button>
         ) : undefined}
@@ -373,8 +373,8 @@ export default function SpEntry() {
                         <th className="text-left py-2.5 px-3">CPT</th>
                         <th className="text-left py-2.5 px-3">Type</th>
                         <th className="text-right py-2.5 px-3">In SP now</th>
-                        <th className="text-right py-2.5 px-3">Enter</th>
-                        <th className="text-right py-2.5 px-3">Change</th>
+                        <th className="text-right py-2.5 px-3">Enter (adds to SP)</th>
+                        <th className="text-right py-2.5 px-3">Result</th>
                         <th className="text-left py-2.5 px-3">Notes</th>
                       </tr>
                     </thead>
@@ -397,19 +397,17 @@ export default function SpEntry() {
                           </td>
                           <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap">{l.spBefore != null ? formatCurrency(l.spBefore) : '—'}</td>
                           <td className="py-2 px-3 text-right whitespace-nowrap">
-                            {l.type === 'denied' && l.change === 0 ? <span className="text-xs text-muted">no payment</span> : (
+                            {l.change === 0 ? <span className="text-xs text-muted">{l.type === 'denied' ? 'no payment' : 'nothing to add'}</span> : (
                               <span className="inline-flex items-center gap-1.5">
-                                <span className={`tabular-nums ${l.done ? '' : 'font-semibold text-ink'}`}>{formatCurrency(l.enter)}</span>
+                                <span className={`tabular-nums ${l.done ? '' : `font-semibold ${l.change < 0 ? 'text-error' : 'text-ink'}`}`}>{formatCurrency(l.change)}</span>
                                 <button
-                                  type="button" onClick={() => copyAmount(l.enter)} aria-label={`Copy ${l.enter.toFixed(2)}`}
+                                  type="button" onClick={() => copyAmount(l.change)} aria-label={`Copy ${l.change.toFixed(2)}`}
                                   className="rounded p-1 text-muted hover:text-teal hover:bg-teal-pale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
                                 ><Copy size={12} /></button>
                               </span>
                             )}
                           </td>
-                          <td className={`py-2 px-3 text-right tabular-nums whitespace-nowrap ${l.done || l.change === 0 ? '' : l.change < 0 ? 'text-error' : 'text-success'}`}>
-                            {l.change === 0 ? '—' : `${l.change > 0 ? '+' : ''}${formatCurrency(l.change)}`}
-                          </td>
+                          <td className="py-2 px-3 text-right tabular-nums whitespace-nowrap text-muted">{formatCurrency(l.enter)}</td>
                           <td className="py-2 px-3 text-xs max-w-[16rem] truncate" title={l.flags}>{l.flags || ''}</td>
                         </tr>
                       ))}
