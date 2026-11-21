@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { ClipboardCheck, Copy, Search, Upload, CheckCheck, Undo2 } from 'lucide-react'
-import { useSpEntry, useImportSpEntry, useSetSpEntryDone } from '../hooks/useSpEntry'
+import { useSpEntry, useImportSpEntry, useSetSpEntryDone, useSetSpEntryEft } from '../hooks/useSpEntry'
 import { useToast } from '../context/ToastContext'
 import PageHeader from '../components/layout/PageHeader'
 import Card from '../components/ui/Card'
@@ -63,6 +63,7 @@ function csvToImportRows(text: string): SpEntryImportRow[] {
       dos: col(r, 'dos'), cpt: col(r, 'cpt'), type,
       spBefore: before === '' ? undefined : parseFloat(before), enter, change, flags,
       sheetRow: Number.isNaN(sheetRow) ? undefined : sheetRow,
+      checkEft: col(r, 'check_eft') || undefined, checkDate: col(r, 'check_date') || undefined,
     }
   })
 }
@@ -87,7 +88,7 @@ const VIEWS: Array<{ id: View; label: string }> = [
   { id: 'unchanged', label: 'Unchanged' }, { id: 'denied', label: 'Denied' },
 ]
 
-interface EraGroup { era: string; eraDate: string; lines: SpEntryLine[]; required: number; doneRequired: number }
+interface EraGroup { era: string; eraDate: string; checkEft?: string; checkDate?: string; lines: SpEntryLine[]; required: number; doneRequired: number }
 
 function Progress({ done, total }: { done: number; total: number }) {
   const pct = total === 0 ? 100 : Math.round((done / total) * 100)
@@ -98,12 +99,56 @@ function Progress({ done, total }: { done: number; total: number }) {
   )
 }
 
+// Check/EFT # comes from Availity (it is not printed on the remittance PDF). Every ERA here has a $0.00
+// payment total, so the amount to enter in SimplePractice's payment field is always 0.00.
+function EftStrip({ checkEft, checkDate, saving, onCopy, onSave }: {
+  checkEft?: string; checkDate?: string; saving: boolean
+  onCopy: (text: string) => void; onSave: (eft: string, date: string) => void
+}) {
+  const [editing, setEditing] = useState(!checkEft)
+  const [eft, setEft] = useState(checkEft ?? '')
+  const [date, setDate] = useState(checkDate ?? '')
+  const valid = /^\d{6,12}$/.test(eft.trim())
+  const inputClass = 'h-8 rounded-lg border border-border bg-white px-2.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal'
+  const copyBtn = 'rounded p-1 text-muted hover:text-teal hover:bg-teal-pale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal'
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2.5 border-b border-border bg-surface-sunken/50 text-sm font-ui">
+      {editing ? (
+        <form className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); if (valid) { onSave(eft.trim(), date.trim()); setEditing(false) } }}>
+          <label className="text-muted" htmlFor="eft-input">Check/EFT #</label>
+          <input id="eft-input" value={eft} onChange={e => setEft(e.target.value)} inputMode="numeric" placeholder="from Availity" className={`${inputClass} w-36`} />
+          <input value={date} onChange={e => setDate(e.target.value)} aria-label="Check date" placeholder="Check date MM/DD/YYYY" className={`${inputClass} w-44`} />
+          <Button size="sm" type="submit" disabled={!valid} loading={saving}>Save</Button>
+          {checkEft && <Button size="sm" variant="ghost" type="button" onClick={() => setEditing(false)}>Cancel</Button>}
+        </form>
+      ) : (
+        <>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-muted">Check/EFT #</span>
+            <span className="font-mono font-semibold text-ink">{checkEft}</span>
+            <button type="button" onClick={() => onCopy(checkEft ?? '')} aria-label="Copy Check/EFT number" className={copyBtn}><Copy size={12} /></button>
+          </span>
+          {checkDate && <span><span className="text-muted">Check date</span> <span className="text-ink tabular-nums">{checkDate}</span></span>}
+          <button type="button" onClick={() => setEditing(true)} className="text-xs text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded">Edit</button>
+        </>
+      )}
+      <span className="inline-flex items-center gap-1.5">
+        <span className="text-muted">Payment amount</span>
+        <span className="font-semibold text-ink tabular-nums">$0.00</span>
+        <button type="button" onClick={() => onCopy('0.00')} aria-label="Copy 0.00" className={copyBtn}><Copy size={12} /></button>
+      </span>
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SpEntry() {
   const { data: lines, isLoading, isError, error } = useSpEntry()
   const importMut = useImportSpEntry()
   const setDone = useSetSpEntryDone()
+  const setEft = useSetSpEntryEft()
   const toast = useToast()
 
   const fileRef = useRef<HTMLInputElement>(null)
@@ -119,6 +164,7 @@ export default function SpEntry() {
     for (const l of lines ?? []) {
       const g = map.get(l.era) ?? { era: l.era, eraDate: l.eraDate, lines: [], required: 0, doneRequired: 0 }
       g.lines.push(l)
+      if (l.checkEft && !g.checkEft) { g.checkEft = l.checkEft; g.checkDate = l.checkDate }
       if (needsEntry(l)) { g.required++; if (l.done) g.doneRequired++ }
       map.set(l.era, g)
     }
@@ -168,10 +214,11 @@ export default function SpEntry() {
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  async function copyAmount(n: number) {
-    try { await navigator.clipboard.writeText(n.toFixed(2)); toast.success(`Copied ${n.toFixed(2)}`) }
+  async function copyText(text: string) {
+    try { await navigator.clipboard.writeText(text); toast.success(`Copied ${text}`) }
     catch { toast.error('Copy failed') }
   }
+  const copyAmount = (n: number) => copyText(n.toFixed(2))
 
   const toggle = (l: SpEntryLine) => setDone.mutate({ rowIndexes: [l.rowIndex], done: !l.done })
   const bulk = (done: boolean) => {
@@ -262,7 +309,9 @@ export default function SpEntry() {
                             {complete ? 'Done' : `${g.doneRequired}/${g.required}`}
                           </span>
                         </div>
-                        <div className="text-xs text-muted font-body mb-1.5">{g.eraDate}</div>
+                        <div className="text-xs text-muted font-body mb-1.5">
+                          {g.eraDate}{!g.checkEft && <span className="ml-1.5 text-warning font-medium">· EFT # needed</span>}
+                        </div>
                         <Progress done={g.doneRequired} total={g.required} />
                       </button>
                     </li>
@@ -282,6 +331,13 @@ export default function SpEntry() {
                 </>
               }
             >
+              <EftStrip
+                key={`${activeEra.era}|${activeEra.checkEft ?? ''}`}
+                checkEft={activeEra.checkEft} checkDate={activeEra.checkDate}
+                saving={setEft.isPending} onCopy={copyText}
+                onSave={(eft, date) => setEft.mutate({ era: activeEra.era, checkEft: eft, checkDate: date })}
+              />
+
               <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border">
                 <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter lines">
                   {VIEWS.map(v => (

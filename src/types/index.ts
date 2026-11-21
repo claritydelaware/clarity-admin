@@ -197,6 +197,8 @@ export interface SpEntryLine {
   sheetRow?: number
   done: boolean
   doneAt?: string
+  checkEft?: string      // Availity Check/EFT # for the ERA
+  checkDate?: string     // MM/DD/YYYY
 }
 
 export type SpEntryImportRow = Omit<SpEntryLine, 'rowIndex' | 'done' | 'doneAt'>

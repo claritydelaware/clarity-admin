@@ -48,3 +48,18 @@ export function useSetSpEntryDone() {
     },
   })
 }
+
+// Check/EFT # applies to every line of an ERA.
+export function useSetSpEntryEft() {
+  const qc = useQueryClient()
+  const toast = useToast()
+  return useMutation({
+    mutationFn: ({ era, checkEft, checkDate }: { era: string; checkEft: string; checkDate: string }) => api.spEntry.setEft(era, checkEft, checkDate),
+    onSuccess: (_r, v) => {
+      qc.setQueryData<SpEntryLine[]>(KEY, old =>
+        (old ?? []).map(l => (l.era === v.era ? { ...l, checkEft: v.checkEft || undefined, checkDate: v.checkEft ? v.checkDate || undefined : undefined } : l)))
+      toast.success('Check/EFT # saved')
+    },
+    onError: err => toast.error((err as Error).message.includes('400') ? 'Check/EFT # must be 6-12 digits' : 'Save failed — please try again'),
+  })
+}
