@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ClipboardCheck, Copy, Search, Upload, CheckCheck, Undo2 } from 'lucide-react'
+import { ClipboardCheck, Copy, Pencil, Search, Upload, CheckCheck, Undo2 } from 'lucide-react'
 import { useSpEntry, useImportSpEntry, useSetSpEntryDone, useSetSpEntryEft } from '../hooks/useSpEntry'
 import { useToast } from '../context/ToastContext'
 import PageHeader from '../components/layout/PageHeader'
@@ -130,7 +130,7 @@ function EftStrip({ checkEft, checkDate, saving, onCopy, onSave }: {
             <button type="button" onClick={() => onCopy(checkEft ?? '')} aria-label="Copy Check/EFT number" className={copyBtn}><Copy size={12} /></button>
           </span>
           {checkDate && <span><span className="text-muted">Check date</span> <span className="text-ink tabular-nums">{checkDate}</span></span>}
-          <button type="button" onClick={() => setEditing(true)} className="text-xs text-teal hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal rounded">Edit</button>
+          <Button size="sm" variant="secondary" type="button" icon={<Pencil size={12} />} onClick={() => setEditing(true)}>Change</Button>
         </>
       )}
       <span className="inline-flex items-center gap-1.5">
