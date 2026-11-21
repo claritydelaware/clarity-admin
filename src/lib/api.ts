@@ -7,7 +7,7 @@ import type {
   Clinician, ConfigData, ContractRate, ValuationSnapshot, TrendGranularity, TrendPoint,
   HourlyPerformanceHistory, HolidayBonusBasis, CredentialingRecord, CredentialingInput,
   CELogRecord, CELogInput, CEStatusRecord,
-  HhoEraLogEntry, HhoEraLogInput,
+  HhoEraLogEntry, HhoEraLogInput, SpEntryLine, SpEntryImportRow,
 } from '../types'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -202,6 +202,13 @@ export const api = {
     list: (): Promise<HhoEraLogEntry[]> => apiFetch<HhoEraLogEntry[]>('/hho-era-log'),
     create: (data: HhoEraLogInput): Promise<HhoEraLogEntry> =>
       apiFetch<HhoEraLogEntry>('/hho-era-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  },
+  spEntry: {
+    list: (): Promise<SpEntryLine[]> => apiFetch<SpEntryLine[]>('/sp-entry'),
+    import: (rows: SpEntryImportRow[], replace: boolean): Promise<{ imported: number; preservedDone: number; replaced: boolean }> =>
+      apiFetch('/sp-entry/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows, replace }) }),
+    setDone: (rowIndexes: number[], done: boolean): Promise<{ updated: number; done: boolean }> =>
+      apiFetch('/sp-entry/done', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rowIndexes, done }) }),
   },
   payroll: {
     list: (): Promise<PayrollEntry[]> => apiFetch<PayrollEntry[]>('/payroll'),

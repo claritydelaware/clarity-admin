@@ -178,6 +178,29 @@ export interface HhoEraLogInput {
   notes?: string
 }
 
+export type SpEntryType = 'new' | 'reprocessed' | 'unchanged' | 'denied'
+
+// One ERA line to post in SimplePractice. Hashed Client IDs only.
+export interface SpEntryLine {
+  rowIndex: number
+  era: string            // e.g. DEHHOCLM1/39724
+  eraDate: string        // MM/DD/YYYY remit date
+  clientId: string
+  clinician: string
+  dos: string            // M/D/YYYY
+  cpt: string
+  type: SpEntryType
+  spBefore?: number      // amount in SimplePractice before this ERA
+  enter: number          // amount to enter for this ERA
+  change: number
+  flags: string
+  sheetRow?: number
+  done: boolean
+  doneAt?: string
+}
+
+export type SpEntryImportRow = Omit<SpEntryLine, 'rowIndex' | 'done' | 'doneAt'>
+
 export interface PayPeriod {
   start: string
   end: string

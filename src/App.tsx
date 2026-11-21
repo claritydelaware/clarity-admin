@@ -17,6 +17,7 @@ import Credentialing from './pages/Credentialing'
 import CETracker from './pages/CETracker'
 import HhoEraLog from './pages/HhoEraLog'
 import HhoOverpayment from './pages/HhoOverpayment'
+import SpEntry from './pages/SpEntry'
 
 export default function App() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="ce-tracker" element={<CETracker />} />
           <Route path="hho-era-log" element={<HhoEraLog />} />
           <Route path="hho-overpayment" element={<HhoOverpayment />} />
+          <Route path="sp-entry" element={<SpEntry />} />
         </Route>
       </Routes>
     </BrowserRouter>

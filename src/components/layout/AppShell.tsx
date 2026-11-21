@@ -8,7 +8,7 @@ import useLocalStorage from '../../hooks/useLocalStorage'
 
 // Table-heavy pages use the full viewport width; card/chart pages are capped so
 // content doesn't stretch absurdly on ultrawide or 1440p+ monitors.
-const FULL_WIDTH_ROUTES = ['/claims', '/caseloads', '/hho-era-log', '/overhead']
+const FULL_WIDTH_ROUTES = ['/claims', '/caseloads', '/hho-era-log', '/sp-entry', '/overhead']
 
 export default function AppShell() {
   const { pathname } = useLocation()

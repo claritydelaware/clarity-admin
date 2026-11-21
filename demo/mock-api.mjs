@@ -236,6 +236,21 @@ let hhoLog = Array.from({ length: 5 }, (_, i) => {
   return { rowIndex: i + 2, eraDate: iso(date), eraReference: `EPP-${100 + i}`, actualDeposited: deposited, trueRateTotal: trueRate, netTransfer: round2(trueRate - deposited), direction: 'to-savings', runningReserveBalance: round2(2400 + i * 260), residualDueToHHO: 0, openingBalance: 2400, notes: '' }
 })
 
+// SP Entry checklist: synthetic ERA lines (hashed-style ids), so the page can be exercised without real data.
+let spEntry = (() => {
+  const eras = [['DEHHOCLM1/10001', '09/14/2026'], ['DEHHOCLM1/10002', '09/21/2026'], ['DEHHOCLM1/10003', '10/05/2026']]
+  const lines = []
+  eras.forEach(([era, eraDate], ei) => {
+    for (let i = 0; i < 12; i++) {
+      const kind = i % 6 === 5 ? 'denied' : i % 6 === 4 ? 'unchanged' : i % 3 === 0 && ei < 2 ? 'reprocessed' : 'new'
+      const before = kind === 'new' || kind === 'denied' ? undefined : 150
+      const enter = kind === 'denied' ? 0 : kind === 'unchanged' ? 100.36 : 100.63
+      lines.push({ rowIndex: lines.length + 2, era, eraDate, clientId: `demo${(i % 5) + 1}c0ffee${ei}${i}ab`, clinician: i % 2 ? 'Jen' : 'Shannon', dos: `${9 + ei}/${(i % 20) + 1}/2026`, cpt: i % 4 === 3 ? '90834' : '90837', type: kind, spBefore: before, enter, change: kind === 'denied' || kind === 'unchanged' ? 0 : round2(enter - (before ?? 0)), flags: kind === 'unchanged' ? 're-issued unchanged' : '', sheetRow: 1000 + lines.length, done: ei === 0 && i < 8, doneAt: undefined })
+    }
+  })
+  return lines
+})()
+
 // ─── dashboard ──────────────────────────────────────────────────────────────
 const metrics = (k) => ({
   sessions: Math.round(214 * k), sessionsByClinician: by(Math.round(92 * k), Math.round(81 * k), Math.round(26 * k), Math.round(15 * k)),
@@ -371,6 +386,9 @@ export function handle(method, pathname, params, body) {
 
   // hho / credentialing / ce
   if (p === '/hho-era-log') { if (method === 'POST') { hhoLog = [...hhoLog, { ...hhoLog[hhoLog.length - 1], ...body, rowIndex: hhoLog.length + 2 }]; return hhoLog[hhoLog.length - 1] } return hhoLog }
+  if (p === '/sp-entry') return spEntry
+  if (p === '/sp-entry/import') { spEntry = (body.rows ?? []).map((r, i) => ({ ...r, rowIndex: i + 2, done: false })); return { imported: spEntry.length, preservedDone: 0, replaced: false } }
+  if (p === '/sp-entry/done') { const s = new Set(body.rowIndexes); spEntry = spEntry.map((l) => (s.has(l.rowIndex) ? { ...l, done: body.done } : l)); return { updated: s.size, done: body.done } }
   if (p === '/credentialing') return method === 'POST' ? { ...body, rowIndex: credentialing.length + 2 } : credentialing
   if ((r = m(/^\/credentialing\/(\d+)$/))) { const c = credentialing.find((x) => x.rowIndex === Number(r[1])); return c ? merge(c, body) : undefined }
   if (p === '/ce/log') return method === 'POST' ? { ...body, rowIndex: ceLog.length + 2 } : ceLog

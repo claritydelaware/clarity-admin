@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, TrendingUp, TrendingDown, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, ArrowLeftRight, Activity, ShieldCheck, GraduationCap, Gift } from 'lucide-react'
+import { LayoutDashboard, FileText, TrendingUp, TrendingDown, BarChart2, Receipt, Calendar, Users, ClipboardList, Landmark, ArrowLeftRight, Activity, ShieldCheck, GraduationCap, Gift, ClipboardCheck } from 'lucide-react'
 
 export const NAV_GROUPS = [
   {
@@ -16,6 +16,7 @@ export const NAV_GROUPS = [
       { to: '/claims',             label: 'Claims',             icon: FileText },
       { to: '/hho-era-log',        label: 'HHO ERA Log',        icon: ArrowLeftRight },
       { to: '/hho-overpayment',    label: 'HHO Overpayment',    icon: TrendingDown },
+      { to: '/sp-entry',           label: 'SP Entry',           icon: ClipboardCheck },
     ],
   },
   {
