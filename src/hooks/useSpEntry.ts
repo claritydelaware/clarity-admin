@@ -17,7 +17,7 @@ export function useImportSpEntry() {
   const qc = useQueryClient()
   const toast = useToast()
   return useMutation({
-    mutationFn: ({ rows, replace }: { rows: SpEntryImportRow[]; replace: boolean }) => api.spEntry.import(rows, replace),
+    mutationFn: ({ rows, replace, keepDone }: { rows: SpEntryImportRow[]; replace: boolean; keepDone: boolean }) => api.spEntry.import(rows, replace, keepDone),
     onSuccess: res => {
       qc.invalidateQueries({ queryKey: KEY })
       toast.success(`Imported ${res.imported} lines${res.preservedDone ? ` (${res.preservedDone} done flags kept)` : ''}`)

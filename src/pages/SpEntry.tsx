@@ -76,8 +76,9 @@ function csvToImportRows(text: string): SpEntryImportRow[] {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// A denial only needs entry when it reverses a payment already in SimplePractice (e.g. an N4 re-denial: $150 -> $0).
-const needsEntry = (l: SpEntryLine) => l.type === 'new' || l.type === 'reprocessed' || l.type === 'offset' || (l.type === 'denied' && l.change !== 0)
+// Only lines with something to type count: a $0 COB line or a re-issue at the same amount needs nothing, and a denial only
+// needs entry when it reverses a payment already in SimplePractice (e.g. an N4 re-denial: $150 -> $0).
+const needsEntry = (l: SpEntryLine) => (l.type === 'new' || l.type === 'reprocessed' || l.type === 'offset' || l.type === 'denied') && l.change !== 0
 const dateKey = (s: string) => { const [m, d, y] = s.split('/').map(Number); return (y || 0) * 10000 + (m || 0) * 100 + (d || 0) }
 
 const TYPE_STYLE: Record<SpEntryType, string> = {
@@ -162,6 +163,7 @@ export default function SpEntry() {
   const [pending, setPending] = useState<SpEntryImportRow[] | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [keepDone, setKeepDone] = useState(true)
   const [selected, setSelected] = useState<string | null>(null)
   const [view, setView] = useState<View>('todo')
   const [search, setSearch] = useState('')
@@ -216,7 +218,7 @@ export default function SpEntry() {
 
   async function runImport() {
     if (!pending) return
-    await importMut.mutateAsync({ rows: pending, replace: (lines?.length ?? 0) > 0 })
+    await importMut.mutateAsync({ rows: pending, replace: (lines?.length ?? 0) > 0, keepDone })
     setPending(null); setShowImport(false)
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -248,13 +250,19 @@ export default function SpEntry() {
           {pending ? `Import ${pending.length} lines` : 'Import'}
         </Button>
       </div>
+      {(lines?.length ?? 0) > 0 && (
+        <label className="mt-3 flex items-center gap-2 text-sm font-body text-ink">
+          <input type="checkbox" checked={keepDone} onChange={e => setKeepDone(e.target.checked)} className="h-4 w-4 rounded border-border-strong accent-teal" />
+          Keep lines already marked done (uncheck to start fresh)
+        </label>
+      )}
       {importError && <p className="mt-3 text-sm text-error font-body">{importError}</p>}
       {pending && (
         <p className="mt-3 text-xs text-muted font-body">
           {new Set(pending.map(p => p.era)).size} ERAs · {pending.filter(p => p.type === 'new').length} new ·{' '}
           {pending.filter(p => p.type === 'reprocessed').length} reprocessed · {pending.filter(p => p.type === 'unchanged').length} unchanged ·{' '}
           {pending.filter(p => p.type === 'denied').length} denied
-          {(lines?.length ?? 0) > 0 && ' — replaces the current data; lines already marked done stay done.'}
+          {(lines?.length ?? 0) > 0 && (keepDone ? ' — replaces the current data; lines already marked done stay done.' : ' — replaces the current data and clears all done ticks.')}
         </p>
       )}
     </Card>

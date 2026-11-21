@@ -205,8 +205,8 @@ export const api = {
   },
   spEntry: {
     list: (): Promise<SpEntryLine[]> => apiFetch<SpEntryLine[]>('/sp-entry'),
-    import: (rows: SpEntryImportRow[], replace: boolean): Promise<{ imported: number; preservedDone: number; replaced: boolean }> =>
-      apiFetch('/sp-entry/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows, replace }) }),
+    import: (rows: SpEntryImportRow[], replace: boolean, keepDone = true): Promise<{ imported: number; preservedDone: number; replaced: boolean }> =>
+      apiFetch('/sp-entry/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows, replace, keepDone }) }),
     setEft: (era: string, checkEft: string, checkDate: string): Promise<{ updated: number }> =>
       apiFetch('/sp-entry/eft', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ era, checkEft, checkDate }) }),
     setDone: (rowIndexes: number[], done: boolean): Promise<{ updated: number; done: boolean }> =>
