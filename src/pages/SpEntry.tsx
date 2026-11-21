@@ -191,7 +191,10 @@ export default function SpEntry() {
   const shown = useMemo(() => {
     if (!activeEra) return []
     const q = search.trim().toLowerCase()
-    return activeEra.lines.filter(l => {
+    // Display order only: client ID, then date of service, then CPT. Done flags are saved per line, so this never affects progress.
+    const byClientThenDos = (x: SpEntryLine, y: SpEntryLine) =>
+      x.clientId.localeCompare(y.clientId) || dateKey(x.dos) - dateKey(y.dos) || x.cpt.localeCompare(y.cpt)
+    return [...activeEra.lines].sort(byClientThenDos).filter(l => {
       if (q && !(l.clientId.toLowerCase().includes(q) || l.dos.includes(q) || l.cpt.includes(q) || (l.claimId ?? '').includes(q))) return false
       if (view === 'todo') return needsEntry(l) && !l.done
       if (view === 'done') return l.done
